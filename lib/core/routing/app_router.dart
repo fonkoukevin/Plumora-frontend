@@ -1,20 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/presentation/auth_screen.dart';
+import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/register_screen.dart';
+import '../../features/auth/presentation/role_selection_screen.dart';
 import '../../features/catalog/presentation/discover_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/home/presentation/landing_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/reading/presentation/library_screen.dart';
 import '../../features/writing/presentation/write_screen.dart';
 
 final GoRouter appRouter = GoRouter(
-  initialLocation: AppRoutes.auth,
+  initialLocation: AppRoutes.landing,
   routes: [
     GoRoute(
-      path: AppRoutes.auth,
-      name: 'auth',
-      builder: (context, state) => const AuthScreen(),
+      path: AppRoutes.landing,
+      name: 'landing',
+      builder: (context, state) => const LandingScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.login,
+      name: 'login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.register,
+      name: 'register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.roleSelection,
+      name: 'role-selection',
+      builder: (context, state) => const RoleSelectionScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) {
@@ -52,8 +70,11 @@ final GoRouter appRouter = GoRouter(
 );
 
 abstract final class AppRoutes {
-  static const String auth = '/auth';
-  static const String home = '/';
+  static const String landing = '/';
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String roleSelection = '/roles';
+  static const String home = '/home';
   static const String discover = '/discover';
   static const String write = '/write';
   static const String library = '/library';

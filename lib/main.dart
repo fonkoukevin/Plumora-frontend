@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_router.dart';
 import 'core/theme/plumora_theme.dart';
 
 void main() {
-  runApp(const PlumoraApp());
+  runApp(const ProviderScope(child: PlumoraApp()));
 }
 
 class PlumoraApp extends StatelessWidget {

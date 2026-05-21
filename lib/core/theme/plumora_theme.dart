@@ -4,27 +4,42 @@ import 'plumora_colors.dart';
 
 abstract final class PlumoraTheme {
   static ThemeData get light {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: PlumoraColors.plum,
-      brightness: Brightness.light,
-      primary: PlumoraColors.plum,
-      secondary: PlumoraColors.leaf,
-      tertiary: PlumoraColors.rose,
-      surface: PlumoraColors.paper,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: PlumoraColors.primary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: PlumoraColors.primary,
+          onPrimary: PlumoraColors.cards,
+          secondary: PlumoraColors.mukemeAccent,
+          onSecondary: PlumoraColors.textPrimary,
+          surface: PlumoraColors.background,
+          onSurface: PlumoraColors.textPrimary,
+          onSurfaceVariant: PlumoraColors.textSecondary,
+          primaryContainer: const Color(0xFFE9DDC8),
+          onPrimaryContainer: PlumoraColors.textPrimary,
+          secondaryContainer: const Color(0xFFDCE8D8),
+          onSecondaryContainer: PlumoraColors.textPrimary,
+          surfaceContainerHighest: PlumoraColors.cards,
+          outlineVariant: PlumoraColors.border,
+        );
 
     return _buildTheme(colorScheme);
   }
 
   static ThemeData get dark {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: PlumoraColors.plum,
-      brightness: Brightness.dark,
-      primary: PlumoraColors.mist,
-      secondary: PlumoraColors.moss,
-      tertiary: PlumoraColors.gold,
-      surface: PlumoraColors.deepPlum,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: PlumoraColors.primary,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: PlumoraColors.primary,
+          secondary: PlumoraColors.mukemeAccent,
+          surface: PlumoraColors.darkBackground,
+          onSurface: PlumoraColors.background,
+          onSurfaceVariant: const Color(0xFFD5CAB8),
+          surfaceContainerHighest: PlumoraColors.darkSurface,
+        );
 
     return _buildTheme(colorScheme);
   }
@@ -36,8 +51,12 @@ abstract final class PlumoraTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: isDark
-          ? PlumoraColors.deepPlum
-          : PlumoraColors.paper,
+          ? PlumoraColors.darkBackground
+          : PlumoraColors.background,
+      textTheme: Typography.material2021().black.apply(
+        bodyColor: colorScheme.onSurface,
+        displayColor: colorScheme.onSurface,
+      ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: colorScheme.surface,
@@ -46,7 +65,9 @@ abstract final class PlumoraTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: colorScheme.surfaceContainerHighest,
+        color: isDark
+            ? colorScheme.surfaceContainerHighest
+            : PlumoraColors.cards,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       filledButtonTheme: FilledButtonThemeData(
