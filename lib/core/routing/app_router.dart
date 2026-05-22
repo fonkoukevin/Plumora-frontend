@@ -1,15 +1,20 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/role_selection_screen.dart';
+import '../../features/beta_reading/presentation/beta_feedback_screen.dart';
 import '../../features/catalog/presentation/discover_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/presentation/landing_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/reading/presentation/library_screen.dart';
-import '../../features/writing/presentation/write_screen.dart';
+import '../../features/writing/presentation/author_dashboard_screen.dart';
+import '../../features/writing/presentation/book_detail_author_screen.dart';
+import '../../features/writing/presentation/chapter_editor_screen.dart';
+import '../../features/writing/presentation/create_book_screen.dart';
+import '../../features/writing/presentation/my_books_screen.dart';
+import 'main_shell.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.landing,
@@ -36,7 +41,7 @@ final GoRouter appRouter = GoRouter(
     ),
     ShellRoute(
       builder: (context, state, child) {
-        return PlumoraShell(location: state.uri.path, child: child);
+        return MainShell(location: state.uri.path, child: child);
       },
       routes: [
         GoRoute(
@@ -52,7 +57,57 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppRoutes.write,
           name: 'write',
-          builder: (context, state) => const WriteScreen(),
+          builder: (context, state) => const AuthorDashboardScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.manuscripts,
+          name: 'manuscripts',
+          builder: (context, state) => const MyBooksScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.editor,
+          name: 'editor',
+          builder: (context, state) => const ChapterEditorScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.createBook,
+          name: 'create-book',
+          builder: (context, state) => const CreateBookScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.editBook,
+          name: 'edit-book',
+          builder: (context, state) {
+            final bookId = Uri.decodeComponent(
+              state.pathParameters['bookId'] ?? '',
+            );
+            return CreateBookScreen(bookId: bookId);
+          },
+        ),
+        GoRoute(
+          path: AppRoutes.authorBookDetail,
+          name: 'author-book-detail',
+          builder: (context, state) {
+            final bookId = Uri.decodeComponent(
+              state.pathParameters['bookId'] ?? '',
+            );
+            return BookDetailAuthorScreen(bookId: bookId);
+          },
+        ),
+        GoRoute(
+          path: AppRoutes.chapterEditor,
+          name: 'chapter-editor',
+          builder: (context, state) {
+            final bookId = Uri.decodeComponent(
+              state.pathParameters['bookId'] ?? '',
+            );
+            return ChapterEditorScreen(bookId: bookId);
+          },
+        ),
+        GoRoute(
+          path: AppRoutes.betaFeedback,
+          name: 'beta-feedback',
+          builder: (context, state) => const BetaFeedbackScreen(),
         ),
         GoRoute(
           path: AppRoutes.library,
@@ -77,127 +132,40 @@ abstract final class AppRoutes {
   static const String home = '/home';
   static const String discover = '/discover';
   static const String write = '/write';
+  static const String manuscripts = '/manuscripts';
+  static const String editor = '/editor';
+  static const String createBook = '/books/new';
+  static const String editBook = '/books/:bookId/edit';
+  static const String authorBookDetail = '/books/:bookId/author';
+  static const String chapterEditor = '/books/:bookId/editor';
+  static const String betaFeedback = '/beta-feedback';
   static const String library = '/library';
   static const String profile = '/profile';
-}
 
-class PlumoraShell extends StatelessWidget {
-  const PlumoraShell({required this.location, required this.child, super.key});
+  static String authorBookDetailPath(String bookId) {
+    final encoded = Uri.encodeComponent(bookId.trim());
+    if (encoded.isEmpty) {
+      return manuscripts;
+    }
 
-  final String location;
-  final Widget child;
-
-  static const List<_ShellDestination> _destinations = [
-    _ShellDestination(
-      label: 'Home',
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-      path: AppRoutes.home,
-    ),
-    _ShellDestination(
-      label: 'Discover',
-      icon: Icons.explore_outlined,
-      selectedIcon: Icons.explore,
-      path: AppRoutes.discover,
-    ),
-    _ShellDestination(
-      label: 'Write',
-      icon: Icons.edit_note_outlined,
-      selectedIcon: Icons.edit_note,
-      path: AppRoutes.write,
-    ),
-    _ShellDestination(
-      label: 'Library',
-      icon: Icons.local_library_outlined,
-      selectedIcon: Icons.local_library,
-      path: AppRoutes.library,
-    ),
-    _ShellDestination(
-      label: 'Profile',
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person,
-      path: AppRoutes.profile,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedIndex = _selectedIndexFor(location);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= 840) {
-          return Scaffold(
-            body: SafeArea(
-              child: Row(
-                children: [
-                  NavigationRail(
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: (index) => _goTo(context, index),
-                    labelType: NavigationRailLabelType.all,
-                    destinations: [
-                      for (final destination in _destinations)
-                        NavigationRailDestination(
-                          icon: Icon(destination.icon),
-                          selectedIcon: Icon(destination.selectedIcon),
-                          label: Text(destination.label),
-                        ),
-                    ],
-                  ),
-                  const VerticalDivider(width: 1),
-                  Expanded(child: child),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return Scaffold(
-          body: child,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: selectedIndex,
-            onDestinationSelected: (index) => _goTo(context, index),
-            destinations: [
-              for (final destination in _destinations)
-                NavigationDestination(
-                  icon: Icon(destination.icon),
-                  selectedIcon: Icon(destination.selectedIcon),
-                  label: destination.label,
-                ),
-            ],
-          ),
-        );
-      },
-    );
+    return '/books/$encoded/author';
   }
 
-  int _selectedIndexFor(String location) {
-    final match = _destinations.indexWhere((destination) {
-      if (destination.path == AppRoutes.home) {
-        return location == AppRoutes.home;
-      }
+  static String editBookPath(String bookId) {
+    final encoded = Uri.encodeComponent(bookId.trim());
+    if (encoded.isEmpty) {
+      return createBook;
+    }
 
-      return location.startsWith(destination.path);
-    });
-
-    return match < 0 ? 0 : match;
+    return '/books/$encoded/edit';
   }
 
-  void _goTo(BuildContext context, int index) {
-    context.go(_destinations[index].path);
+  static String chapterEditorPath(String bookId) {
+    final encoded = Uri.encodeComponent(bookId.trim());
+    if (encoded.isEmpty) {
+      return editor;
+    }
+
+    return '/books/$encoded/editor';
   }
-}
-
-class _ShellDestination {
-  const _ShellDestination({
-    required this.label,
-    required this.icon,
-    required this.selectedIcon,
-    required this.path,
-  });
-
-  final String label;
-  final IconData icon;
-  final IconData selectedIcon;
-  final String path;
 }

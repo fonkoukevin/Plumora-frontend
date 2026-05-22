@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accueil - Plumora</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .hover-card {
+      cursor: pointer;
+      transition: all 200ms;
+    }
+    .hover-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      border-color: var(--primary);
+    }
+    .progress-bar {
+      height: 6px;
+      background: var(--muted);
+      border-radius: 999px;
+      overflow: hidden;
+      flex: 1;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 35%;
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen bg-background px-4 py-6">
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- Header -->
+      <header class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <svg class="icon-lg text-primary" viewBox="0 0 24 24" stroke-width="1.5">
+              <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+              <line x1="16" y1="8" x2="2" y2="22"></line>
+              <line x1="17.5" y1="15" x2="9" y2="15"></line>
+            </svg>
+            <span class="text-2xl font-bold text-primary">Plumora</span>
+          </div>
+          <p class="text-xl font-medium text-foreground">Bonjour, Kevin 👋</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="w-10 h-10 rounded-xl flex items-center justify-center transition-colors" style="background: transparent;" onmouseover="this.style.backgroundColor='var(--muted)'" onmouseout="this.style.backgroundColor='transparent'">
+            <svg class="w-5 h-5 text-muted-foreground" viewBox="0 0 24 24">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </button>
+          <button
+            onclick="navigateTo('profile.html')"
+            class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg transition-transform"
+            onmouseover="this.style.transform='scale(1.05)'"
+            onmouseout="this.style.transform='scale(1)'"
+          >
+            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Quote -->
+      <div class="card bg-secondary">
+        <div class="flex items-start gap-4">
+          <svg class="w-7 h-7 text-primary" viewBox="0 0 24 24" style="flex-shrink: 0; margin-top: 0.125rem;">
+            <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+            <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"></path>
+          </svg>
+          <div class="flex-1 text-center">
+            <p class="text-foreground italic text-sm" style="line-height: 1.6;">
+              "N'attendez pas l'inspiration. Elle vient en écrivant."
+            </p>
+            <p class="text-sm text-muted-foreground mt-2">— Victor Hugo</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manuscrits Section -->
+      <div>
+        <h2 class="text-xl font-bold text-foreground mb-4">Vos manuscrits</h2>
+        <div class="flex gap-6" style="flex-wrap: wrap;">
+          <!-- Continue writing card -->
+          <div class="card hover-card relative overflow-hidden" style="flex: 1; min-width: 300px;">
+            <div style="position: absolute; top: 0; right: 0; width: 8rem; height: 8rem; background-color: var(--secondary); border-radius: 0 0 0 100%; margin-right: -4rem; margin-top: -4rem;"></div>
+            <div class="relative flex items-start gap-5">
+              <div class="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-sm" style="flex-shrink: 0;">
+                <svg class="w-7 h-7 text-white" viewBox="0 0 24 24">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                  <path d="M2 2l7.586 7.586"></path>
+                  <circle cx="11" cy="11" r="2"></circle>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-lg font-bold mb-1.5">
+                  Continuer à écrire
+                </h3>
+                <p class="text-sm text-muted-foreground mb-2">
+                  La Nuit Rouge - Chapitre 3
+                </p>
+                <div class="flex items-center gap-2">
+                  <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                  </div>
+                  <span class="text-sm font-semibold text-primary">35%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Discover books card -->
+          <div class="card hover-card relative overflow-hidden" style="flex: 1; min-width: 300px;">
+            <div style="position: absolute; top: 0; right: 0; width: 8rem; height: 8rem; background-color: var(--secondary); border-radius: 0 0 0 100%; margin-right: -4rem; margin-top: -4rem;"></div>
+            <div class="relative flex items-start gap-5">
+              <div class="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-sm" style="flex-shrink: 0;">
+                <svg class="w-7 h-7 text-white" viewBox="0 0 24 24">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-lg font-bold mb-1.5">
+                  Découvrir un livre
+                </h3>
+                <p class="text-sm text-muted-foreground">
+                  Explorez des milliers de livres
+                </p>
+                <p class="text-sm font-medium mt-2" style="color: var(--accent);">
+                  ✨ Recommandé par Mukeme
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div>
+        <h2 class="text-xl font-bold text-foreground mb-4">Actions rapides</h2>
+        <div class="flex gap-4" style="flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="alert('Fonctionnalité à venir')">
+            <svg class="icon" viewBox="0 0 24 24">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nouveau manuscrit
+          </button>
+          <button class="btn btn-outline" onclick="alert('Fonctionnalité à venir')">
+            <svg class="icon" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            Rechercher
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation footer -->
+      <div style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+        <div class="flex gap-4 justify-center" style="flex-wrap: wrap;">
+          <a href="index.html" class="link">Accueil</a>
+          <a href="profile.html" class="link">Profil</a>
+          <a href="login.html" class="link">Déconnexion</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="navigation.js"></script>
+</body>
+</html>

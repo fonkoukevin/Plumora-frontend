@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/plumora_colors.dart';
+import 'plumora_ui.dart';
+
 class PlumoraPlaceholderScreen extends StatelessWidget {
   const PlumoraPlaceholderScreen({
     required this.title,
@@ -16,51 +19,59 @@ class PlumoraPlaceholderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 760;
+        final horizontal = isWide ? 32.0 : 16.0;
+        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 82.0;
 
-    return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Icon(
-                      icon,
-                      color: colorScheme.onPrimaryContainer,
-                      size: 32,
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            horizontal,
+            28,
+            horizontal,
+            bottomPadding,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: PlumoraCard(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    PlumoraIconTile(
+                      backgroundColor: PlumoraColors.secondary,
+                      child: Icon(icon, color: PlumoraColors.primary, size: 30),
                     ),
-                  ),
+                    const SizedBox(height: 22),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: PlumoraColors.textPrimary,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: PlumoraColors.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
+                    if (actions.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Wrap(spacing: 12, runSpacing: 12, children: actions),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 24),
-                Text(title, style: textTheme.headlineMedium),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (actions.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Wrap(spacing: 12, runSpacing: 12, children: actions),
-                ],
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

@@ -33,8 +33,8 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: _readString(json, ['id', 'idUser', 'id_user']),
-      firstname: _readString(json, ['firstname', 'firstName']),
-      lastname: _readString(json, ['lastname', 'lastName']),
+      firstname: _readString(json, ['firstName', 'firstname', 'first_name']),
+      lastname: _readString(json, ['lastName', 'lastname', 'last_name']),
       email: _readString(json, ['email']),
       username: _readNullableString(json, ['username']),
       avatarUrl: _readNullableString(json, ['avatarUrl', 'avatar_url']),
