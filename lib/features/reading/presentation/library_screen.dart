@@ -1,17 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/app_error.dart';
+import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../beta_reading/presentation/beta_invitations_screen.dart';
+import '../../catalog/data/models/catalog_book_model.dart';
+import '../../catalog/data/repositories/catalog_repository.dart';
+import '../data/models/reading_progress_model.dart';
+import '../data/repositories/reading_repository.dart';
+import 'my_favorites_screen.dart';
 
-class LibraryScreen extends StatefulWidget {
+class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
   @override
-  State<LibraryScreen> createState() => _LibraryScreenState();
+  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> {
+class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   String _activeTab = 'Mes lectures';
+  String _libraryQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,14 +67,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  _LibrarySearchField(
+                    controller: _searchController,
+                    onChanged: (value) =>
+                        setState(() => _libraryQuery = value.trim()),
+                    onSubmitted: _submitSearch,
+                  ),
+                  const SizedBox(height: 24),
                   PlumoraSegmentedTabs(
                     tabs: const ['Mes lectures', 'Favoris', 'Bêta-lectures'],
                     selectedTab: _activeTab,
                     onSelected: (value) => setState(() => _activeTab = value),
                   ),
                   const SizedBox(height: 26),
-                  if (_activeTab == 'Mes lectures') const _ReadingsTab(),
-                  if (_activeTab == 'Favoris') const _FavoritesTab(),
+                  if (_activeTab == 'Mes lectures')
+                    _ReadingsTab(query: _libraryQuery),
+                  if (_activeTab == 'Favoris') const MyFavoritesScreen(),
                   if (_activeTab == 'Bêta-lectures') const _BetaReadingsTab(),
                 ],
               ),
@@ -66,40 +92,159 @@ class _LibraryScreenState extends State<LibraryScreen> {
       },
     );
   }
+
+  void _submitSearch(String value) {
+    setState(() => _libraryQuery = value.trim());
+  }
 }
 
-class _ReadingsTab extends StatelessWidget {
-  const _ReadingsTab();
+class _LibrarySearchField extends StatelessWidget {
+  const _LibrarySearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (final book in _savedBooks) ...[
-          _ReadingCard(book: book),
-          const SizedBox(height: 16),
-        ],
-        const _LibraryStats(),
-      ],
+    return SizedBox(
+      height: 48,
+      child: TextField(
+        controller: controller,
+        textInputAction: TextInputAction.search,
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
+        style: const TextStyle(
+          color: PlumoraColors.textPrimary,
+          fontSize: 14,
+          height: 1.2,
+        ),
+        decoration: const InputDecoration(
+          hintText: 'Rechercher un livre, un auteur, un genre...',
+          prefixIcon: Icon(
+            Icons.search,
+            color: PlumoraColors.textSecondary,
+            size: 22,
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        ),
+      ),
     );
   }
 }
 
-class _ReadingCard extends StatelessWidget {
-  const _ReadingCard({required this.book});
+class _ReadingsTab extends ConsumerWidget {
+  const _ReadingsTab({required this.query});
 
-  final _LibraryBook book;
+  final String query;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progressAsync = ref.watch(myReadingProgressProvider);
+    final normalizedQuery = query.trim();
+    final booksAsync = normalizedQuery.isEmpty
+        ? ref.watch(catalogBooksProvider(''))
+        : ref.watch(catalogSearchProvider(normalizedQuery));
+
+    return booksAsync.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (error, _) => _LibraryStateCard(
+        title: 'Catalogue indisponible',
+        subtitle: AppError.messageFor(error),
+        action: FilledButton(
+          onPressed: () {
+            if (normalizedQuery.isEmpty) {
+              ref.invalidate(catalogBooksProvider(''));
+            } else {
+              ref.invalidate(catalogSearchProvider(normalizedQuery));
+            }
+          },
+          child: const Text('Réessayer'),
+        ),
+      ),
+      data: (books) {
+        if (books.isEmpty) {
+          return _LibraryStateCard(
+            title: normalizedQuery.isEmpty
+                ? 'Aucun livre disponible'
+                : 'Aucun résultat',
+            subtitle: normalizedQuery.isEmpty
+                ? 'Les livres publiés apparaîtront ici dès qu’ils seront disponibles.'
+                : 'Aucun livre ne correspond à cette recherche.',
+            action: normalizedQuery.isEmpty
+                ? FilledButton.icon(
+                    onPressed: () => context.go(AppRoutes.discover),
+                    icon: const Icon(Icons.menu_book_outlined, size: 18),
+                    label: const Text('Découvrir'),
+                  )
+                : null,
+          );
+        }
+
+        final progressByBookId = progressAsync.maybeWhen(
+          data: (readings) => {
+            for (final reading in readings) reading.bookId: reading,
+          },
+          orElse: () => <String, ReadingProgressModel>{},
+        );
+        final finished = books
+            .where((book) => progressByBookId[book.id]?.finished ?? false)
+            .length;
+
+        return Column(
+          children: [
+            if (progressAsync.hasError) ...[
+              _InlineWarning(
+                message: AppError.messageFor(progressAsync.error!),
+              ),
+              const SizedBox(height: 16),
+            ],
+            for (final book in books) ...[
+              _CatalogReadingCard(
+                book: book,
+                progress: progressByBookId[book.id],
+              ),
+              const SizedBox(height: 16),
+            ],
+            _LibraryStats(savedCount: books.length, finishedCount: finished),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CatalogReadingCard extends StatelessWidget {
+  const _CatalogReadingCard({required this.book, this.progress});
+
+  final CatalogBookModel book;
+  final ReadingProgressModel? progress;
 
   @override
   Widget build(BuildContext context) {
+    final title = book.title.trim().isEmpty ? 'Livre sans titre' : book.title;
+    final readingProgress = progress;
+    final progressPercent = readingProgress?.progressPercent ?? 0;
+    final isFinished = readingProgress?.finished ?? false;
+    final hasProgress = readingProgress != null;
+
     return PlumoraCard(
       leftAccent: PlumoraColors.primary,
-      onTap: () {},
+      onTap: () => context.go(AppRoutes.readingPath(book.id)),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 480;
           final cover = PlumoraBookCover(
-            colors: book.colors,
+            colors: _catalogCoverColors(book),
             width: compact ? 72 : 96,
             height: compact ? 104 : 128,
           );
@@ -112,18 +257,22 @@ class _ReadingCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      book.title,
+                      title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
                   PlumoraBadge(
-                    label: book.progress == 100 ? 'Terminé' : 'En cours',
-                    backgroundColor: book.progress == 100
+                    label: isFinished
+                        ? 'Terminé ✓'
+                        : hasProgress
+                        ? 'En cours'
+                        : 'À lire',
+                    backgroundColor: isFinished
                         ? const Color(0xFFEADFCF)
                         : const Color(0xFFE6EFE4),
-                    foregroundColor: book.progress == 100
+                    foregroundColor: isFinished
                         ? const Color(0xFF7A5E2F)
                         : const Color(0xFF5F7A5A),
                   ),
@@ -131,7 +280,7 @@ class _ReadingCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'par ${book.author}',
+                'par ${book.authorName}',
                 style: const TextStyle(
                   color: PlumoraColors.textSecondary,
                   fontSize: 12,
@@ -141,7 +290,7 @@ class _ReadingCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8F0FF),
+                  color: const Color(0xFFFFFAE9),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
@@ -159,7 +308,7 @@ class _ReadingCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '${book.progress}%',
+                          '$progressPercent%',
                           style: const TextStyle(
                             color: PlumoraColors.primary,
                             fontSize: 12,
@@ -173,7 +322,7 @@ class _ReadingCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                       child: LinearProgressIndicator(
                         minHeight: 8,
-                        value: book.progress / 100,
+                        value: (readingProgress?.progress ?? 0).clamp(0, 1),
                         backgroundColor: Colors.white,
                         color: PlumoraColors.primary,
                       ),
@@ -186,8 +335,13 @@ class _ReadingCard extends StatelessWidget {
                 spacing: 16,
                 runSpacing: 8,
                 children: [
-                  _Meta(icon: Icons.schedule, label: 'Lu ${book.lastRead}'),
-                  _RatingStars(rating: book.rating),
+                  _Meta(
+                    icon: Icons.schedule,
+                    label: hasProgress
+                        ? _lastReadLabel(readingProgress.updatedAt)
+                        : 'Pas encore lu',
+                  ),
+                  _RatingStars(rating: book.rating.round().clamp(0, 5)),
                 ],
               ),
             ],
@@ -214,302 +368,20 @@ class _ReadingCard extends StatelessWidget {
   }
 }
 
-class _FavoritesTab extends StatelessWidget {
-  const _FavoritesTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        PlumoraCard(
-          borderColor: const Color(0xFFF1C8C8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const PlumoraIconTile(
-                backgroundColor: Color(0xFFE95858),
-                child: Icon(Icons.favorite, color: Colors.white),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Mes Favoris',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Les livres que vous avez adorés et que vous voulez retrouver facilement.',
-                      style: TextStyle(
-                        color: PlumoraColors.textSecondary,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 900
-                ? 4
-                : constraints.maxWidth >= 620
-                ? 3
-                : 2;
-            const spacing = 14.0;
-            final width =
-                (constraints.maxWidth - spacing * (columns - 1)) / columns;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: 14,
-              children: [
-                for (final book in _savedBooks.take(4))
-                  SizedBox(
-                    width: width,
-                    child: _FavoriteCard(book: book),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _FavoriteCard extends StatelessWidget {
-  const _FavoriteCard({required this.book});
-
-  final _LibraryBook book;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      padding: EdgeInsets.zero,
-      clip: true,
-      onTap: () {},
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: 2 / 3,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: book.colors,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.favorite,
-                      color: Color(0xFFE95858),
-                      size: 17,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  book.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  book.author,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                _RatingStars(rating: book.rating, small: true),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BetaReadingsTab extends StatelessWidget {
   const _BetaReadingsTab();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        PlumoraCard(
-          borderColor: const Color(0xFFD6CCE8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const PlumoraIconTile(
-                child: Icon(Icons.forum_outlined, color: Colors.white),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Espace Bêta-lecture',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Lisez les manuscrits avant publication et aidez les auteurs avec vos retours constructifs.',
-                      style: TextStyle(
-                        color: PlumoraColors.textSecondary,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        for (final beta in _betaBooks) ...[
-          _BetaBookCard(book: beta),
-          const SizedBox(height: 16),
-        ],
-      ],
-    );
-  }
-}
-
-class _BetaBookCard extends StatelessWidget {
-  const _BetaBookCard({required this.book});
-
-  final _BetaBook book;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      leftAccent: PlumoraColors.primary,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          PlumoraBookCover(colors: book.colors, width: 82, height: 112),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        book.title,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                    PlumoraBadge(
-                      label: book.status,
-                      backgroundColor: book.status == 'À lire'
-                          ? const Color(0xFFE6EFE4)
-                          : const Color(0xFFF8E6D2),
-                      foregroundColor: book.status == 'À lire'
-                          ? const Color(0xFF5F7A5A)
-                          : const Color(0xFFA4683E),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'par ${book.author}',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _InfoChip(
-                  icon: Icons.schedule,
-                  label: 'Deadline : ${book.deadline}',
-                  foregroundColor: const Color(0xFFA4683E),
-                  backgroundColor: const Color(0xFFF8E6D2),
-                ),
-                if (book.chaptersRead > 0) ...[
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      minHeight: 8,
-                      value: book.chaptersRead / book.totalChapters,
-                      backgroundColor: PlumoraColors.muted,
-                      color: PlumoraColors.primary,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () {},
-                    child: Text(
-                      book.status == 'À lire'
-                          ? 'Commencer la lecture'
-                          : 'Continuer',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return const BetaInvitationsScreen(embedded: true);
   }
 }
 
 class _LibraryStats extends StatelessWidget {
-  const _LibraryStats();
+  const _LibraryStats({required this.savedCount, required this.finishedCount});
+
+  final int savedCount;
+  final int finishedCount;
 
   @override
   Widget build(BuildContext context) {
@@ -524,10 +396,19 @@ class _LibraryStats extends StatelessWidget {
         return Wrap(
           spacing: spacing,
           runSpacing: 14,
-          children: const [
-            _LibraryStat(label: 'Livres sauvegardés', value: '12'),
-            _LibraryStat(label: 'Livres terminés', value: '8'),
-            _LibraryStat(label: 'Temps de lecture total', value: '45h'),
+          children: [
+            _LibraryStat(
+              label: 'Livres sauvegardés',
+              value: savedCount.toString(),
+            ),
+            _LibraryStat(
+              label: 'Livres terminés',
+              value: finishedCount.toString(),
+            ),
+            _LibraryStat(
+              label: 'En cours',
+              value: (savedCount - finishedCount).toString(),
+            ),
           ].map((card) => SizedBox(width: width, child: card)).toList(),
         );
       },
@@ -571,6 +452,66 @@ class _LibraryStat extends StatelessWidget {
   }
 }
 
+class _LibraryStateCard extends StatelessWidget {
+  const _LibraryStateCard({
+    required this.title,
+    required this.subtitle,
+    this.action,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return PlumoraCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: const TextStyle(color: PlumoraColors.textSecondary),
+          ),
+          if (action != null) ...[const SizedBox(height: 16), action!],
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineWarning extends StatelessWidget {
+  const _InlineWarning({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7E6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: PlumoraColors.border),
+      ),
+      child: Text(
+        'Progression indisponible : $message',
+        style: const TextStyle(
+          color: PlumoraColors.textSecondary,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
 class _Meta extends StatelessWidget {
   const _Meta({required this.icon, required this.label});
 
@@ -597,26 +538,30 @@ class _Meta extends StatelessWidget {
 }
 
 class _RatingStars extends StatelessWidget {
-  const _RatingStars({required this.rating, this.small = false});
+  const _RatingStars({required this.rating});
 
   final int rating;
-  final bool small;
 
   @override
   Widget build(BuildContext context) {
-    final size = small ? 13.0 : 15.0;
+    if (rating == 0) {
+      return const Text(
+        'Aucune note',
+        style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 12),
+      );
+    }
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var index = 0; index < rating; index++)
-          Icon(Icons.star, size: size, color: const Color(0xFFF5C84C)),
+          Icon(Icons.star, size: 15, color: const Color(0xFFF5C84C)),
         const SizedBox(width: 5),
         Text(
           '$rating/5',
-          style: TextStyle(
+          style: const TextStyle(
             color: PlumoraColors.textPrimary,
-            fontSize: small ? 11 : 12,
+            fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -625,128 +570,36 @@ class _RatingStars extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.foregroundColor,
-    required this.backgroundColor,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color foregroundColor;
-  final Color backgroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: foregroundColor),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: foregroundColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
+String _lastReadLabel(DateTime? updatedAt) {
+  if (updatedAt == null) {
+    return 'Lecture récente';
   }
+
+  final now = DateTime.now();
+  final difference = now.difference(updatedAt.toLocal());
+  if (difference.inHours < 1) {
+    return 'Lu à l’instant';
+  }
+  if (difference.inHours < 24) {
+    return 'Lu il y a ${difference.inHours} heure${difference.inHours > 1 ? 's' : ''}';
+  }
+  if (difference.inDays == 1) {
+    return 'Lu hier';
+  }
+  return 'Lu il y a ${difference.inDays} jours';
 }
 
-const _savedBooks = [
-  _LibraryBook(
-    title: "Les Chroniques d'Eldoria",
-    author: 'Sophie Martin',
-    progress: 65,
-    lastRead: 'il y a 2 heures',
-    rating: 5,
-    colors: [Color(0xFF7C3AED), Color(0xFFDB2777)],
-  ),
-  _LibraryBook(
-    title: 'Au-delà des Étoiles',
-    author: 'Marc Dubois',
-    progress: 23,
-    lastRead: 'hier',
-    rating: 4,
-    colors: [Color(0xFF2563EB), Color(0xFF06B6D4)],
-  ),
-  _LibraryBook(
-    title: 'Le Dernier Refuge',
-    author: 'Emma Laurent',
-    progress: 100,
-    lastRead: 'il y a 3 jours',
-    rating: 5,
-    colors: [Color(0xFFDC2626), Color(0xFFEA580C)],
-  ),
-];
-
-const _betaBooks = [
-  _BetaBook(
-    title: 'La Nuit Rouge',
-    author: 'Kevin Fonkou',
-    status: 'À lire',
-    deadline: '12 juin',
-    chaptersRead: 0,
-    totalChapters: 8,
-    colors: [Color(0xFFDC2626), Color(0xFFEA580C)],
-  ),
-  _BetaBook(
-    title: 'Les Ombres de Minuit',
-    author: 'Sophie Martin',
-    status: 'Retour en cours',
-    deadline: '20 juin',
-    chaptersRead: 5,
-    totalChapters: 10,
-    colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
-  ),
-];
-
-class _LibraryBook {
-  const _LibraryBook({
-    required this.title,
-    required this.author,
-    required this.progress,
-    required this.lastRead,
-    required this.rating,
-    required this.colors,
-  });
-
-  final String title;
-  final String author;
-  final int progress;
-  final String lastRead;
-  final int rating;
-  final List<Color> colors;
-}
-
-class _BetaBook {
-  const _BetaBook({
-    required this.title,
-    required this.author,
-    required this.status,
-    required this.deadline,
-    required this.chaptersRead,
-    required this.totalChapters,
-    required this.colors,
-  });
-
-  final String title;
-  final String author;
-  final String status;
-  final String deadline;
-  final int chaptersRead;
-  final int totalChapters;
-  final List<Color> colors;
+List<Color> _catalogCoverColors(CatalogBookModel book) {
+  final palettes = [
+    [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
+    [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
+    [const Color(0xFFDC2626), const Color(0xFFEA580C)],
+    [const Color(0xFFDB2777), const Color(0xFFE11D48)],
+    [const Color(0xFF4F46E5), const Color(0xFF7C3AED)],
+    [const Color(0xFF059669), const Color(0xFF0D9488)],
+  ];
+  final key = book.id.isEmpty ? book.title : book.id;
+  final index =
+      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
+  return palettes[index];
 }

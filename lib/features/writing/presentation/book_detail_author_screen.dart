@@ -67,8 +67,11 @@ class _BookDetailAuthorScreenState
                       isMutating: _isMutating,
                       error: _error,
                       onPublish: book.canPublish
-                          ? () => _publish(book.id)
+                          ? () => context.go(AppRoutes.publishBookPath(book.id))
                           : null,
+                      onBeta: () => context.go(
+                        AppRoutes.authorBetaCampaignsPath(book.id),
+                      ),
                       onArchive: book.isArchived
                           ? null
                           : () => _archive(book.id),
@@ -120,7 +123,10 @@ class _BookDetailAuthorScreenState
                               PlumoraCard(
                                 padding: const EdgeInsets.all(16),
                                 onTap: () => context.go(
-                                  AppRoutes.chapterEditorPath(book.id),
+                                  AppRoutes.authorChapterDetailPath(
+                                    chapter.id,
+                                    bookId: book.id,
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
@@ -187,10 +193,6 @@ class _BookDetailAuthorScreenState
     );
   }
 
-  Future<void> _publish(String bookId) async {
-    await _mutate(() => ref.read(bookRepositoryProvider).publishBook(bookId));
-  }
-
   Future<void> _archive(String bookId) async {
     await _mutate(() => ref.read(bookRepositoryProvider).archiveBook(bookId));
   }
@@ -220,6 +222,7 @@ class _BookHeader extends StatelessWidget {
     required this.book,
     required this.isMutating,
     required this.onPublish,
+    required this.onBeta,
     required this.onArchive,
     this.error,
   });
@@ -227,6 +230,7 @@ class _BookHeader extends StatelessWidget {
   final BookModel book;
   final bool isMutating;
   final VoidCallback? onPublish;
+  final VoidCallback? onBeta;
   final VoidCallback? onArchive;
   final String? error;
 
@@ -293,6 +297,11 @@ class _BookHeader extends StatelessWidget {
               OutlinedButton(
                 onPressed: isMutating ? null : onPublish,
                 child: Text(isMutating ? '...' : 'Publier'),
+              ),
+              OutlinedButton.icon(
+                onPressed: isMutating ? null : onBeta,
+                icon: const Icon(Icons.groups_outlined, size: 18),
+                label: const Text('Bêta-test'),
               ),
               TextButton(
                 onPressed: isMutating ? null : onArchive,

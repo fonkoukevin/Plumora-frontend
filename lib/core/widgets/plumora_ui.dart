@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/plumora_colors.dart';
 
-class PlumoraCard extends StatelessWidget {
+class PlumoraCard extends StatefulWidget {
   const PlumoraCard({
     required this.child,
     this.padding = const EdgeInsets.all(24),
@@ -25,26 +25,39 @@ class PlumoraCard extends StatelessWidget {
   final bool clip;
 
   @override
+  State<PlumoraCard> createState() => _PlumoraCardState();
+}
+
+class _PlumoraCardState extends State<PlumoraCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final card = Container(
+    final hasHover = widget.onTap != null && _hovered;
+    final card = AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
       width: double.infinity,
-      clipBehavior: clip || leftAccent != null ? Clip.antiAlias : Clip.none,
+      clipBehavior: widget.clip || widget.leftAccent != null
+          ? Clip.antiAlias
+          : Clip.none,
       decoration: BoxDecoration(
         color: PlumoraColors.cards,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: borderColor),
-        boxShadow: shadow
-            ? const [
+        borderRadius: BorderRadius.circular(widget.radius),
+        border: Border.all(color: widget.borderColor),
+        boxShadow: widget.shadow
+            ? [
                 BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 14,
-                  offset: Offset(0, 7),
+                  color: hasHover
+                      ? const Color(0x18000000)
+                      : const Color(0x0D000000),
+                  blurRadius: hasHover ? 8 : 2,
+                  offset: Offset(0, hasHover ? 4 : 1),
                 ),
               ]
             : null,
       ),
-      child: leftAccent == null
-          ? Padding(padding: padding, child: child)
+      child: widget.leftAccent == null
+          ? Padding(padding: widget.padding, child: widget.child)
           : Stack(
               children: [
                 Positioned(
@@ -52,25 +65,32 @@ class PlumoraCard extends StatelessWidget {
                   top: 0,
                   bottom: 0,
                   child: ColoredBox(
-                    color: leftAccent!,
+                    color: widget.leftAccent!,
                     child: const SizedBox(width: 4),
                   ),
                 ),
-                Padding(padding: padding, child: child),
+                Padding(padding: widget.padding, child: widget.child),
               ],
             ),
     );
 
-    if (onTap == null) {
+    if (widget.onTap == null) {
       return card;
     }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: card,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          hoverColor: Colors.transparent,
+          splashColor: PlumoraColors.primary.withValues(alpha: 0.08),
+          highlightColor: PlumoraColors.primary.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(widget.radius),
+          child: card,
+        ),
       ),
     );
   }
@@ -128,7 +148,7 @@ class PlumoraBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(999),
@@ -144,8 +164,8 @@ class PlumoraBadge extends StatelessWidget {
             label,
             style: TextStyle(
               color: foregroundColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -172,13 +192,13 @@ class PlumoraSegmentedTabs extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final tab in tabs) ...[
+          for (var index = 0; index < tabs.length; index++) ...[
             _PlumoraTabButton(
-              label: tab,
-              selected: selectedTab == tab,
-              onTap: () => onSelected(tab),
+              label: tabs[index],
+              selected: selectedTab == tabs[index],
+              onTap: () => onSelected(tabs[index]),
             ),
-            const SizedBox(width: 8),
+            if (index != tabs.length - 1) const SizedBox(width: 8),
           ],
         ],
       ),
@@ -186,7 +206,7 @@ class PlumoraSegmentedTabs extends StatelessWidget {
   }
 }
 
-class _PlumoraTabButton extends StatelessWidget {
+class _PlumoraTabButton extends StatefulWidget {
   const _PlumoraTabButton({
     required this.label,
     required this.selected,
@@ -198,20 +218,87 @@ class _PlumoraTabButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_PlumoraTabButton> createState() => _PlumoraTabButtonState();
+}
+
+class _PlumoraTabButtonState extends State<_PlumoraTabButton> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: onTap,
-      style: FilledButton.styleFrom(
-        elevation: selected ? 3 : 0,
-        backgroundColor: selected
-            ? PlumoraColors.primary
-            : const Color(0xFFF3EBDD),
-        foregroundColor: selected ? Colors.white : PlumoraColors.textSecondary,
-        shadowColor: const Color(0x33000000),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-        minimumSize: const Size(0, 44),
+    final selected = widget.selected;
+    final textColor = selected
+        ? Colors.white
+        : _hovered
+        ? PlumoraColors.textPrimary
+        : PlumoraColors.textSecondary;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        hoverColor: Colors.transparent,
+        splashColor: PlumoraColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 52,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? PlumoraColors.primary
+                      : _hovered
+                      ? PlumoraColors.muted
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: selected
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+              if (selected)
+                Positioned(
+                  bottom: 4,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: PlumoraColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
-      child: Text(label),
     );
   }
 }
@@ -221,7 +308,7 @@ class PlumoraBookCover extends StatelessWidget {
     required this.colors,
     this.width = 80,
     this.height = 112,
-    this.radius = 14,
+    this.radius = 12,
     super.key,
   });
 

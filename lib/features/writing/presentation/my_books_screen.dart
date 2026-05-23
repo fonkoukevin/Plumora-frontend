@@ -281,7 +281,7 @@ class _BookCardState extends ConsumerState<_BookCard> {
               FilledButton(
                 onPressed: _isMutating || !book.canPublish
                     ? null
-                    : () => _publish(book.id),
+                    : () => context.go(AppRoutes.publishBookPath(book.id)),
                 child: Text(_isMutating ? '...' : 'Publier'),
               ),
               TextButton(
@@ -295,10 +295,6 @@ class _BookCardState extends ConsumerState<_BookCard> {
         ],
       ),
     );
-  }
-
-  Future<void> _publish(String bookId) async {
-    await _mutate(() => ref.read(bookRepositoryProvider).publishBook(bookId));
   }
 
   Future<void> _archive(String bookId) async {

@@ -70,57 +70,109 @@ abstract final class PlumoraTheme {
         color: isDark
             ? colorScheme.surfaceContainerHighest
             : PlumoraColors.cards,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: PlumoraColors.primary,
-          foregroundColor: PlumoraColors.cards,
-          disabledBackgroundColor: const Color(0xFFD7C49E),
-          disabledForegroundColor: PlumoraColors.cards,
-          elevation: 2,
-          shadowColor: const Color(0x33000000),
-          minimumSize: const Size(0, 42),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const Color(0xFFD7C49E);
+            }
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.pressed)) {
+              return PlumoraColors.primary.withValues(alpha: 0.9);
+            }
+            return PlumoraColors.primary;
+          }),
+          foregroundColor: const WidgetStatePropertyAll(PlumoraColors.cards),
+          overlayColor: WidgetStatePropertyAll(
+            PlumoraColors.cards.withValues(alpha: 0.08),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          elevation: const WidgetStatePropertyAll(1),
+          shadowColor: const WidgetStatePropertyAll(Color(0x1A000000)),
+          minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          ),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: PlumoraColors.primary,
-          minimumSize: const Size(0, 42),
-          side: const BorderSide(color: PlumoraColors.primary),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.pressed)) {
+              return PlumoraColors.primary;
+            }
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.pressed)) {
+              return PlumoraColors.cards;
+            }
+            return PlumoraColors.primary;
+          }),
+          overlayColor: WidgetStatePropertyAll(
+            PlumoraColors.primary.withValues(alpha: 0.08),
           ),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+          side: const WidgetStatePropertyAll(
+            BorderSide(color: PlumoraColors.primary, width: 2),
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          ),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: PlumoraColors.primary,
-          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        style: ButtonStyle(
+          foregroundColor: const WidgetStatePropertyAll(PlumoraColors.primary),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.pressed)) {
+              return PlumoraColors.muted;
+            }
+            return Colors.transparent;
+          }),
+          overlayColor: WidgetStatePropertyAll(
+            PlumoraColors.primary.withValues(alpha: 0.08),
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         isDense: true,
         filled: true,
         fillColor: PlumoraColors.cards,
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 44),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 10,
         ),
         labelStyle: const TextStyle(
-          color: PlumoraColors.textSecondary,
-          fontSize: 13,
+          color: PlumoraColors.textPrimary,
+          fontSize: 14,
         ),
         floatingLabelStyle: const TextStyle(
-          color: PlumoraColors.textSecondary,
-          fontSize: 13,
+          color: PlumoraColors.textPrimary,
+          fontSize: 14,
         ),
         hintStyle: const TextStyle(color: Color(0xFF9E9A96), fontSize: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

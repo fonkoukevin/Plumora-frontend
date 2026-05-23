@@ -29,7 +29,8 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
   String? _loadedChapterId;
   bool _isSaving = false;
   bool _isCreating = false;
-  bool _isPublishing = false;
+  final bool _isPublishing = false;
+  bool _isDeleting = false;
   String? _error;
 
   @override
@@ -92,12 +93,18 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
             isSaving: _isSaving,
             isCreating: _isCreating,
             isPublishing: _isPublishing,
+            isDeleting: _isDeleting,
             onSelectChapter: _selectChapter,
             onCreateChapter: () => _createChapter(book.id, chapters.length),
             onSave: selectedChapter == null
                 ? null
                 : () => _saveChapter(selectedChapter),
-            onPublish: book.canPublish ? () => _publishBook(book.id) : null,
+            onDelete: selectedChapter == null
+                ? null
+                : () => _confirmDeleteChapter(selectedChapter),
+            onPublish: book.canPublish
+                ? () => context.go(AppRoutes.publishBookPath(book.id))
+                : null,
           );
         }
 
@@ -111,12 +118,18 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
           isSaving: _isSaving,
           isCreating: _isCreating,
           isPublishing: _isPublishing,
+          isDeleting: _isDeleting,
           onSelectChapter: _selectChapter,
           onCreateChapter: () => _createChapter(book.id, chapters.length),
           onSave: selectedChapter == null
               ? null
               : () => _saveChapter(selectedChapter),
-          onPublish: book.canPublish ? () => _publishBook(book.id) : null,
+          onDelete: selectedChapter == null
+              ? null
+              : () => _confirmDeleteChapter(selectedChapter),
+          onPublish: book.canPublish
+              ? () => context.go(AppRoutes.publishBookPath(book.id))
+              : null,
         );
       },
     );
@@ -217,21 +230,56 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
     }
   }
 
-  Future<void> _publishBook(String bookId) async {
+  Future<void> _confirmDeleteChapter(ChapterModel chapter) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.48),
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer ce chapitre ?'),
+        content: Text(
+          chapter.title.trim().isEmpty
+              ? 'Cette action est définitive.'
+              : '"${chapter.title}" sera définitivement supprimé.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.delete_outline, size: 16),
+            label: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteChapter(chapter);
+    }
+  }
+
+  Future<void> _deleteChapter(ChapterModel chapter) async {
     setState(() {
-      _isPublishing = true;
+      _isDeleting = true;
       _error = null;
     });
 
     try {
-      await ref.read(bookRepositoryProvider).publishBook(bookId);
-      ref.invalidate(authorBookProvider(bookId));
+      await ref.read(chapterRepositoryProvider).deleteChapter(chapter.id);
+      ref.invalidate(bookChaptersProvider(chapter.bookId));
+      ref.invalidate(authorBookProvider(chapter.bookId));
       ref.invalidate(myBooksProvider);
+      setState(() {
+        _selectedChapterId = null;
+        _loadedChapterId = null;
+      });
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
     } finally {
       if (mounted) {
-        setState(() => _isPublishing = false);
+        setState(() => _isDeleting = false);
       }
     }
   }
@@ -247,10 +295,12 @@ class _DesktopEditor extends StatelessWidget {
     required this.onSelectChapter,
     required this.onCreateChapter,
     required this.onSave,
+    required this.onDelete,
     required this.onPublish,
     required this.isSaving,
     required this.isCreating,
     required this.isPublishing,
+    required this.isDeleting,
     this.error,
   });
 
@@ -262,10 +312,12 @@ class _DesktopEditor extends StatelessWidget {
   final ValueChanged<ChapterModel> onSelectChapter;
   final VoidCallback onCreateChapter;
   final VoidCallback? onSave;
+  final VoidCallback? onDelete;
   final VoidCallback? onPublish;
   final bool isSaving;
   final bool isCreating;
   final bool isPublishing;
+  final bool isDeleting;
   final String? error;
 
   @override
@@ -295,9 +347,11 @@ class _DesktopEditor extends StatelessWidget {
               contentController: contentController,
               error: error,
               onSave: onSave,
+              onDelete: onDelete,
               onPublish: onPublish,
               isSaving: isSaving,
               isPublishing: isPublishing,
+              isDeleting: isDeleting,
               expanded: true,
             ),
           ),
@@ -317,10 +371,12 @@ class _MobileEditor extends StatelessWidget {
     required this.onSelectChapter,
     required this.onCreateChapter,
     required this.onSave,
+    required this.onDelete,
     required this.onPublish,
     required this.isSaving,
     required this.isCreating,
     required this.isPublishing,
+    required this.isDeleting,
     this.error,
   });
 
@@ -332,10 +388,12 @@ class _MobileEditor extends StatelessWidget {
   final ValueChanged<ChapterModel> onSelectChapter;
   final VoidCallback onCreateChapter;
   final VoidCallback? onSave;
+  final VoidCallback? onDelete;
   final VoidCallback? onPublish;
   final bool isSaving;
   final bool isCreating;
   final bool isPublishing;
+  final bool isDeleting;
   final String? error;
 
   @override
@@ -362,9 +420,11 @@ class _MobileEditor extends StatelessWidget {
             contentController: contentController,
             error: error,
             onSave: onSave,
+            onDelete: onDelete,
             onPublish: onPublish,
             isSaving: isSaving,
             isPublishing: isPublishing,
+            isDeleting: isDeleting,
             expanded: false,
           ),
         ],
@@ -573,9 +633,11 @@ class _EditorCard extends StatelessWidget {
     required this.titleController,
     required this.contentController,
     required this.onSave,
+    required this.onDelete,
     required this.onPublish,
     required this.isSaving,
     required this.isPublishing,
+    required this.isDeleting,
     required this.expanded,
     this.error,
   });
@@ -585,9 +647,11 @@ class _EditorCard extends StatelessWidget {
   final TextEditingController titleController;
   final TextEditingController contentController;
   final VoidCallback? onSave;
+  final VoidCallback? onDelete;
   final VoidCallback? onPublish;
   final bool isSaving;
   final bool isPublishing;
+  final bool isDeleting;
   final bool expanded;
   final String? error;
 
@@ -662,6 +726,39 @@ class _EditorCard extends StatelessWidget {
                     runSpacing: 10,
                     alignment: WrapAlignment.end,
                     children: [
+                      TextButton.icon(
+                        onPressed: isDeleting || isSaving ? null : onDelete,
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: Text(
+                          isDeleting ? 'Suppression...' : 'Supprimer',
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: PlumoraColors.destructive,
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: selectedChapter == null
+                            ? null
+                            : () => context.go(
+                                AppRoutes.authorChapterDetailPath(
+                                  selectedChapter!.id,
+                                  bookId: book.id,
+                                ),
+                              ),
+                        icon: const Icon(Icons.open_in_new, size: 17),
+                        label: const Text('Détail'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: selectedChapter == null
+                            ? null
+                            : () => context.go(
+                                AppRoutes.mukemeWritingPath(
+                                  chapterId: selectedChapter!.id,
+                                ),
+                              ),
+                        icon: const Icon(Icons.auto_awesome, size: 17),
+                        label: const Text('Mukeme'),
+                      ),
                       OutlinedButton(
                         onPressed: isPublishing ? null : onPublish,
                         child: Text(

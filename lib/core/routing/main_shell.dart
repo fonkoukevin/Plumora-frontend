@@ -66,8 +66,8 @@ class MainShell extends StatelessWidget {
     ),
     ShellDestination(
       label: 'Bêta-retours',
-      icon: Icons.rate_review_outlined,
-      selectedIcon: Icons.rate_review,
+      icon: Icons.forum_outlined,
+      selectedIcon: Icons.forum,
       path: AppRoutes.betaFeedback,
     ),
     ShellDestination(
@@ -161,7 +161,7 @@ class _MobileBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 61,
+      height: 70,
       decoration: const BoxDecoration(
         color: PlumoraColors.cards,
         border: Border(top: BorderSide(color: PlumoraColors.border)),
@@ -196,18 +196,18 @@ class _BottomNavItem extends StatelessWidget {
     return InkWell(
       onTap: () => context.go(destination.path),
       child: Padding(
-        padding: const EdgeInsets.only(top: 7, bottom: 5),
+        padding: const EdgeInsets.only(top: 9, bottom: 7),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             destination.useLogoMark
-                ? PlumoraLogoMark(size: 20, color: color, strokeWidth: 2.2)
+                ? PlumoraLogoMark(size: 24, color: color, strokeWidth: 2.2)
                 : Icon(
                     selected ? destination.selectedIcon : destination.icon,
                     color: color,
-                    size: 20,
+                    size: 24,
                   ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
@@ -215,7 +215,7 @@ class _BottomNavItem extends StatelessWidget {
                 maxLines: 1,
                 style: TextStyle(
                   color: color,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),

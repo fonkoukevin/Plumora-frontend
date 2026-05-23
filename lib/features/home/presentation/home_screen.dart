@@ -67,7 +67,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () => context.go(AppRoutes.notifications),
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(50, 32),
@@ -159,7 +159,7 @@ class _HomeHeader extends StatelessWidget {
               ),
             ),
             IconButton(
-              onPressed: () {},
+              onPressed: () => context.go(AppRoutes.notifications),
               icon: const Icon(Icons.notifications_none_outlined),
               color: PlumoraColors.textSecondary,
               iconSize: 21,

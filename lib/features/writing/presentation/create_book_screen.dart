@@ -75,20 +75,20 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final horizontal = constraints.maxWidth >= 760 ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 82.0;
+        const horizontal = 16.0;
+        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 92.0;
 
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             horizontal,
-            16,
+            32,
             horizontal,
             bottomPadding,
           ),
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: constraints.maxWidth >= 760 ? 560 : 430,
+                maxWidth: constraints.maxWidth >= 760 ? 768 : 430,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,30 +116,30 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                     icon: const Icon(Icons.arrow_back, size: 16),
                     label: const Text('Retour'),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 28),
                   Text(
                     isEditing ? 'Modifier le livre' : 'Créer un nouveau livre',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.black,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      height: 1.08,
+                      color: PlumoraColors.textPrimary,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
                     ),
                   ),
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 8),
                   Text(
                     isEditing
                         ? 'Mets à jour les informations de ton manuscrit'
                         : 'Remplissez les informations pour commencer votre nouveau projet',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: PlumoraColors.textSecondary,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   PlumoraCard(
-                    radius: 12,
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 15),
+                    radius: 16,
+                    padding: const EdgeInsets.all(24),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -163,7 +163,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           const _FieldLabel('Genre'),
                           DropdownButtonFormField<String>(
                             initialValue: _selectedGenre,
@@ -184,7 +184,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                                     _selectedGenre = value;
                                   }),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           const _FieldLabel('Résumé court'),
                           TextFormField(
                             controller: _descriptionController,
@@ -196,7 +196,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                                   'Décrivez votre livre en quelques lignes...',
                             ),
                           ),
-                          const SizedBox(height: 17),
+                          const SizedBox(height: 24),
                           const _FieldLabel('Visibilité'),
                           RadioGroup<String>(
                             groupValue: _visibility,
@@ -210,7 +210,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                                   subtitle: 'Visible uniquement par vous',
                                   onTap: () => _setVisibility('PRIVATE'),
                                 ),
-                                const SizedBox(height: 7),
+                                const SizedBox(height: 8),
                                 _VisibilityOption(
                                   value: 'BETA_ONLY',
                                   selected: _visibility == 'BETA_ONLY',
@@ -219,7 +219,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                                       'Accessible aux bêta-testeurs sélectionnés',
                                   onTap: () => _setVisibility('BETA_ONLY'),
                                 ),
-                                const SizedBox(height: 7),
+                                const SizedBox(height: 8),
                                 _VisibilityOption(
                                   value: 'PUBLIC',
                                   selected: _visibility == 'PUBLIC',
@@ -458,9 +458,9 @@ class _FieldLabel extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          color: Colors.black,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+          color: PlumoraColors.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -488,11 +488,11 @@ class _VisibilityOption extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 51),
-        padding: const EdgeInsets.fromLTRB(9, 7, 12, 7),
+        constraints: const BoxConstraints(minHeight: 72),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: PlumoraColors.cards,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? PlumoraColors.primary : PlumoraColors.border,
           ),
@@ -513,9 +513,9 @@ class _VisibilityOption extends StatelessWidget {
                   Text(
                     title,
                     style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                      color: PlumoraColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -523,7 +523,7 @@ class _VisibilityOption extends StatelessWidget {
                     subtitle,
                     style: const TextStyle(
                       color: PlumoraColors.textSecondary,
-                      fontSize: 10,
+                      fontSize: 14,
                     ),
                   ),
                 ],

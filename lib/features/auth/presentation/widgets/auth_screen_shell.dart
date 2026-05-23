@@ -212,15 +212,32 @@ class PlumoraTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      textInputAction: textInputAction,
-      obscureText: obscureText,
-      validator: validator,
-      onFieldSubmitted: onFieldSubmitted,
-      style: const TextStyle(fontSize: 16, color: PlumoraColors.textPrimary),
-      decoration: InputDecoration(labelText: label, hintText: hint),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: PlumoraColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          obscureText: obscureText,
+          validator: validator,
+          onFieldSubmitted: onFieldSubmitted,
+          style: const TextStyle(
+            fontSize: 16,
+            color: PlumoraColors.textPrimary,
+          ),
+          decoration: InputDecoration(hintText: hint),
+        ),
+      ],
     );
   }
 }

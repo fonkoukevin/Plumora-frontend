@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../beta_reading/presentation/author_beta_comments_screen.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/repositories/book_repository.dart';
 
@@ -29,13 +30,13 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobilePanel = constraints.maxWidth < 520;
-        final horizontal = constraints.maxWidth >= 760 ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 82.0;
+        const horizontal = 16.0;
+        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 92.0;
 
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             horizontal,
-            22,
+            32,
             horizontal,
             bottomPadding,
           ),
@@ -46,7 +47,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _Header(isCompact: constraints.maxWidth < 560),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 32),
                   _AuthorTabs(
                     activeTab: _activeTab,
                     onChanged: (tab) => setState(() => _activeTab = tab),
@@ -64,7 +65,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                           books: books,
                           onRefresh: () => ref.invalidate(myBooksProvider),
                         ),
-                        _AuthorTab.feedback => _FeedbackTab(books: books),
+                        _AuthorTab.feedback => const _FeedbackTab(),
                         _AuthorTab.publication => _PublicationTab(
                           books: books,
                           onRefresh: () => ref.invalidate(myBooksProvider),
@@ -96,17 +97,17 @@ class _Header extends StatelessWidget {
           'Écrire',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: PlumoraColors.textPrimary,
-            fontSize: 27,
-            fontWeight: FontWeight.w900,
-            height: 1.05,
+            fontSize: 36,
+            fontWeight: FontWeight.w700,
+            height: 1.1,
           ),
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 8),
         Text(
-          "Gérez vos manuscrits et votre activité\nd'auteur",
+          "Gérez vos manuscrits et votre activité d'auteur",
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: PlumoraColors.textSecondary,
-            fontSize: 13,
+            fontSize: 14,
             height: 1.45,
           ),
         ),
@@ -152,22 +153,29 @@ class _NewBookButton extends StatelessWidget {
       shadowColor: const Color(0x22000000),
       child: InkWell(
         onTap: onTap,
+        hoverColor: Colors.white.withValues(alpha: 0.10),
+        splashColor: Colors.white.withValues(alpha: 0.12),
+        highlightColor: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         child: const SizedBox(
           width: 146,
-          height: 42,
+          height: 66,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.add, color: Colors.white, size: 18),
               SizedBox(width: 8),
-              Text(
-                'Nouveau livre',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  'Nouveau livre',
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    height: 1.1,
+                  ),
                 ),
               ),
             ],
@@ -186,49 +194,34 @@ class _AuthorTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final gap = constraints.maxWidth < 380 ? 8.0 : 16.0;
-
-        return SizedBox(
-          height: 42,
-          child: Row(
-            children: [
-              Expanded(
-                flex: activeTab == _AuthorTab.manuscripts ? 4 : 3,
-                child: _TabButton(
-                  label: 'Mes manuscrits',
-                  selected: activeTab == _AuthorTab.manuscripts,
-                  onTap: () => onChanged(_AuthorTab.manuscripts),
-                ),
-              ),
-              SizedBox(width: gap),
-              Expanded(
-                flex: activeTab == _AuthorTab.feedback ? 4 : 3,
-                child: _TabButton(
-                  label: 'Retours bêta',
-                  selected: activeTab == _AuthorTab.feedback,
-                  onTap: () => onChanged(_AuthorTab.feedback),
-                ),
-              ),
-              SizedBox(width: gap),
-              Expanded(
-                flex: activeTab == _AuthorTab.publication ? 4 : 3,
-                child: _TabButton(
-                  label: 'Publication',
-                  selected: activeTab == _AuthorTab.publication,
-                  onTap: () => onChanged(_AuthorTab.publication),
-                ),
-              ),
-            ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _TabButton(
+            label: 'Mes manuscrits',
+            selected: activeTab == _AuthorTab.manuscripts,
+            onTap: () => onChanged(_AuthorTab.manuscripts),
           ),
-        );
-      },
+          const SizedBox(width: 8),
+          _TabButton(
+            label: 'Retours bêta',
+            selected: activeTab == _AuthorTab.feedback,
+            onTap: () => onChanged(_AuthorTab.feedback),
+          ),
+          const SizedBox(width: 8),
+          _TabButton(
+            label: 'Publication',
+            selected: activeTab == _AuthorTab.publication,
+            onTap: () => onChanged(_AuthorTab.publication),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _TabButton extends StatelessWidget {
+class _TabButton extends StatefulWidget {
   const _TabButton({
     required this.label,
     required this.selected,
@@ -240,62 +233,85 @@ class _TabButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_TabButton> createState() => _TabButtonState();
+}
+
+class _TabButtonState extends State<_TabButton> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(11),
-      child: SizedBox(
-        height: 42,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.topCenter,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              width: double.infinity,
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: selected ? PlumoraColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(11),
-                boxShadow: selected
-                    ? const [
-                        BoxShadow(
-                          color: Color(0x26000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Center(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: selected
-                        ? Colors.white
-                        : PlumoraColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+    final selected = widget.selected;
+    final textColor = selected
+        ? Colors.white
+        : _hovered
+        ? PlumoraColors.textPrimary
+        : PlumoraColors.textSecondary;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        hoverColor: Colors.transparent,
+        splashColor: PlumoraColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 52,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? PlumoraColors.primary
+                      : _hovered
+                      ? PlumoraColors.muted
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: selected
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x26000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (selected)
-              Positioned(
-                bottom: 0,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: PlumoraColors.primary,
-                    shape: BoxShape.circle,
+              if (selected)
+                Positioned(
+                  bottom: 4,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: PlumoraColors.primary,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -372,7 +388,6 @@ class _AuthorBookCard extends ConsumerStatefulWidget {
 }
 
 class _AuthorBookCardState extends ConsumerState<_AuthorBookCard> {
-  bool _isPublishing = false;
   bool _isArchiving = false;
   String? _error;
 
@@ -438,6 +453,17 @@ class _AuthorBookCardState extends ConsumerState<_AuthorBookCard> {
                     ),
                     const SizedBox(width: 4),
                     _CardIconAction(
+                      icon: Icons.groups_outlined,
+                      color: PlumoraColors.info,
+                      tooltip: 'Bêta-test',
+                      onTap: book.isArchived
+                          ? null
+                          : () => context.go(
+                              AppRoutes.authorBetaCampaignsPath(book.id),
+                            ),
+                    ),
+                    const SizedBox(width: 4),
+                    _CardIconAction(
                       icon: Icons.delete_outline,
                       color: PlumoraColors.destructive,
                       tooltip: 'Supprimer',
@@ -461,36 +487,13 @@ class _AuthorBookCardState extends ConsumerState<_AuthorBookCard> {
                   ),
                 ],
                 const SizedBox(height: 15),
-                _BookPrimaryAction(
-                  book: book,
-                  isPublishing: _isPublishing,
-                  onPublish: () => _publish(book.id),
-                ),
+                _BookPrimaryAction(book: book),
               ],
             ),
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _publish(String bookId) async {
-    setState(() {
-      _isPublishing = true;
-      _error = null;
-    });
-
-    try {
-      await ref.read(bookRepositoryProvider).publishBook(bookId);
-      ref.invalidate(myBooksProvider);
-      widget.onRefresh();
-    } catch (error) {
-      setState(() => _error = AppError.messageFor(error));
-    } finally {
-      if (mounted) {
-        setState(() => _isPublishing = false);
-      }
-    }
   }
 
   Future<void> _confirmArchive(BookModel book) async {
@@ -544,6 +547,9 @@ class _CardIconAction extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: onTap,
+        hoverColor: color.withValues(alpha: 0.10),
+        splashColor: color.withValues(alpha: 0.12),
+        highlightColor: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
           width: 28,
@@ -853,30 +859,23 @@ class _InfoStrip extends StatelessWidget {
 }
 
 class _BookPrimaryAction extends StatelessWidget {
-  const _BookPrimaryAction({
-    required this.book,
-    required this.isPublishing,
-    required this.onPublish,
-  });
+  const _BookPrimaryAction({required this.book});
 
   final BookModel book;
-  final bool isPublishing;
-  final VoidCallback onPublish;
 
   @override
   Widget build(BuildContext context) {
     switch (book.status) {
       case BookStatus.readyToPublish:
         return FilledButton(
-          onPressed: isPublishing ? null : onPublish,
+          onPressed: () => context.go(AppRoutes.publishBookPath(book.id)),
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(43)),
-          child: Text(
-            isPublishing ? 'Publication...' : 'Soumettre à publication',
-          ),
+          child: const Text('Soumettre à publication'),
         );
       case BookStatus.inBetaReading:
         return OutlinedButton(
-          onPressed: () => context.go(AppRoutes.betaFeedback),
+          onPressed: () =>
+              context.go(AppRoutes.authorBetaCommentsPath(book.id)),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(43),
           ),
@@ -891,11 +890,9 @@ class _BookPrimaryAction extends StatelessWidget {
           child: const Text('Voir le détail'),
         );
       default:
-        return OutlinedButton(
+        return FilledButton(
           onPressed: () => context.go(AppRoutes.chapterEditorPath(book.id)),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(43),
-          ),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(43)),
           child: const Text('Continuer'),
         );
     }
@@ -953,36 +950,11 @@ class _StatsCard extends StatelessWidget {
 }
 
 class _FeedbackTab extends StatelessWidget {
-  const _FeedbackTab({required this.books});
-
-  final List<BookModel> books;
+  const _FeedbackTab();
 
   @override
   Widget build(BuildContext context) {
-    final betaBooks = books
-        .where(
-          (book) =>
-              book.status == BookStatus.inBetaReading ||
-              book.status == BookStatus.inCorrection,
-        )
-        .toList(growable: false);
-
-    if (betaBooks.isEmpty) {
-      return const _PassivePanel(
-        title: 'Aucun retour bêta',
-        subtitle: 'Les livres en bêta-lecture apparaîtront ici.',
-        icon: Icons.chat_bubble_outline,
-      );
-    }
-
-    return Column(
-      children: [
-        for (final book in betaBooks) ...[
-          _AuthorBookCard(book: book, onRefresh: () {}),
-          const SizedBox(height: 20),
-        ],
-      ],
-    );
+    return const AuthorBetaCommentsScreen(embedded: true);
   }
 }
 

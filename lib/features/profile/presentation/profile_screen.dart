@@ -78,7 +78,7 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const _Section(
+                  _Section(
                     title: 'Paramètres',
                     child: Column(
                       children: [
@@ -88,17 +88,19 @@ class ProfileScreen extends ConsumerWidget {
                           subtitle: 'Gérer vos préférences de notification',
                           background: Color(0xFFE8F0F5),
                           color: PlumoraColors.info,
+                          onTap: () => context.go(AppRoutes.notifications),
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         _SettingsTile(
                           icon: Icons.auto_awesome,
                           title: 'Assistant Mukeme',
                           subtitle: "Configurer votre assistant IA d'écriture",
                           background: Color(0xFFE6EFE4),
                           color: PlumoraColors.mukemeAccent,
+                          onTap: () => context.go(AppRoutes.mukemeWriting),
                         ),
-                        SizedBox(height: 12),
-                        _SettingsTile(
+                        const SizedBox(height: 12),
+                        const _SettingsTile(
                           icon: Icons.shield_outlined,
                           title: 'Confidentialité & sécurité',
                           subtitle:
@@ -349,6 +351,7 @@ class _SettingsTile extends StatelessWidget {
     required this.subtitle,
     this.background = PlumoraColors.secondary,
     this.color = PlumoraColors.primary,
+    this.onTap,
   });
 
   final IconData icon;
@@ -356,11 +359,12 @@ class _SettingsTile extends StatelessWidget {
   final String subtitle;
   final Color background;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return PlumoraCard(
-      onTap: () {},
+      onTap: onTap,
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [

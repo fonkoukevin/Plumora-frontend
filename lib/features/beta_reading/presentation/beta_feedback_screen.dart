@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/plumora_placeholder_screen.dart';
+import 'author_beta_comments_screen.dart';
 
 class BetaFeedbackScreen extends StatelessWidget {
-  const BetaFeedbackScreen({super.key});
+  const BetaFeedbackScreen({this.bookId, super.key});
+
+  final String? bookId;
 
   @override
   Widget build(BuildContext context) {
-    return const PlumoraPlaceholderScreen(
-      title: 'Bêta-retours',
-      subtitle: 'Retours de bêta-lecture liés aux manuscrits.',
-      icon: Icons.rate_review_outlined,
-    );
+    return AuthorBetaCommentsScreen(bookId: bookId);
   }
 }
