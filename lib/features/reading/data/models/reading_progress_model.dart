@@ -45,7 +45,14 @@ class ReadingProgressModel {
       ]),
       bookTitle: _readString(bookJson, ['title', 'name']),
       authorName: _readAuthorName(bookJson),
-      coverUrl: _readNullableString(bookJson, ['coverUrl', 'cover_url']),
+      coverUrl: _readNullableString(bookJson, [
+        'coverUrl',
+        'cover_url',
+        'coverImageUrl',
+        'cover_image_url',
+        'imageUrl',
+        'image_url',
+      ]),
       rating: _readDouble(bookJson, [
         'rating',
         'averageRating',

@@ -8,6 +8,7 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/models/chapter_model.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
 import '../../book/presentation/widgets/book_status_badge.dart';
@@ -114,7 +115,7 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
   }
 }
 
-class _PublishContent extends StatelessWidget {
+class _PublishContent extends ConsumerWidget {
   const _PublishContent({
     required this.book,
     required this.chapters,
@@ -134,10 +135,11 @@ class _PublishContent extends StatelessWidget {
   final String? error;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasTitle = book.title.trim().isNotEmpty;
     final hasDescription = book.description.trim().isNotEmpty;
     final hasChapters = chapters.isNotEmpty;
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,8 +176,13 @@ class _PublishContent extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const PlumoraIconTile(
-                    child: Icon(Icons.upload_outlined, color: Colors.white),
+                  PlumoraBookCover(
+                    colors: _bookCoverColors(book),
+                    imageUrl: book.coverUrl,
+                    imageBytes: cachedCover,
+                    width: 70,
+                    height: 100,
+                    radius: 12,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -383,4 +390,17 @@ class _ErrorCard extends StatelessWidget {
       ),
     );
   }
+}
+
+List<Color> _bookCoverColors(BookModel book) {
+  final palettes = [
+    [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
+    [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
+    [const Color(0xFFDC2626), const Color(0xFFEA580C)],
+    [const Color(0xFF8FA889), const Color(0xFF5F7A5A)],
+  ];
+  final key = book.id.isEmpty ? book.title : book.id;
+  final index =
+      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
+  return palettes[index];
 }

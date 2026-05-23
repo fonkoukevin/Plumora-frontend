@@ -9,7 +9,10 @@ class BookApiService {
   final Dio _dio;
 
   Future<BookModel> createBook(BookUpsertRequest request) async {
-    final response = await _dio.post('/books', data: request.toJson());
+    final response = await _sendBookRequest(
+      request,
+      (data) => _dio.post('/books', data: data),
+    );
     final payload = _tryReadPayloadMap(response.data);
     if (payload != null) {
       final book = BookModel.fromJson(payload);
@@ -52,13 +55,59 @@ class BookApiService {
   }
 
   Future<BookModel> updateBook(String bookId, BookUpsertRequest request) async {
-    final response = await _dio.put('/books/$bookId', data: request.toJson());
+    final response = await _sendBookRequest(
+      request,
+      (data) => _dio.put('/books/$bookId', data: data),
+    );
     final payload = _tryReadPayloadMap(response.data);
     if (payload == null) {
       return bookById(bookId);
     }
 
     return BookModel.fromJson(payload);
+  }
+
+  Future<Object> _requestData(BookUpsertRequest request) async {
+    if (!request.hasCoverImage) {
+      return request.toJson();
+    }
+
+    final upload = request.coverImage!;
+    final multipartFile = upload.bytes != null
+        ? MultipartFile.fromBytes(upload.bytes!, filename: upload.fileName)
+        : await MultipartFile.fromFile(upload.path!, filename: upload.fileName);
+
+    return FormData.fromMap({...request.toJson(), 'coverImage': multipartFile});
+  }
+
+  Future<Response<Object?>> _sendBookRequest(
+    BookUpsertRequest request,
+    Future<Response<Object?>> Function(Object data) send,
+  ) async {
+    try {
+      return await send(await _requestData(request));
+    } on DioException catch (error) {
+      if (request.hasCoverImage && _isMultipartUnsupported(error)) {
+        return send(request.toJson());
+      }
+      rethrow;
+    }
+  }
+
+  bool _isMultipartUnsupported(DioException error) {
+    final statusCode = error.response?.statusCode;
+    if (statusCode == 415) {
+      return true;
+    }
+
+    if (statusCode != 500) {
+      return false;
+    }
+
+    final message = error.response?.data?.toString().toLowerCase() ?? '';
+    return message.contains('unexpected server error') ||
+        message.contains('multipart') ||
+        message.contains('content-type');
   }
 
   Future<BookModel> publishBook(String bookId) async {

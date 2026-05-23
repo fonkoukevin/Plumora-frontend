@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/dio_provider.dart';
@@ -32,8 +33,16 @@ class BookRepository {
     return _apiService.createBook(request);
   }
 
-  Future<List<BookModel>> myBooks() {
-    return _apiService.myBooks();
+  Future<List<BookModel>> myBooks() async {
+    try {
+      return await _apiService.myBooks();
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 403) {
+        return <BookModel>[];
+      }
+
+      rethrow;
+    }
   }
 
   Future<BookModel> bookById(String bookId) {

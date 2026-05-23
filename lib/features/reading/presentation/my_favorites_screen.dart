@@ -6,12 +6,15 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../../catalog/data/models/catalog_book_model.dart';
 import '../data/models/favorite_model.dart';
 import '../data/repositories/favorite_repository.dart';
 
 class MyFavoritesScreen extends ConsumerWidget {
-  const MyFavoritesScreen({super.key});
+  const MyFavoritesScreen({this.query = '', super.key});
+
+  final String query;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,11 +75,21 @@ class MyFavoritesScreen extends ConsumerWidget {
             ),
           ),
           data: (favorites) {
-            if (favorites.isEmpty) {
-              return const _StateCard(
-                title: 'Aucun favori',
-                subtitle:
-                    'Ajoute des livres depuis leur fiche pour les retrouver ici.',
+            final normalizedQuery = query.trim();
+            final filteredFavorites = favorites
+                .where(
+                  (favorite) => _matchesFavorite(favorite, normalizedQuery),
+                )
+                .toList(growable: false);
+
+            if (filteredFavorites.isEmpty) {
+              return _StateCard(
+                title: normalizedQuery.isEmpty
+                    ? 'Aucun favori'
+                    : 'Aucun résultat',
+                subtitle: normalizedQuery.isEmpty
+                    ? 'Ajoute des livres depuis leur fiche pour les retrouver ici.'
+                    : 'Aucun favori ne correspond à cette recherche.',
               );
             }
 
@@ -95,7 +108,7 @@ class MyFavoritesScreen extends ConsumerWidget {
                   spacing: spacing,
                   runSpacing: 14,
                   children: [
-                    for (final favorite in favorites)
+                    for (final favorite in filteredFavorites)
                       SizedBox(
                         width: width,
                         child: _FavoriteCard(favorite: favorite),
@@ -109,16 +122,29 @@ class MyFavoritesScreen extends ConsumerWidget {
       ],
     );
   }
+
+  bool _matchesFavorite(FavoriteModel favorite, String query) {
+    if (query.isEmpty) {
+      return true;
+    }
+
+    final normalizedQuery = query.toLowerCase();
+    final book = favorite.book;
+    return book.title.toLowerCase().contains(normalizedQuery) ||
+        book.authorName.toLowerCase().contains(normalizedQuery) ||
+        (book.genre?.toLowerCase().contains(normalizedQuery) ?? false);
+  }
 }
 
-class _FavoriteCard extends StatelessWidget {
+class _FavoriteCard extends ConsumerWidget {
   const _FavoriteCard({required this.favorite});
 
   final FavoriteModel favorite;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final book = favorite.book;
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
     return PlumoraCard(
       padding: EdgeInsets.zero,
       clip: true,
@@ -131,14 +157,13 @@ class _FavoriteCard extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: _coverColors(book),
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
+                  child: PlumoraBookCover(
+                    colors: _coverColors(book),
+                    imageUrl: book.coverUrl,
+                    imageBytes: cachedCover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    radius: 0,
                   ),
                 ),
                 Positioned(

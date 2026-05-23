@@ -165,31 +165,47 @@ void main() {
       expect(updatedRoles.map((role) => role.name), contains('READER'));
 
       final createdBook = await books.createBook(
-        const BookUpsertRequest(
+        BookUpsertRequest(
           title: 'La Nuit Rouge',
           description: 'Thriller littéraire.',
           genre: 'Thriller',
           visibility: 'PRIVATE',
+          coverImage: BookCoverUpload(
+            fileName: 'nuit-rouge.jpg',
+            bytes: Uint8List.fromList([1, 2, 3]),
+          ),
         ),
       );
       final myBooks = await books.myBooks();
       final book = await books.bookById('book-1');
       final updatedBook = await books.updateBook(
         'book-1',
-        const BookUpsertRequest(
+        BookUpsertRequest(
           title: 'La Nuit Rouge corrigée',
           description: 'Résumé corrigé.',
           genre: 'Thriller',
           visibility: 'PUBLIC',
+          coverImage: BookCoverUpload(
+            fileName: 'nuit-rouge-v2.jpg',
+            bytes: Uint8List.fromList([4, 5, 6]),
+          ),
         ),
       );
       final publishedBook = await books.publishBook('book-1');
       final archivedBook = await books.archiveBook('book-1');
 
       expect(createdBook.id, 'book-1');
+      expect(
+        createdBook.coverUrl,
+        'https://cdn.plumora.test/covers/nuit-rouge.jpg',
+      );
       expect(myBooks, hasLength(2));
       expect(book.status, BookStatus.draft);
       expect(updatedBook.title, 'La Nuit Rouge corrigée');
+      expect(
+        updatedBook.coverUrl,
+        'https://cdn.plumora.test/covers/nuit-rouge-v2.jpg',
+      );
       expect(publishedBook.status, BookStatus.published);
       expect(archivedBook.status, BookStatus.archived);
 
@@ -225,6 +241,7 @@ void main() {
       final catalogDetail = await catalog.bookDetail('book-1');
 
       expect(catalogBooks.single.title, 'La Nuit Rouge');
+      expect(catalogBooks.single.coverUrl, createdBook.coverUrl);
       expect(latestBooks.single.id, 'book-1');
       expect(popularBooks.single.id, 'book-1');
       expect(searchBooks.single.id, 'book-1');
@@ -252,7 +269,9 @@ void main() {
       final finishedProgress = await reading.finishProgress('book-1');
 
       expect(readBook.id, 'book-1');
+      expect(readBook.coverUrl, createdBook.coverUrl);
       expect(myProgress.single.progressPercent, 35);
+      expect(myProgress.single.coverUrl, createdBook.coverUrl);
       expect(progress.chapterId, 'chapter-1');
       expect(createdProgress.progressPercent, 25);
       expect(updatedProgress.progressPercent, 65);
@@ -264,6 +283,7 @@ void main() {
       final isFavorite = await favorites.isFavorite('book-1');
 
       expect(favoriteItems.single.book.id, 'book-1');
+      expect(favoriteItems.single.book.coverUrl, createdBook.coverUrl);
       expect(isFavorite, isTrue);
 
       final createdReview = await reviews.createReview(
@@ -321,7 +341,9 @@ void main() {
       );
 
       expect(invitations.single.id, 'invitation-1');
+      expect(invitations.single.coverUrl, createdBook.coverUrl);
       expect(campaign.id, 'campaign-1');
+      expect(campaign.coverUrl, createdBook.coverUrl);
       expect(campaigns.single.id, 'campaign-1');
       expect(campaignDetail.status, BetaCampaignStatus.open);
       expect(closedCampaign.status, BetaCampaignStatus.closed);
@@ -362,6 +384,7 @@ void main() {
       expect(modifiedSuggestion.status, AiSuggestionStatus.modified);
       expect(ignoredSuggestion.status, AiSuggestionStatus.ignored);
       expect(recommendations.single.book.id, 'book-1');
+      expect(recommendations.single.book.coverUrl, createdBook.coverUrl);
       expect(recommendationRequests.single.queryText, contains('thriller'));
 
       final notificationItems = await notifications.myNotifications();
@@ -449,7 +472,68 @@ void main() {
         (request) => request.key == 'PUT /users/me/roles',
       );
       expect(roleRequest.data, containsPair('roles', ['AUTHOR', 'READER']));
+
+      final createBookRequest = adapter.requests.firstWhere(
+        (request) => request.key == 'POST /books',
+      );
+      expect(_formDataField(createBookRequest.data, 'title'), 'La Nuit Rouge');
+      expect(
+        _formDataFileName(createBookRequest.data, 'coverImage'),
+        'nuit-rouge.jpg',
+      );
+
+      final updateBookRequest = adapter.requests.firstWhere(
+        (request) => request.key == 'PUT /books/book-1',
+      );
+      expect(
+        _formDataField(updateBookRequest.data, 'title'),
+        'La Nuit Rouge corrigée',
+      );
+      expect(
+        _formDataFileName(updateBookRequest.data, 'coverImage'),
+        'nuit-rouge-v2.jpg',
+      );
     });
+
+    test(
+      'falls back to JSON when book cover multipart is unsupported',
+      () async {
+        final adapter = _SeedHttpClientAdapter(
+          _seedResponses(),
+          unsupportedMultipartKeys: const {'POST /books'},
+        );
+        final dio = Dio(BaseOptions(baseUrl: 'http://plumora.test/api/v1'))
+          ..httpClientAdapter = adapter;
+        final books = BookApiService(dio);
+
+        final createdBook = await books.createBook(
+          BookUpsertRequest(
+            title: 'La Nuit Rouge',
+            description: 'Thriller littéraire.',
+            genre: 'Thriller',
+            visibility: 'PRIVATE',
+            coverImage: BookCoverUpload(
+              fileName: 'nuit-rouge.jpg',
+              bytes: Uint8List.fromList([1, 2, 3]),
+            ),
+          ),
+        );
+
+        final createRequests = adapter.requests
+            .where((request) => request.key == 'POST /books')
+            .toList(growable: false);
+
+        expect(createdBook.id, 'book-1');
+        expect(createRequests, hasLength(2));
+        expect(createRequests.first.data, isA<FormData>());
+        expect(createRequests.last.data, isA<Map<String, dynamic>>());
+        expect(createRequests.last.data, isNot(contains('coverImage')));
+        expect(
+          createRequests.last.data,
+          containsPair('title', 'La Nuit Rouge'),
+        );
+      },
+    );
   });
 }
 
@@ -480,6 +564,34 @@ List<String> _collectRoutePaths(List<RouteBase> routes) {
   return paths;
 }
 
+String? _formDataField(Object? data, String name) {
+  if (data is! FormData) {
+    return null;
+  }
+
+  for (final field in data.fields) {
+    if (field.key == name) {
+      return field.value;
+    }
+  }
+
+  return null;
+}
+
+String? _formDataFileName(Object? data, String name) {
+  if (data is! FormData) {
+    return null;
+  }
+
+  for (final file in data.files) {
+    if (file.key == name) {
+      return file.value.filename;
+    }
+  }
+
+  return null;
+}
+
 Map<String, Object?> _seedResponses() {
   final user = {
     'id': 'user-1',
@@ -494,6 +606,7 @@ Map<String, Object?> _seedResponses() {
     'description': 'Thriller littéraire.',
     'genre': 'Thriller',
     'visibility': 'PUBLIC',
+    'coverUrl': 'https://cdn.plumora.test/covers/nuit-rouge.jpg',
     'status': 'DRAFT',
     'chapterCount': 1,
     'progress': 35,
@@ -505,6 +618,7 @@ Map<String, Object?> _seedResponses() {
     ...book,
     'title': 'La Nuit Rouge corrigée',
     'description': 'Résumé corrigé.',
+    'coverUrl': 'https://cdn.plumora.test/covers/nuit-rouge-v2.jpg',
   };
   final chapter = {
     'id': 'chapter-1',
@@ -546,6 +660,7 @@ Map<String, Object?> _seedResponses() {
     'id': 'campaign-1',
     'bookId': 'book-1',
     'bookTitle': 'La Nuit Rouge',
+    'coverUrl': 'https://cdn.plumora.test/covers/nuit-rouge.jpg',
     'status': 'OPEN',
     'instructions': 'Chercher les incohérences.',
     'deadline': '2026-06-12',
@@ -556,6 +671,7 @@ Map<String, Object?> _seedResponses() {
     'bookId': 'book-1',
     'bookTitle': 'La Nuit Rouge',
     'authorName': 'Kevin Fonkou',
+    'coverUrl': 'https://cdn.plumora.test/covers/nuit-rouge.jpg',
     'status': 'PENDING',
   };
   final sharedChapter = {
@@ -775,9 +891,13 @@ class _SeedRequest {
 }
 
 class _SeedHttpClientAdapter implements HttpClientAdapter {
-  _SeedHttpClientAdapter(this.responses);
+  _SeedHttpClientAdapter(
+    this.responses, {
+    this.unsupportedMultipartKeys = const {},
+  });
 
   final Map<String, Object?> responses;
+  final Set<String> unsupportedMultipartKeys;
   final List<_SeedRequest> requests = [];
 
   List<String> get requestKeys =>
@@ -789,15 +909,24 @@ class _SeedHttpClientAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    final key = '${options.method.toUpperCase()} ${options.path}';
-    requests.add(
-      _SeedRequest(
-        method: options.method.toUpperCase(),
-        path: options.path,
-        query: Map<String, dynamic>.from(options.queryParameters),
-        data: options.data,
-      ),
+    final request = _SeedRequest(
+      method: options.method.toUpperCase(),
+      path: options.path,
+      query: Map<String, dynamic>.from(options.queryParameters),
+      data: options.data,
     );
+    final key = request.key;
+    requests.add(request);
+
+    if (unsupportedMultipartKeys.contains(key) && options.data is FormData) {
+      return ResponseBody.fromString(
+        jsonEncode({'message': 'Unexpected server error'}),
+        500,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
 
     if (!responses.containsKey(key)) {
       return ResponseBody.fromString(

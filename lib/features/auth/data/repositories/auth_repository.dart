@@ -54,19 +54,21 @@ class AuthRepository {
   }
 
   Future<AuthSession> register(RegisterRequest request) async {
+    await _tokenStorage.clearAccessToken();
     final response = await _apiService.register(request);
     await _tokenStorage.saveAccessToken(response.accessToken);
 
-    final user = response.user ?? await _loadCurrentUser();
+    final user = await _loadCurrentUser(response.user);
     final roles = await _loadRolesSafely();
     return AuthSession(user: user, roles: roles);
   }
 
   Future<AuthSession> login(LoginRequest request) async {
+    await _tokenStorage.clearAccessToken();
     final response = await _apiService.login(request);
     await _tokenStorage.saveAccessToken(response.accessToken);
 
-    final user = response.user ?? await _loadCurrentUser();
+    final user = await _loadCurrentUser(response.user);
     final roles = await _loadRolesSafely();
     return AuthSession(user: user, roles: roles);
   }
@@ -83,15 +85,40 @@ class AuthRepository {
     return _tokenStorage.clearAccessToken();
   }
 
-  Future<UserModel> _loadCurrentUser() async {
+  Future<UserModel> _loadCurrentUser([UserModel? fallback]) async {
     try {
-      return await _apiService.authMe();
+      final user = await _apiService.authMe();
+      _assertSameLoginUser(user, fallback);
+      return user;
     } on DioException catch (error) {
       if (error.response?.statusCode == 404) {
-        return _apiService.userMe();
+        final user = await _apiService.userMe();
+        _assertSameLoginUser(user, fallback);
+        return user;
+      }
+
+      if (error.response?.statusCode == 401 ||
+          error.response?.statusCode == 403) {
+        await _tokenStorage.clearAccessToken();
+      }
+
+      if (fallback != null && error.response == null) {
+        return fallback;
       }
 
       rethrow;
+    }
+  }
+
+  void _assertSameLoginUser(UserModel currentUser, UserModel? loginUser) {
+    if (loginUser == null || loginUser.id.isEmpty || currentUser.id.isEmpty) {
+      return;
+    }
+
+    if (loginUser.id != currentUser.id) {
+      throw const AppException(
+        'Session utilisateur incohérente. Reconnecte-toi.',
+      );
     }
   }
 

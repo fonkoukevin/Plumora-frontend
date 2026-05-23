@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/ai_models.dart';
 import '../data/repositories/ai_repository.dart';
 
@@ -390,14 +391,15 @@ class _ResultsSection extends StatelessWidget {
   }
 }
 
-class _RecommendationCard extends StatelessWidget {
+class _RecommendationCard extends ConsumerWidget {
   const _RecommendationCard({required this.recommendation});
 
   final AiRecommendedBookModel recommendation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final book = recommendation.book;
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
     return PlumoraCard(
       onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
       child: LayoutBuilder(
@@ -405,6 +407,8 @@ class _RecommendationCard extends StatelessWidget {
           final compact = constraints.maxWidth < 620;
           final cover = PlumoraBookCover(
             colors: _coverColors(book.id.isEmpty ? book.title : book.id),
+            imageUrl: book.coverUrl,
+            imageBytes: cachedCover,
             width: compact ? double.infinity : 148,
             height: compact ? 220 : 220,
           );

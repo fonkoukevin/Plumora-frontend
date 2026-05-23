@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/review_model.dart';
 import '../data/repositories/review_repository.dart';
 
@@ -110,6 +111,9 @@ class _MyReviewCardState extends ConsumerState<_MyReviewCard> {
   Widget build(BuildContext context) {
     final review = widget.review;
     final book = review.book;
+    final cachedCover = book == null
+        ? null
+        : ref.watch(bookCoverBytesProvider(book.id));
     return PlumoraCard(
       padding: const EdgeInsets.all(16),
       onTap: book == null || book.id.isEmpty
@@ -121,6 +125,17 @@ class _MyReviewCardState extends ConsumerState<_MyReviewCard> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (book != null) ...[
+                PlumoraBookCover(
+                  colors: _coverColors(book.id.isEmpty ? book.title : book.id),
+                  imageUrl: book.coverUrl,
+                  imageBytes: cachedCover,
+                  width: 48,
+                  height: 66,
+                  radius: 9,
+                ),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,4 +249,16 @@ class _StateCard extends StatelessWidget {
       ),
     );
   }
+}
+
+List<Color> _coverColors(String key) {
+  final palettes = [
+    [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
+    [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
+    [const Color(0xFFDC2626), const Color(0xFFEA580C)],
+    [const Color(0xFF8FA889), const Color(0xFF5F7A5A)],
+  ];
+  final index =
+      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
+  return palettes[index];
 }

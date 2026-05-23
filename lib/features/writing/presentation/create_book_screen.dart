@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +10,7 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/models/book_model.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../../book/data/repositories/book_repository.dart';
 
 class CreateBookScreen extends ConsumerStatefulWidget {
@@ -26,6 +30,9 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
   String? _selectedGenre;
   String _visibility = 'PRIVATE';
   String? _loadedBookId;
+  String? _existingCoverUrl;
+  String? _selectedCoverFileName;
+  Uint8List? _selectedCoverBytes;
   bool _isSaving = false;
   String? _error;
 
@@ -73,6 +80,10 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
     required bool isEditing,
     required String? bookId,
   }) {
+    final cachedCover = bookId == null
+        ? null
+        : ref.watch(bookCoverBytesProvider(bookId));
+
     return LayoutBuilder(
       builder: (context, constraints) {
         const horizontal = 16.0;
@@ -197,6 +208,17 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
+                          const _FieldLabel('Image du livre'),
+                          _CoverPicker(
+                            fileName: _selectedCoverFileName,
+                            bytes: _selectedCoverBytes ?? cachedCover,
+                            existingUrl: _existingCoverUrl,
+                            isSaving: _isSaving,
+                            canClear: _selectedCoverBytes != null,
+                            onPick: _pickCoverImage,
+                            onClear: _clearSelectedCover,
+                          ),
+                          const SizedBox(height: 24),
                           const _FieldLabel('Visibilité'),
                           RadioGroup<String>(
                             groupValue: _visibility,
@@ -307,6 +329,9 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
     _loadedBookId = book.id;
     _titleController.text = book.title;
     _descriptionController.text = book.description;
+    _existingCoverUrl = book.coverUrl;
+    _selectedCoverFileName = null;
+    _selectedCoverBytes = null;
     _selectedGenre = book.genre?.trim().isEmpty ?? true
         ? null
         : book.genre?.trim();
@@ -346,6 +371,13 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
         description: _descriptionController.text,
         genre: _selectedGenre,
         visibility: _visibility,
+        coverUrl: _selectedCoverBytes == null ? _existingCoverUrl : null,
+        coverImage: _selectedCoverBytes == null
+            ? null
+            : BookCoverUpload(
+                fileName: _selectedCoverFileName ?? 'couverture-plumora.jpg',
+                bytes: _selectedCoverBytes,
+              ),
       );
       final bookId = widget.bookId?.trim();
       final book = bookId == null || bookId.isEmpty
@@ -358,6 +390,21 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
 
       if (mounted) {
         final targetBookId = book.id.isEmpty ? (bookId ?? '') : book.id;
+        if (_selectedCoverBytes != null && targetBookId.isNotEmpty) {
+          ref
+              .read(bookCoverCacheProvider.notifier)
+              .put(targetBookId, _selectedCoverBytes!);
+        }
+        if (_selectedCoverBytes != null &&
+            (book.coverUrl == null || book.coverUrl!.trim().isEmpty)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Livre sauvegardé, mais l'API ne prend pas encore l'import d'image.",
+              ),
+            ),
+          );
+        }
         if (bookId == null || bookId.isEmpty) {
           context.go(AppRoutes.chapterEditorPath(targetBookId));
         } else {
@@ -371,6 +418,44 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  Future<void> _pickCoverImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+        allowMultiple: false,
+        withData: true,
+      );
+      final file = result?.files.single;
+      final bytes = file?.bytes;
+      if (file == null || bytes == null) {
+        return;
+      }
+
+      if (bytes.length > 5 * 1024 * 1024) {
+        setState(() {
+          _error = 'Image trop lourde : 5 Mo maximum.';
+        });
+        return;
+      }
+
+      setState(() {
+        _selectedCoverFileName = file.name;
+        _selectedCoverBytes = bytes;
+        _error = null;
+      });
+    } catch (error) {
+      setState(() => _error = AppError.messageFor(error));
+    }
+  }
+
+  void _clearSelectedCover() {
+    setState(() {
+      _selectedCoverFileName = null;
+      _selectedCoverBytes = null;
+    });
   }
 }
 
@@ -462,6 +547,103 @@ class _FieldLabel extends StatelessWidget {
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
+      ),
+    );
+  }
+}
+
+class _CoverPicker extends StatelessWidget {
+  const _CoverPicker({
+    required this.fileName,
+    required this.bytes,
+    required this.existingUrl,
+    required this.isSaving,
+    required this.canClear,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final String? fileName;
+  final Uint8List? bytes;
+  final String? existingUrl;
+  final bool isSaving;
+  final bool canClear;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImportedImage = bytes != null;
+    final hasExistingImage = existingUrl?.trim().isNotEmpty ?? false;
+    final hasImage = hasImportedImage || hasExistingImage;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 118),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBF8F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: PlumoraColors.border),
+      ),
+      child: Row(
+        children: [
+          PlumoraBookCover(
+            colors: const [Color(0xFFB08F54), Color(0xFFE8D9C4)],
+            imageUrl: hasImportedImage ? null : existingUrl,
+            imageBytes: bytes,
+            width: 64,
+            height: 90,
+            radius: 10,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  hasImportedImage
+                      ? fileName ?? 'Image importée'
+                      : hasExistingImage
+                      ? 'Couverture actuelle'
+                      : 'Couverture optionnelle',
+                  style: const TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  hasImage
+                      ? 'Cette image sera utilisée dans le catalogue, les favoris et la bibliothèque.'
+                      : 'Importe une image depuis ton ordinateur ou ton téléphone.',
+                  style: const TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: isSaving ? null : onPick,
+                      icon: const Icon(Icons.upload_file_outlined, size: 17),
+                      label: Text(hasImage ? 'Changer' : 'Importer'),
+                    ),
+                    if (hasImportedImage && canClear)
+                      TextButton(
+                        onPressed: isSaving ? null : onClear,
+                        child: const Text('Annuler'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -33,6 +33,7 @@ class BetaInvitationModel {
     required this.authorName,
     required this.status,
     this.campaign,
+    this.coverUrl,
     this.deadline,
     this.chaptersAvailable = 0,
     this.chaptersRead = 0,
@@ -48,6 +49,7 @@ class BetaInvitationModel {
   final String authorName;
   final BetaInvitationStatus status;
   final BetaCampaignModel? campaign;
+  final String? coverUrl;
   final DateTime? deadline;
   final int chaptersAvailable;
   final int chaptersRead;
@@ -99,6 +101,24 @@ class BetaInvitationModel {
           ].whereType<String>().join(' ').trim(),
       status: BetaInvitationStatus.fromApi(json['status']),
       campaign: campaign,
+      coverUrl:
+          readBetaNullableString(json, [
+            'coverUrl',
+            'cover_url',
+            'coverImageUrl',
+            'cover_image_url',
+            'imageUrl',
+            'image_url',
+          ]) ??
+          campaign?.coverUrl ??
+          readBetaNullableString(book, [
+            'coverUrl',
+            'cover_url',
+            'coverImageUrl',
+            'cover_image_url',
+            'imageUrl',
+            'image_url',
+          ]),
       deadline:
           readBetaDate(json, ['deadline', 'dueDate', 'due_date']) ??
           campaign?.deadline,
@@ -130,6 +150,7 @@ class BetaInvitationModel {
     String? authorName,
     BetaInvitationStatus? status,
     BetaCampaignModel? campaign,
+    String? coverUrl,
     DateTime? deadline,
     int? chaptersAvailable,
     int? chaptersRead,
@@ -145,6 +166,7 @@ class BetaInvitationModel {
       authorName: authorName ?? this.authorName,
       status: status ?? this.status,
       campaign: campaign ?? this.campaign,
+      coverUrl: coverUrl ?? this.coverUrl,
       deadline: deadline ?? this.deadline,
       chaptersAvailable: chaptersAvailable ?? this.chaptersAvailable,
       chaptersRead: chaptersRead ?? this.chaptersRead,

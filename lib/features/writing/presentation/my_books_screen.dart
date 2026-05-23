@@ -7,6 +7,7 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/models/book_model.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/presentation/widgets/book_status_badge.dart';
 
@@ -205,6 +206,7 @@ class _BookCardState extends ConsumerState<_BookCard> {
   @override
   Widget build(BuildContext context) {
     final book = widget.book;
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
     return PlumoraCard(
       child: Column(
@@ -213,12 +215,13 @@ class _BookCardState extends ConsumerState<_BookCard> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PlumoraIconTile(
-                backgroundColor: book.status.backgroundColor,
-                child: Icon(
-                  Icons.menu_book_outlined,
-                  color: book.status.foregroundColor,
-                ),
+              PlumoraBookCover(
+                colors: _bookCoverColors(book),
+                imageUrl: book.coverUrl,
+                imageBytes: cachedCover,
+                width: 54,
+                height: 76,
+                radius: 10,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -395,4 +398,17 @@ class _EmptyBooks extends StatelessWidget {
       ),
     );
   }
+}
+
+List<Color> _bookCoverColors(BookModel book) {
+  final palettes = [
+    [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
+    [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
+    [const Color(0xFFDC2626), const Color(0xFFEA580C)],
+    [const Color(0xFF8FA889), const Color(0xFF5F7A5A)],
+  ];
+  final key = book.id.isEmpty ? book.title : book.id;
+  final index =
+      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
+  return palettes[index];
 }

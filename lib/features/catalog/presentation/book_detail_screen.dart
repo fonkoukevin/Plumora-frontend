@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../../reading/data/models/review_model.dart';
 import '../../reading/data/repositories/favorite_repository.dart';
 import '../../reading/data/repositories/review_repository.dart';
@@ -114,28 +115,20 @@ class _ActionRailState extends ConsumerState<_ActionRail> {
     final book = widget.book;
     final summary = book.summary;
     final favoriteAsync = ref.watch(favoriteStatusProvider(book.id));
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AspectRatio(
           aspectRatio: 2 / 3,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                colors: _coverColors(summary),
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x30000000),
-                  blurRadius: 22,
-                  offset: Offset(0, 12),
-                ),
-              ],
-            ),
+          child: PlumoraBookCover(
+            colors: _coverColors(summary),
+            imageUrl: summary.coverUrl,
+            imageBytes: cachedCover,
+            width: double.infinity,
+            height: double.infinity,
+            radius: 18,
           ),
         ),
         const SizedBox(height: 16),

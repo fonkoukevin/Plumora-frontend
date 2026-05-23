@@ -6,13 +6,19 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/beta_invitation_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
 
 class BetaInvitationsScreen extends ConsumerStatefulWidget {
-  const BetaInvitationsScreen({this.embedded = false, super.key});
+  const BetaInvitationsScreen({
+    this.embedded = false,
+    this.query = '',
+    super.key,
+  });
 
   final bool embedded;
+  final String query;
 
   @override
   ConsumerState<BetaInvitationsScreen> createState() =>
@@ -56,6 +62,10 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
       0,
       (sum, invitation) => sum + invitation.feedbackCount,
     );
+    final normalizedQuery = widget.query.trim();
+    final filteredInvitations = invitations
+        .where((invitation) => _matchesInvitation(invitation, normalizedQuery))
+        .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,10 +111,12 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
           feedbackCount: feedbackCount,
         ),
         const SizedBox(height: 20),
-        if (invitations.isEmpty)
-          const _EmptyPanel()
+        if (filteredInvitations.isEmpty)
+          normalizedQuery.isEmpty
+              ? const _EmptyPanel()
+              : const _QueryEmptyPanel()
         else
-          for (final invitation in invitations) ...[
+          for (final invitation in filteredInvitations) ...[
             _InvitationCard(
               invitation: invitation,
               busy: _busyInvitationId == invitation.id,
@@ -171,6 +183,16 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
       context,
     ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
   }
+
+  bool _matchesInvitation(BetaInvitationModel invitation, String query) {
+    if (query.isEmpty) {
+      return true;
+    }
+
+    final normalizedQuery = query.toLowerCase();
+    return invitation.bookTitle.toLowerCase().contains(normalizedQuery) ||
+        invitation.authorName.toLowerCase().contains(normalizedQuery);
+  }
 }
 
 class _SummaryGrid extends StatelessWidget {
@@ -208,7 +230,7 @@ class _SummaryGrid extends StatelessWidget {
   }
 }
 
-class _InvitationCard extends StatelessWidget {
+class _InvitationCard extends ConsumerWidget {
   const _InvitationCard({
     required this.invitation,
     required this.busy,
@@ -224,7 +246,7 @@ class _InvitationCard extends StatelessWidget {
   final VoidCallback? onRead;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final progress = invitation.chaptersAvailable == 0
         ? 0.0
         : invitation.chaptersRead / invitation.chaptersAvailable;
@@ -234,6 +256,7 @@ class _InvitationCard extends StatelessWidget {
     final author = invitation.authorName.trim().isEmpty
         ? 'Auteur Plumora'
         : invitation.authorName;
+    final cachedCover = ref.watch(bookCoverBytesProvider(invitation.bookId));
 
     return PlumoraCard(
       leftAccent: _statusColor(invitation.status),
@@ -242,6 +265,8 @@ class _InvitationCard extends StatelessWidget {
           final compact = constraints.maxWidth < 560;
           final cover = PlumoraBookCover(
             colors: _coverColors(invitation.bookId),
+            imageUrl: invitation.coverUrl,
+            imageBytes: cachedCover,
             width: compact ? 72 : 92,
             height: compact ? 102 : 124,
           );
@@ -499,6 +524,45 @@ class _EmptyPanel extends StatelessWidget {
                 SizedBox(height: 8),
                 Text(
                   'Les manuscrits partagés par les auteurs apparaîtront ici.',
+                  style: TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QueryEmptyPanel extends StatelessWidget {
+  const _QueryEmptyPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return const PlumoraCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PlumoraIconTile(
+            backgroundColor: Color(0xFFE6EFE4),
+            child: Icon(Icons.search_off_outlined, color: Color(0xFF5F7A5A)),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Aucun résultat',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Aucune bêta-lecture ne correspond à cette recherche.',
                   style: TextStyle(
                     color: PlumoraColors.textSecondary,
                     height: 1.45,

@@ -24,7 +24,9 @@ abstract final class AppError {
 
   static String _dioMessage(DioException error) {
     final responseMessage = _responseMessage(error.response?.data);
-    if (responseMessage != null && responseMessage.isNotEmpty) {
+    if (responseMessage != null &&
+        responseMessage.isNotEmpty &&
+        !_isGenericServerError(responseMessage)) {
       return responseMessage;
     }
 
@@ -82,5 +84,11 @@ abstract final class AppError {
     }
 
     return null;
+  }
+
+  static bool _isGenericServerError(String message) {
+    final normalized = message.trim().toLowerCase();
+    return normalized == 'unexpected server error' ||
+        normalized == 'internal server error';
   }
 }

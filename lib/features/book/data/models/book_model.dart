@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 enum BookStatus {
   draft('DRAFT'),
   inBetaReading('IN_BETA_READING'),
@@ -73,7 +75,14 @@ class BookModel {
       genre: _readNullableString(json, ['genre', 'category']),
       visibility: _readNullableString(json, ['visibility']),
       authorId: _readNullableString(json, ['authorId', 'author_id']),
-      coverUrl: _readNullableString(json, ['coverUrl', 'cover_url']),
+      coverUrl: _readNullableString(json, [
+        'coverUrl',
+        'cover_url',
+        'coverImageUrl',
+        'cover_image_url',
+        'imageUrl',
+        'image_url',
+      ]),
       chapterCount: _readInt(json, [
         'chapterCount',
         'chaptersCount',
@@ -107,7 +116,8 @@ class BookModel {
       if (genre != null) 'genre': genre,
       if (visibility != null) 'visibility': visibility,
       if (authorId != null) 'authorId': authorId,
-      if (coverUrl != null) 'coverUrl': coverUrl,
+      if (coverUrl != null && coverUrl!.trim().isNotEmpty)
+        'coverUrl': coverUrl!.trim(),
       'chapterCount': chapterCount,
       'wordCount': wordCount,
       'progress': progress,
@@ -125,12 +135,18 @@ class BookUpsertRequest {
     this.description = '',
     this.genre,
     this.visibility,
+    this.coverUrl,
+    this.coverImage,
   });
 
   final String title;
   final String description;
   final String? genre;
   final String? visibility;
+  final String? coverUrl;
+  final BookCoverUpload? coverImage;
+
+  bool get hasCoverImage => coverImage != null;
 
   Map<String, dynamic> toJson() {
     return {
@@ -139,8 +155,19 @@ class BookUpsertRequest {
       if (genre != null && genre!.trim().isNotEmpty) 'genre': genre!.trim(),
       if (visibility != null && visibility!.trim().isNotEmpty)
         'visibility': visibility!.trim(),
+      if (coverUrl != null && coverUrl!.trim().isNotEmpty)
+        'coverUrl': coverUrl!.trim(),
     };
   }
+}
+
+class BookCoverUpload {
+  const BookCoverUpload({required this.fileName, this.bytes, this.path})
+    : assert(bytes != null || path != null);
+
+  final String fileName;
+  final Uint8List? bytes;
+  final String? path;
 }
 
 Map<String, dynamic> _readMap(Object? value) {

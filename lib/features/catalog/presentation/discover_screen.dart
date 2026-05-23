@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/catalog_book_model.dart';
 import '../data/repositories/catalog_repository.dart';
 
@@ -505,7 +506,7 @@ class _BookCoverCard extends StatelessWidget {
   }
 }
 
-class _CatalogCover extends StatelessWidget {
+class _CatalogCover extends ConsumerWidget {
   const _CatalogCover({
     required this.book,
     this.width,
@@ -519,28 +520,16 @@ class _CatalogCover extends StatelessWidget {
   final bool expand;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = _coverColors(book);
-    return Container(
-      width: expand ? double.infinity : width,
-      height: expand ? double.infinity : height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(expand ? 0 : 14),
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: expand
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x22000000),
-                  blurRadius: 12,
-                  offset: Offset(0, 7),
-                ),
-              ],
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+
+    return PlumoraBookCover(
+      colors: _coverColors(book),
+      imageUrl: book.coverUrl,
+      imageBytes: cachedCover,
+      width: expand ? double.infinity : (width ?? 76),
+      height: expand ? double.infinity : (height ?? 104),
+      radius: expand ? 0 : 14,
     );
   }
 }

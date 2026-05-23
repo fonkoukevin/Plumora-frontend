@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/catalog_book_model.dart';
 import '../data/repositories/catalog_repository.dart';
 
@@ -201,15 +202,19 @@ class _SearchBookCard extends StatelessWidget {
   }
 }
 
-class _Cover extends StatelessWidget {
+class _Cover extends ConsumerWidget {
   const _Cover({required this.book});
 
   final CatalogBookModel book;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+
     return PlumoraBookCover(
       colors: _coverColors(book),
+      imageUrl: book.coverUrl,
+      imageBytes: cachedCover,
       width: 72,
       height: 100,
       radius: 13,

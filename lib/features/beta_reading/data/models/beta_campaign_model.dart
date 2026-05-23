@@ -25,6 +25,7 @@ class BetaCampaignModel {
     required this.bookId,
     required this.bookTitle,
     required this.status,
+    this.coverUrl,
     this.instructions,
     this.deadline,
     this.createdAt,
@@ -35,6 +36,7 @@ class BetaCampaignModel {
   final String bookId;
   final String bookTitle;
   final BetaCampaignStatus status;
+  final String? coverUrl;
   final String? instructions;
   final DateTime? deadline;
   final DateTime? createdAt;
@@ -53,6 +55,23 @@ class BetaCampaignModel {
           readBetaNullableString(json, ['bookTitle', 'book_title', 'title']) ??
           readBetaString(book, ['title', 'name']),
       status: BetaCampaignStatus.fromApi(json['status']),
+      coverUrl:
+          readBetaNullableString(json, [
+            'coverUrl',
+            'cover_url',
+            'coverImageUrl',
+            'cover_image_url',
+            'imageUrl',
+            'image_url',
+          ]) ??
+          readBetaNullableString(book, [
+            'coverUrl',
+            'cover_url',
+            'coverImageUrl',
+            'cover_image_url',
+            'imageUrl',
+            'image_url',
+          ]),
       instructions: readBetaNullableString(json, [
         'instructions',
         'guidelines',

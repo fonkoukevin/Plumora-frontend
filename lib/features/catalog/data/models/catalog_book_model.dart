@@ -38,7 +38,14 @@ class CatalogBookModel {
       authorName: _readAuthorName(json),
       authorId: _readNullableString(json, ['authorId', 'author_id']),
       genre: _readNullableString(json, ['genre', 'category']),
-      coverUrl: _readNullableString(json, ['coverUrl', 'cover_url']),
+      coverUrl: _readNullableString(json, [
+        'coverUrl',
+        'cover_url',
+        'coverImageUrl',
+        'cover_image_url',
+        'imageUrl',
+        'image_url',
+      ]),
       rating: _readDouble(json, [
         'rating',
         'averageRating',
@@ -146,7 +153,14 @@ class CatalogBookDetailModel {
       authorId: _readNullableString(bookJson, ['authorId', 'author_id']),
       authorBio: _readNullableString(bookJson, ['authorBio', 'author_bio']),
       genre: _readNullableString(bookJson, ['genre', 'category']),
-      coverUrl: _readNullableString(bookJson, ['coverUrl', 'cover_url']),
+      coverUrl: _readNullableString(bookJson, [
+        'coverUrl',
+        'cover_url',
+        'coverImageUrl',
+        'cover_image_url',
+        'imageUrl',
+        'image_url',
+      ]),
       rating: _readDouble(bookJson, [
         'rating',
         'averageRating',

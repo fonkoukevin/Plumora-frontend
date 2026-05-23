@@ -18,6 +18,22 @@ PUT `/books/{bookId}`
 PATCH `/books/{bookId}/publish`
 PATCH `/books/{bookId}/archive`
 
+Book create/update payloads may be sent as JSON or as `multipart/form-data`.
+When a user imports a cover image, the frontend sends:
+- text fields: `title`, `description`, `genre`, `visibility`
+- file field: `coverImage`
+
+Accepted cover file aliases on the API side are `coverImage`, `cover_image`,
+`image`, `imageFile`, `cover` and `file`.
+
+Book responses should return this image as `coverUrl`. The frontend also accepts
+`cover_url`, `coverImageUrl`, `cover_image_url`, `imageUrl` and `image_url` for
+compatibility.
+
+Persisted local cover URLs may be relative to the API base path, for example:
+`uploads/book-covers/{filename}`. The public image route is:
+GET `/uploads/book-covers/{filename}`.
+
 ## Chapters
 
 POST `/books/{bookId}/chapters`

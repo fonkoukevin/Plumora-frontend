@@ -8,6 +8,7 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../beta_reading/presentation/author_beta_comments_screen.dart';
 import '../../book/data/models/book_model.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../../book/data/repositories/book_repository.dart';
 
 enum _AuthorTab { manuscripts, feedback, publication }
@@ -395,6 +396,7 @@ class _AuthorBookCardState extends ConsumerState<_AuthorBookCard> {
   Widget build(BuildContext context) {
     final book = widget.book;
     final content = _BookStatusContent(book: book);
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -431,6 +433,15 @@ class _AuthorBookCardState extends ConsumerState<_AuthorBookCard> {
               children: [
                 Row(
                   children: [
+                    PlumoraBookCover(
+                      colors: _bookCoverColors(book),
+                      imageUrl: book.coverUrl,
+                      imageBytes: cachedCover,
+                      width: 44,
+                      height: 60,
+                      radius: 9,
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         book.title.isEmpty ? 'Livre sans titre' : book.title,
@@ -814,6 +825,19 @@ class _BookStatusContent extends StatelessWidget {
 
     return 'Modifié le ${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}';
   }
+}
+
+List<Color> _bookCoverColors(BookModel book) {
+  final palettes = [
+    [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
+    [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
+    [const Color(0xFFDC2626), const Color(0xFFEA580C)],
+    [const Color(0xFF8FA889), const Color(0xFF5F7A5A)],
+  ];
+  final key = book.id.isEmpty ? book.title : book.id;
+  final index =
+      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
+  return palettes[index];
 }
 
 class _InfoStrip extends StatelessWidget {

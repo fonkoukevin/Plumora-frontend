@@ -7,8 +7,7 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../beta_reading/presentation/beta_invitations_screen.dart';
-import '../../catalog/data/models/catalog_book_model.dart';
-import '../../catalog/data/repositories/catalog_repository.dart';
+import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/reading_progress_model.dart';
 import '../data/repositories/reading_repository.dart';
 import 'my_favorites_screen.dart';
@@ -82,8 +81,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   const SizedBox(height: 26),
                   if (_activeTab == 'Mes lectures')
                     _ReadingsTab(query: _libraryQuery),
-                  if (_activeTab == 'Favoris') const MyFavoritesScreen(),
-                  if (_activeTab == 'Bêta-lectures') const _BetaReadingsTab(),
+                  if (_activeTab == 'Favoris')
+                    MyFavoritesScreen(query: _libraryQuery),
+                  if (_activeTab == 'Bêta-lectures')
+                    _BetaReadingsTab(query: _libraryQuery),
                 ],
               ),
             ),
@@ -124,7 +125,7 @@ class _LibrarySearchField extends StatelessWidget {
           height: 1.2,
         ),
         decoration: const InputDecoration(
-          hintText: 'Rechercher un livre, un auteur, un genre...',
+          hintText: 'Rechercher un livre ou un auteur...',
           prefixIcon: Icon(
             Icons.search,
             color: PlumoraColors.textSecondary,
@@ -146,11 +147,8 @@ class _ReadingsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final progressAsync = ref.watch(myReadingProgressProvider);
     final normalizedQuery = query.trim();
-    final booksAsync = normalizedQuery.isEmpty
-        ? ref.watch(catalogBooksProvider(''))
-        : ref.watch(catalogSearchProvider(normalizedQuery));
 
-    return booksAsync.when(
+    return progressAsync.when(
       loading: () => const Center(
         child: Padding(
           padding: EdgeInsets.all(40),
@@ -158,93 +156,85 @@ class _ReadingsTab extends ConsumerWidget {
         ),
       ),
       error: (error, _) => _LibraryStateCard(
-        title: 'Catalogue indisponible',
+        title: 'Lectures indisponibles',
         subtitle: AppError.messageFor(error),
         action: FilledButton(
-          onPressed: () {
-            if (normalizedQuery.isEmpty) {
-              ref.invalidate(catalogBooksProvider(''));
-            } else {
-              ref.invalidate(catalogSearchProvider(normalizedQuery));
-            }
-          },
+          onPressed: () => ref.invalidate(myReadingProgressProvider),
           child: const Text('Réessayer'),
         ),
       ),
-      data: (books) {
-        if (books.isEmpty) {
+      data: (readings) {
+        final filteredReadings = readings
+            .where((reading) => _matchesReading(reading, normalizedQuery))
+            .toList(growable: false);
+
+        if (filteredReadings.isEmpty) {
           return _LibraryStateCard(
             title: normalizedQuery.isEmpty
-                ? 'Aucun livre disponible'
+                ? 'Aucune lecture en cours'
                 : 'Aucun résultat',
             subtitle: normalizedQuery.isEmpty
-                ? 'Les livres publiés apparaîtront ici dès qu’ils seront disponibles.'
-                : 'Aucun livre ne correspond à cette recherche.',
+                ? 'Les livres que tu commences à lire apparaîtront ici.'
+                : 'Aucune lecture personnelle ne correspond à cette recherche.',
             action: normalizedQuery.isEmpty
                 ? FilledButton.icon(
                     onPressed: () => context.go(AppRoutes.discover),
                     icon: const Icon(Icons.menu_book_outlined, size: 18),
-                    label: const Text('Découvrir'),
+                    label: const Text('Découvrir un livre'),
                   )
                 : null,
           );
         }
 
-        final progressByBookId = progressAsync.maybeWhen(
-          data: (readings) => {
-            for (final reading in readings) reading.bookId: reading,
-          },
-          orElse: () => <String, ReadingProgressModel>{},
-        );
-        final finished = books
-            .where((book) => progressByBookId[book.id]?.finished ?? false)
-            .length;
+        final finished = readings.where((reading) => reading.finished).length;
 
         return Column(
           children: [
-            if (progressAsync.hasError) ...[
-              _InlineWarning(
-                message: AppError.messageFor(progressAsync.error!),
-              ),
+            for (final reading in filteredReadings) ...[
+              _ReadingProgressCard(reading: reading),
               const SizedBox(height: 16),
             ],
-            for (final book in books) ...[
-              _CatalogReadingCard(
-                book: book,
-                progress: progressByBookId[book.id],
-              ),
-              const SizedBox(height: 16),
-            ],
-            _LibraryStats(savedCount: books.length, finishedCount: finished),
+            _LibraryStats(savedCount: readings.length, finishedCount: finished),
           ],
         );
       },
     );
   }
+
+  bool _matchesReading(ReadingProgressModel reading, String query) {
+    if (query.isEmpty) {
+      return true;
+    }
+
+    final normalizedQuery = query.toLowerCase();
+    return reading.bookTitle.toLowerCase().contains(normalizedQuery) ||
+        reading.authorName.toLowerCase().contains(normalizedQuery);
+  }
 }
 
-class _CatalogReadingCard extends StatelessWidget {
-  const _CatalogReadingCard({required this.book, this.progress});
+class _ReadingProgressCard extends ConsumerWidget {
+  const _ReadingProgressCard({required this.reading});
 
-  final CatalogBookModel book;
-  final ReadingProgressModel? progress;
+  final ReadingProgressModel reading;
 
   @override
-  Widget build(BuildContext context) {
-    final title = book.title.trim().isEmpty ? 'Livre sans titre' : book.title;
-    final readingProgress = progress;
-    final progressPercent = readingProgress?.progressPercent ?? 0;
-    final isFinished = readingProgress?.finished ?? false;
-    final hasProgress = readingProgress != null;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final title = reading.bookTitle.trim().isEmpty
+        ? 'Livre sans titre'
+        : reading.bookTitle;
+    final isFinished = reading.finished;
+    final cachedCover = ref.watch(bookCoverBytesProvider(reading.bookId));
 
     return PlumoraCard(
       leftAccent: PlumoraColors.primary,
-      onTap: () => context.go(AppRoutes.readingPath(book.id)),
+      onTap: () => context.go(AppRoutes.readingPath(reading.bookId)),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 480;
           final cover = PlumoraBookCover(
-            colors: _catalogCoverColors(book),
+            colors: _coverColors(reading.bookId),
+            imageUrl: reading.coverUrl,
+            imageBytes: cachedCover,
             width: compact ? 72 : 96,
             height: compact ? 104 : 128,
           );
@@ -264,11 +254,7 @@ class _CatalogReadingCard extends StatelessWidget {
                     ),
                   ),
                   PlumoraBadge(
-                    label: isFinished
-                        ? 'Terminé ✓'
-                        : hasProgress
-                        ? 'En cours'
-                        : 'À lire',
+                    label: isFinished ? 'Terminé ✓' : 'En cours',
                     backgroundColor: isFinished
                         ? const Color(0xFFEADFCF)
                         : const Color(0xFFE6EFE4),
@@ -280,7 +266,7 @@ class _CatalogReadingCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'par ${book.authorName}',
+                'par ${reading.authorName}',
                 style: const TextStyle(
                   color: PlumoraColors.textSecondary,
                   fontSize: 12,
@@ -308,7 +294,7 @@ class _CatalogReadingCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '$progressPercent%',
+                          '${reading.progressPercent}%',
                           style: const TextStyle(
                             color: PlumoraColors.primary,
                             fontSize: 12,
@@ -322,7 +308,7 @@ class _CatalogReadingCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                       child: LinearProgressIndicator(
                         minHeight: 8,
-                        value: (readingProgress?.progress ?? 0).clamp(0, 1),
+                        value: reading.progress.clamp(0, 1).toDouble(),
                         backgroundColor: Colors.white,
                         color: PlumoraColors.primary,
                       ),
@@ -337,11 +323,9 @@ class _CatalogReadingCard extends StatelessWidget {
                 children: [
                   _Meta(
                     icon: Icons.schedule,
-                    label: hasProgress
-                        ? _lastReadLabel(readingProgress.updatedAt)
-                        : 'Pas encore lu',
+                    label: _lastReadLabel(reading.updatedAt),
                   ),
-                  _RatingStars(rating: book.rating.round().clamp(0, 5)),
+                  _RatingStars(rating: reading.rating.round().clamp(0, 5)),
                 ],
               ),
             ],
@@ -369,11 +353,13 @@ class _CatalogReadingCard extends StatelessWidget {
 }
 
 class _BetaReadingsTab extends StatelessWidget {
-  const _BetaReadingsTab();
+  const _BetaReadingsTab({required this.query});
+
+  final String query;
 
   @override
   Widget build(BuildContext context) {
-    return const BetaInvitationsScreen(embedded: true);
+    return BetaInvitationsScreen(embedded: true, query: query);
   }
 }
 
@@ -385,6 +371,8 @@ class _LibraryStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inProgressCount = savedCount - finishedCount;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 650 ? 3 : 1;
@@ -397,18 +385,12 @@ class _LibraryStats extends StatelessWidget {
           spacing: spacing,
           runSpacing: 14,
           children: [
-            _LibraryStat(
-              label: 'Livres sauvegardés',
-              value: savedCount.toString(),
-            ),
+            _LibraryStat(label: 'Mes lectures', value: savedCount.toString()),
             _LibraryStat(
               label: 'Livres terminés',
               value: finishedCount.toString(),
             ),
-            _LibraryStat(
-              label: 'En cours',
-              value: (savedCount - finishedCount).toString(),
-            ),
+            _LibraryStat(label: 'En cours', value: inProgressCount.toString()),
           ].map((card) => SizedBox(width: width, child: card)).toList(),
         );
       },
@@ -485,33 +467,6 @@ class _LibraryStateCard extends StatelessWidget {
   }
 }
 
-class _InlineWarning extends StatelessWidget {
-  const _InlineWarning({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7E6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: PlumoraColors.border),
-      ),
-      child: Text(
-        'Progression indisponible : $message',
-        style: const TextStyle(
-          color: PlumoraColors.textSecondary,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class _Meta extends StatelessWidget {
   const _Meta({required this.icon, required this.label});
 
@@ -555,7 +510,7 @@ class _RatingStars extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var index = 0; index < rating; index++)
-          Icon(Icons.star, size: 15, color: const Color(0xFFF5C84C)),
+          const Icon(Icons.star, size: 15, color: Color(0xFFF5C84C)),
         const SizedBox(width: 5),
         Text(
           '$rating/5',
@@ -578,7 +533,7 @@ String _lastReadLabel(DateTime? updatedAt) {
   final now = DateTime.now();
   final difference = now.difference(updatedAt.toLocal());
   if (difference.inHours < 1) {
-    return 'Lu à l’instant';
+    return "Lu à l'instant";
   }
   if (difference.inHours < 24) {
     return 'Lu il y a ${difference.inHours} heure${difference.inHours > 1 ? 's' : ''}';
@@ -589,7 +544,7 @@ String _lastReadLabel(DateTime? updatedAt) {
   return 'Lu il y a ${difference.inDays} jours';
 }
 
-List<Color> _catalogCoverColors(CatalogBookModel book) {
+List<Color> _coverColors(String seed) {
   final palettes = [
     [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
     [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
@@ -598,8 +553,7 @@ List<Color> _catalogCoverColors(CatalogBookModel book) {
     [const Color(0xFF4F46E5), const Color(0xFF7C3AED)],
     [const Color(0xFF059669), const Color(0xFF0D9488)],
   ];
-  final key = book.id.isEmpty ? book.title : book.id;
   final index =
-      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
+      seed.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
   return palettes[index];
 }

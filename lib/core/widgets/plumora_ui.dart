@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
+import '../network/api_config.dart';
 import '../theme/plumora_colors.dart';
 
 class PlumoraCard extends StatefulWidget {
@@ -306,6 +309,8 @@ class _PlumoraTabButtonState extends State<_PlumoraTabButton> {
 class PlumoraBookCover extends StatelessWidget {
   const PlumoraBookCover({
     required this.colors,
+    this.imageUrl,
+    this.imageBytes,
     this.width = 80,
     this.height = 112,
     this.radius = 12,
@@ -313,22 +318,21 @@ class PlumoraBookCover extends StatelessWidget {
   });
 
   final List<Color> colors;
+  final String? imageUrl;
+  final Uint8List? imageBytes;
   final double width;
   final double height;
   final double radius;
 
   @override
   Widget build(BuildContext context) {
+    final normalizedImageUrl = _normalizedImageUrl(imageUrl);
+
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x22000000),
@@ -337,6 +341,65 @@ class PlumoraBookCover extends StatelessWidget {
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: colors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          if (imageBytes != null)
+            Image.memory(
+              imageBytes!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox.shrink(),
+            )
+          else if (normalizedImageUrl != null)
+            Image.network(
+              normalizedImageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox.shrink(),
+            ),
+        ],
+      ),
     );
+  }
+
+  String? _normalizedImageUrl(String? value) {
+    final url = value?.trim();
+    if (url == null || url.isEmpty) {
+      return null;
+    }
+
+    final uri = Uri.tryParse(url);
+    final scheme = uri?.scheme.toLowerCase();
+    if (uri == null) {
+      return null;
+    }
+
+    if (uri.hasScheme) {
+      return scheme == 'http' || scheme == 'https' ? url : null;
+    }
+
+    final apiUri = Uri.tryParse(ApiConfig.baseUrl);
+    if (apiUri == null || !apiUri.hasScheme) {
+      return null;
+    }
+
+    final backendOrigin = apiUri.replace(path: '', query: null, fragment: null);
+    final apiBasePath = apiUri.path.endsWith('/')
+        ? apiUri.path
+        : '${apiUri.path}/';
+    final normalizedPath = url.startsWith('/') ? url : '$apiBasePath$url';
+
+    return backendOrigin.resolve(normalizedPath).toString();
   }
 }
