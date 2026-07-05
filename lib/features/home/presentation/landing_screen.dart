@@ -58,13 +58,20 @@ class LandingScreen extends StatelessWidget {
               top: 70,
               left: 0,
               right: 0,
-              child: Center(
-                child: Container(
-                  width: 500,
-                  height: 260,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: PlumoraColors.primary.withValues(alpha: 0.08),
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    width: 500,
+                    height: 260,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          PlumoraColors.primary.withValues(alpha: 0.16),
+                          PlumoraColors.primary.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -78,16 +85,12 @@ class LandingScreen extends StatelessWidget {
                       children: [
                         const FigmaBrandMark(size: 36, textSize: 22),
                         const Spacer(),
-                        FilledButton(
+                        _GradientPillButton(
+                          label: 'Se connecter',
                           onPressed: () => context.go(AppRoutes.login),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(0, 42),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                          ),
-                          child: const Text('Se connecter'),
+                          radius: 12,
+                          minHeight: 42,
+                          horizontalPadding: 20,
                         ),
                       ],
                     ),
@@ -103,15 +106,15 @@ class LandingScreen extends StatelessWidget {
                           const _HeroTitle(),
                           const SizedBox(height: 18),
                           ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 440),
+                            constraints: const BoxConstraints(maxWidth: 448),
                             child: const Text(
                               "Ecrivez, publiez, lisez et collaborez avec une communaute passionnee. L'IA Mukeme vous accompagne a chaque etape.",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: PlumoraColors.textSecondary,
                                 fontSize: 16,
-                                height: 1.45,
-                                fontWeight: FontWeight.w600,
+                                height: 1.5,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ),
@@ -121,19 +124,13 @@ class LandingScreen extends StatelessWidget {
                             spacing: 12,
                             runSpacing: 12,
                             children: [
-                              FilledButton.icon(
+                              _GradientPillButton(
+                                label: 'Rejoindre gratuitement',
                                 onPressed: () => context.go(AppRoutes.register),
-                                icon: const Icon(Icons.arrow_forward),
-                                label: const Text('Rejoindre gratuitement'),
-                                style: FilledButton.styleFrom(
-                                  minimumSize: const Size(0, 56),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 26,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                ),
+                                trailingIcon: Icons.arrow_forward,
+                                radius: 16,
+                                minHeight: 56,
+                                horizontalPadding: 32,
                               ),
                               OutlinedButton.icon(
                                 onPressed: () => context.go(AppRoutes.discover),
@@ -145,7 +142,7 @@ class LandingScreen extends StatelessWidget {
                                     horizontal: 26,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
                               ),
@@ -166,7 +163,7 @@ class LandingScreen extends StatelessWidget {
                                       context.go(AppRoutes.discover),
                                   labelStyle: const TextStyle(
                                     color: PlumoraColors.textSecondary,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                   backgroundColor: PlumoraColors.cards,
                                   side: const BorderSide(
@@ -196,13 +193,80 @@ class LandingScreen extends StatelessWidget {
   }
 }
 
+class _GradientPillButton extends StatelessWidget {
+  const _GradientPillButton({
+    required this.label,
+    required this.onPressed,
+    this.trailingIcon,
+    this.radius = 16,
+    this.minHeight = 56,
+    this.horizontalPadding = 32,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final IconData? trailingIcon;
+  final double radius;
+  final double minHeight;
+  final double horizontalPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(minHeight: minHeight),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [PlumoraColors.primary, PlumoraColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: PlumoraColors.primary.withValues(alpha: 0.30),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(radius),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (trailingIcon != null) ...[
+                  const SizedBox(width: 8),
+                  Icon(trailingIcon, color: Colors.white, size: 20),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HeroBadge extends StatelessWidget {
   const _HeroBadge();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: PlumoraColors.primary.withValues(alpha: 0.08),
         border: Border.all(
@@ -235,7 +299,7 @@ class _HeroTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final size = width >= 720 ? 56.0 : 39.0;
+    final size = width >= 720 ? 60.0 : 36.0;
 
     return Text.rich(
       TextSpan(
@@ -258,8 +322,8 @@ class _HeroTitle extends StatelessWidget {
         color: PlumoraColors.textPrimary,
         fontFamily: 'Playfair Display',
         fontSize: size,
-        fontWeight: FontWeight.w900,
-        height: 1.06,
+        fontWeight: FontWeight.w700,
+        height: 1.25,
       ),
     );
   }
@@ -271,25 +335,42 @@ class _CoverStack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 300,
-      height: 190,
+      width: 320,
+      height: 192,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           for (var index = 0; index < LandingScreen._covers.length; index++)
             Positioned(
-              left: index * 46,
+              left: index * 44,
               top: LandingScreen._covers[index].top,
               child: Transform.rotate(
                 angle: LandingScreen._covers[index].angle,
                 child: FigmaBookCover(
-                  width: 84,
-                  height: 132,
+                  width: 80,
+                  height: 128,
                   colors: LandingScreen._covers[index].colors,
                   title: LandingScreen._covers[index].title,
                 ),
               ),
             ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      PlumoraColors.background,
+                      PlumoraColors.background.withValues(alpha: 0),
+                      PlumoraColors.background.withValues(alpha: 0),
+                      PlumoraColors.background,
+                    ],
+                    stops: const [0.0, 0.15, 0.85, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -308,38 +389,38 @@ class _StatsRow extends StatelessWidget {
     ];
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
+      constraints: const BoxConstraints(maxWidth: 320),
       child: Row(
         children: [
           for (final stat in stats) ...[
             Expanded(
               child: FigmaCard(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Icon(stat.$1, color: PlumoraColors.primary, size: 18),
+                    Icon(stat.$1, color: PlumoraColors.primary, size: 16),
                     const SizedBox(height: 7),
                     Text(
                       stat.$2,
                       style: const TextStyle(
                         color: PlumoraColors.textPrimary,
                         fontSize: 18,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
                       stat.$3,
                       style: const TextStyle(
                         color: PlumoraColors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            if (stat != stats.last) const SizedBox(width: 10),
+            if (stat != stats.last) const SizedBox(width: 16),
           ],
         ],
       ),
@@ -354,90 +435,102 @@ class _FeatureGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     const features = [
       _LandingFeature(
-        icon: Icons.edit_outlined,
+        emoji: '✍️',
         title: 'Ecrire',
-        description: 'Editeur puissant avec IA pour creer vos histoires.',
+        description:
+            'Editeur puissant avec IA pour creer vos histoires sans limites',
         color: PlumoraColors.primary,
       ),
       _LandingFeature(
-        icon: Icons.search,
+        emoji: '🔍',
         title: 'Decouvrir',
-        description: 'Mukeme recommande les livres parfaits selon vos gouts.',
+        description:
+            'Mukeme vous recommande les livres parfaits selon vos gouts',
         color: PlumoraColors.secondary,
       ),
       _LandingFeature(
-        icon: Icons.rate_review_outlined,
+        emoji: '📚',
         title: 'Beta-lire',
-        description: 'Aidez les auteurs et recevez des retours utiles.',
+        description:
+            'Aidez les auteurs et recevez des retours sur vos manuscrits',
         color: PlumoraColors.accent,
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 720 ? 3 : 1;
-        final spacing = 14.0;
-        final width = columns == 1
-            ? constraints.maxWidth
-            : (constraints.maxWidth - spacing * (columns - 1)) / columns;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 896),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 720 ? 3 : 1;
+          final spacing = 16.0;
+          final width = columns == 1
+              ? constraints.maxWidth
+              : (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final feature in features)
-              SizedBox(
-                width: width,
-                child: FigmaCard(
-                  onTap: () => context.go(AppRoutes.register),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(feature.icon, color: feature.color, size: 30),
-                      const SizedBox(height: 14),
-                      Text(
-                        feature.title,
-                        style: const TextStyle(
-                          color: PlumoraColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: [
+              for (final feature in features)
+                SizedBox(
+                  width: width,
+                  child: FigmaCard(
+                    onTap: () => context.go(AppRoutes.register),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          feature.emoji,
+                          style: const TextStyle(fontSize: 30),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        feature.description,
-                        style: const TextStyle(
-                          color: PlumoraColors.textSecondary,
-                          fontSize: 13,
-                          height: 1.35,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(height: 12),
+                        Text(
+                          feature.title,
+                          style: const TextStyle(
+                            color: PlumoraColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Text(
-                            'En savoir plus',
-                            style: TextStyle(
-                              color: feature.color,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
+                        const SizedBox(height: 6),
+                        Text(
+                          feature.description,
+                          style: const TextStyle(
+                            color: PlumoraColors.textSecondary,
+                            fontSize: 14,
+                            height: 1.5,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'En savoir plus',
+                              style: TextStyle(
+                                color: feature.color,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          Icon(
-                            Icons.chevron_right,
-                            color: feature.color,
-                            size: 16,
-                          ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.chevron_right,
+                              color: feature.color,
+                              size: 14,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -458,13 +551,13 @@ class _LandingCover {
 
 class _LandingFeature {
   const _LandingFeature({
-    required this.icon,
+    required this.emoji,
     required this.title,
     required this.description,
     required this.color,
   });
 
-  final IconData icon;
+  final String emoji;
   final String title;
   final String description;
   final Color color;

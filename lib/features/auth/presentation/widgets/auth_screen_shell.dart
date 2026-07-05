@@ -10,7 +10,7 @@ class AuthScreenShell extends StatelessWidget {
     this.topPadding = 24,
     this.horizontalPadding = 14,
     this.bottomPadding = 28,
-    this.maxPanelWidth = 430,
+    this.maxPanelWidth = 448,
     super.key,
   });
 
@@ -23,50 +23,30 @@ class AuthScreenShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.appOutside,
+      backgroundColor: PlumoraColors.background,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < 520;
-            final outerInset = isCompact ? 0.0 : 8.0;
-            final availableWidth = math.max(
-              0.0,
-              constraints.maxWidth - (outerInset * 2),
-            );
-            final panelWidth = isCompact
-                ? constraints.maxWidth
-                : math.min(maxPanelWidth, availableWidth);
-            final panelRadius = isCompact ? 0.0 : 28.0;
             final heightScale = constraints.maxHeight < 720 ? 0.78 : 1.0;
-            final effectiveHorizontalPadding = math.min(
-              horizontalPadding,
-              math.max(14.0, panelWidth * 0.08),
-            );
+            final sidePadding = math.max(16.0, horizontalPadding);
+            final verticalPadding = topPadding * heightScale;
 
             return SingleChildScrollView(
-              padding: EdgeInsets.all(outerInset),
-              child: Center(
-                child: SizedBox(
-                  width: panelWidth,
+              padding: EdgeInsets.fromLTRB(
+                sidePadding,
+                verticalPadding,
+                sidePadding,
+                bottomPadding,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight:
+                      constraints.maxHeight - verticalPadding - bottomPadding,
+                ),
+                child: Center(
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - (outerInset * 2),
-                    ),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: PlumoraColors.background,
-                        borderRadius: BorderRadius.circular(panelRadius),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          effectiveHorizontalPadding,
-                          topPadding * heightScale,
-                          effectiveHorizontalPadding,
-                          bottomPadding,
-                        ),
-                        child: child,
-                      ),
-                    ),
+                    constraints: BoxConstraints(maxWidth: maxPanelWidth),
+                    child: child,
                   ),
                 ),
               ),

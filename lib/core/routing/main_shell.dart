@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,20 +21,20 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.home,
     ),
     ShellDestination(
-      label: 'Découvrir',
+      label: 'Decouvrir',
       icon: Icons.menu_book_outlined,
       selectedIcon: Icons.menu_book,
       path: AppRoutes.discover,
     ),
     ShellDestination(
-      label: 'Écrire',
+      label: 'Ecrire',
       icon: Icons.draw_outlined,
       selectedIcon: Icons.draw,
       path: AppRoutes.write,
       useLogoMark: true,
     ),
     ShellDestination(
-      label: 'Bibliothèque',
+      label: 'Bibliotheque',
       icon: Icons.library_books_outlined,
       selectedIcon: Icons.library_books,
       path: AppRoutes.library,
@@ -59,25 +61,25 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.manuscripts,
     ),
     ShellDestination(
-      label: 'Éditeur',
+      label: 'Editeur',
       icon: Icons.edit_note_outlined,
       selectedIcon: Icons.edit_note,
       path: AppRoutes.editor,
     ),
     ShellDestination(
-      label: 'Bêta-retours',
+      label: 'Beta-retours',
       icon: Icons.forum_outlined,
       selectedIcon: Icons.forum,
       path: AppRoutes.betaFeedback,
     ),
     ShellDestination(
-      label: 'Découvrir',
+      label: 'Decouvrir',
       icon: Icons.menu_book_outlined,
       selectedIcon: Icons.menu_book,
       path: AppRoutes.discover,
     ),
     ShellDestination(
-      label: 'Bibliothèque',
+      label: 'Bibliotheque',
       icon: Icons.library_books_outlined,
       selectedIcon: Icons.library_books,
       path: AppRoutes.library,
@@ -139,22 +141,30 @@ class _MobileBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 66,
-      decoration: BoxDecoration(
-        color: PlumoraColors.background.withValues(alpha: 0.96),
-        border: const Border(top: BorderSide(color: PlumoraColors.border)),
-      ),
-      child: Row(
-        children: [
-          for (final destination in MainShell.mobileDestinations)
-            Expanded(
-              child: _BottomNavItem(
-                destination: destination,
-                selected: _isSelected(location, destination.path),
-              ),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          height: 70,
+          decoration: BoxDecoration(
+            color: PlumoraColors.background.withValues(alpha: 0.95),
+            border: const Border(top: BorderSide(color: PlumoraColors.border)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: [
+                for (final destination in MainShell.mobileDestinations)
+                  Expanded(
+                    child: _BottomNavItem(
+                      destination: destination,
+                      selected: _isSelected(location, destination.path),
+                    ),
+                  ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
@@ -174,19 +184,47 @@ class _BottomNavItem extends StatelessWidget {
 
     return InkWell(
       onTap: () => context.go(destination.path),
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.only(top: 8, bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            destination.useLogoMark
-                ? PlumoraLogoMark(size: 24, color: color, strokeWidth: 2.2)
-                : Icon(
-                    selected ? destination.selectedIcon : destination.icon,
-                    color: color,
-                    size: 24,
-                  ),
-            const SizedBox(height: 4),
+            Transform.scale(
+              scale: selected ? 1.1 : 1,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  destination.useLogoMark
+                      ? PlumoraLogoMark(
+                          size: 22,
+                          color: color,
+                          strokeWidth: 2.2,
+                        )
+                      : Icon(
+                          selected
+                              ? destination.selectedIcon
+                              : destination.icon,
+                          color: color,
+                          size: 22,
+                        ),
+                  if (selected)
+                    Positioned(
+                      bottom: -5,
+                      child: Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: PlumoraColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 5),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
@@ -285,7 +323,7 @@ class _SidebarItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         onTap: () => context.go(destination.path),
         child: Container(
           width: double.infinity,
@@ -294,7 +332,7 @@ class _SidebarItem extends StatelessWidget {
             color: selected
                 ? PlumoraColors.primary.withValues(alpha: 0.10)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [

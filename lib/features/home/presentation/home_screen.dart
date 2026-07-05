@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,78 +35,106 @@ class HomeScreen extends ConsumerWidget {
     final unreadCount =
         ref.watch(unreadNotificationsCountProvider).valueOrNull ?? 0;
 
-    return FigmaScreen(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _HomeHeader(unreadCount: unreadCount),
-          const SizedBox(height: 18),
-          _QuoteCard(displayName: displayName),
-          const SizedBox(height: 18),
-          readingsAsync.when(
-            loading: () => const _LoadingCard(height: 188),
-            error: (_, _) => _NoReadingCard(
-              onDiscover: () => context.go(AppRoutes.discover),
+    return ColoredBox(
+      color: PlumoraColors.background,
+      child: SafeArea(
+        bottom: false,
+        child: CustomScrollView(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _HomeHeaderDelegate(
+                unreadCount: unreadCount,
+                displayName: displayName,
+              ),
             ),
-            data: (readings) {
-              final active =
-                  readings.where((reading) => !reading.finished).toList()
-                    ..sort((a, b) {
-                      final aDate = a.updatedAt ?? DateTime(0);
-                      final bDate = b.updatedAt ?? DateTime(0);
-                      return bDate.compareTo(aDate);
-                    });
-              if (active.isEmpty) {
-                return _NoReadingCard(
-                  onDiscover: () => context.go(AppRoutes.discover),
-                );
-              }
-              return _ContinueReadingCard(reading: active.first);
-            },
-          ),
-          const SizedBox(height: 18),
-          _QuickActions(
-            onWrite: () => context.go(AppRoutes.write),
-            onDiscover: () => context.go(AppRoutes.discover),
-            onMukeme: () => context.go(AppRoutes.mukemeRecommendation),
-          ),
-          const SizedBox(height: 26),
-          _BookRail(
-            title: 'Tendances',
-            icon: Icons.local_fire_department,
-            iconColor: PlumoraColors.primary,
-            booksAsync: popularAsync,
-            rankItems: true,
-            onSeeAll: () => context.go(AppRoutes.discover),
-            onRetry: () => ref.invalidate(popularCatalogBooksProvider),
-          ),
-          const SizedBox(height: 24),
-          _BookRail(
-            title: 'Nouveautes',
-            icon: Icons.bolt_outlined,
-            iconColor: PlumoraColors.accent,
-            booksAsync: latestAsync,
-            onSeeAll: () => context.go(AppRoutes.discover),
-            onRetry: () => ref.invalidate(latestCatalogBooksProvider),
-          ),
-          const SizedBox(height: 24),
-          _ActivityList(notificationsAsync: notificationsAsync),
-          const SizedBox(height: 16),
-          betaAsync.when(
-            loading: () => const _LoadingCard(height: 92),
-            error: (_, _) => _BetaSummaryCard(count: 0),
-            data: (invitations) {
-              final pending = invitations
-                  .where((invitation) => invitation.isPending)
-                  .length;
-              final accepted = invitations
-                  .where((invitation) => invitation.isAccepted)
-                  .length;
-              return _BetaSummaryCard(count: pending + accepted);
-            },
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 92),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _QuoteCard(),
+                        const SizedBox(height: 18),
+                        readingsAsync.when(
+                          loading: () => const _LoadingCard(height: 188),
+                          error: (_, _) => _NoReadingCard(
+                            onDiscover: () => context.go(AppRoutes.discover),
+                          ),
+                          data: (readings) {
+                            final active =
+                                readings
+                                    .where((reading) => !reading.finished)
+                                    .toList()
+                                  ..sort((a, b) {
+                                    final aDate = a.updatedAt ?? DateTime(0);
+                                    final bDate = b.updatedAt ?? DateTime(0);
+                                    return bDate.compareTo(aDate);
+                                  });
+                            if (active.isEmpty) {
+                              return _NoReadingCard(
+                                onDiscover: () =>
+                                    context.go(AppRoutes.discover),
+                              );
+                            }
+                            return _ContinueReadingCard(reading: active.first);
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        _QuickActions(
+                          onWrite: () => context.go(AppRoutes.write),
+                          onDiscover: () => context.go(AppRoutes.discover),
+                          onMukeme: () =>
+                              context.go(AppRoutes.mukemeRecommendation),
+                        ),
+                        const SizedBox(height: 26),
+                        _BookRail(
+                          title: 'Tendances',
+                          icon: Icons.local_fire_department,
+                          iconColor: PlumoraColors.primary,
+                          booksAsync: popularAsync,
+                          rankItems: true,
+                          onSeeAll: () => context.go(AppRoutes.discover),
+                          onRetry: () =>
+                              ref.invalidate(popularCatalogBooksProvider),
+                        ),
+                        const SizedBox(height: 24),
+                        _BookRail(
+                          title: 'Nouveautes',
+                          icon: Icons.bolt_outlined,
+                          iconColor: PlumoraColors.accent,
+                          booksAsync: latestAsync,
+                          onSeeAll: () => context.go(AppRoutes.discover),
+                          onRetry: () =>
+                              ref.invalidate(latestCatalogBooksProvider),
+                        ),
+                        const SizedBox(height: 24),
+                        _ActivityList(notificationsAsync: notificationsAsync),
+                        const SizedBox(height: 16),
+                        betaAsync.when(
+                          loading: () => const _LoadingCard(height: 92),
+                          error: (_, _) => _BetaSummaryCard(count: 0),
+                          data: (invitations) {
+                            final pending = invitations
+                                .where((invitation) => invitation.isPending)
+                                .length;
+                            final accepted = invitations
+                                .where((invitation) => invitation.isAccepted)
+                                .length;
+                            return _BetaSummaryCard(count: pending + accepted);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -126,6 +156,85 @@ class HomeScreen extends ConsumerWidget {
     }
 
     return 'Plumora';
+  }
+}
+
+class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _HomeHeaderDelegate({
+    required this.unreadCount,
+    required this.displayName,
+  });
+
+  final int unreadCount;
+  final String displayName;
+
+  static const _height = 98.0;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: PlumoraColors.background.withValues(alpha: 0.95),
+            border: const Border(
+              bottom: BorderSide(color: PlumoraColors.border),
+            ),
+            boxShadow: overlapsContent
+                ? const [
+                    BoxShadow(
+                      color: Color(0x0F000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1280),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _HomeHeader(unreadCount: unreadCount),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Bonjour, $displayName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: PlumoraColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _HomeHeaderDelegate oldDelegate) {
+    return oldDelegate.unreadCount != unreadCount ||
+        oldDelegate.displayName != displayName;
   }
 }
 
@@ -192,49 +301,31 @@ class _HomeHeader extends StatelessWidget {
 }
 
 class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({required this.displayName});
-
-  final String displayName;
+  const _QuoteCard();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Bonjour, $displayName',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: PlumoraColors.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 12),
-        const FigmaCard(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FigmaGradientIcon(
-                icon: Icons.format_quote,
-                size: 38,
-                iconSize: 18,
+    return const FigmaCard(
+      padding: EdgeInsets.all(20),
+      shadow: false,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FigmaGradientIcon(icon: Icons.format_quote, size: 38, iconSize: 18),
+          SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              '"N\'attendez pas l\'inspiration. Elle vient en ecrivant."',
+              style: TextStyle(
+                color: PlumoraColors.textPrimary,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                height: 1.45,
               ),
-              SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  '"N\'attendez pas l\'inspiration. Elle vient en ecrivant."',
-                  style: TextStyle(
-                    color: PlumoraColors.textPrimary,
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
-                    height: 1.45,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

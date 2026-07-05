@@ -98,8 +98,11 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         return Scaffold(
           backgroundColor: _readerPaper,
           appBar: AppBar(
-            backgroundColor: _readerPaper,
+            backgroundColor: PlumoraColors.cards,
             surfaceTintColor: Colors.transparent,
+            shape: const Border(
+              bottom: BorderSide(color: PlumoraColors.border),
+            ),
             leading: IconButton(
               onPressed: () => context.go(AppRoutes.library),
               icon: const Icon(Icons.arrow_back),
@@ -170,7 +173,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: _readerPaper,
+                  color: PlumoraColors.cards,
                   border: const Border(
                     top: BorderSide(color: PlumoraColors.border),
                   ),

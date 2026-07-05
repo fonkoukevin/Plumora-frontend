@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,164 +56,135 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       genre: hasCategory ? _plumoraGenreForFilter(_activeFilter) : '',
     );
 
-    return FigmaScreen(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Decouvrir',
-            style: TextStyle(
-              color: PlumoraColors.textPrimary,
-              fontFamily: 'Playfair Display',
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _submitSearch(),
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
-              hintText: 'Titre, auteur, genre...',
-              suffixIcon: IconButton(
-                tooltip: 'Rechercher',
-                onPressed: _submitSearch,
-                icon: const Icon(Icons.arrow_forward, size: 18),
+    return ColoredBox(
+      color: PlumoraColors.background,
+      child: SafeArea(
+        bottom: false,
+        child: CustomScrollView(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _DiscoverHeaderDelegate(
+                searchController: _searchController,
+                onSearch: _submitSearch,
+                onMukemeTap: () => context.go(AppRoutes.mukemeRecommendation),
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          FigmaCard(
-            onTap: () => context.go(AppRoutes.mukemeRecommendation),
-            color: PlumoraColors.primary.withValues(alpha: 0.05),
-            child: Row(
-              children: [
-                const FigmaGradientIcon(icon: Icons.auto_awesome, size: 52),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Trouver avec Mukeme',
-                        style: TextStyle(
-                          color: PlumoraColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
+            SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 92),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _DiscoverFilterTabs(
+                          filters: _filters,
+                          activeFilter: _activeFilter,
+                          onSelected: (filter) =>
+                              setState(() => _activeFilter = filter),
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Recommandations personnalisees par IA',
-                        style: TextStyle(
-                          color: PlumoraColors.textSecondary,
-                          fontSize: 13,
+                        const SizedBox(height: 12),
+                        _LanguageTabs(
+                          language: _language,
+                          onSelected: (language) =>
+                              setState(() => _language = language),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 30),
+                        if (hasCategory) ...[
+                          _PlumoraAsyncRail(
+                            title: 'Oeuvres Plumora',
+                            icon: Icons.auto_stories_outlined,
+                            iconColor: PlumoraColors.secondary,
+                            query: plumoraQuery,
+                          ),
+                          const SizedBox(height: 32),
+                          _ExternalAsyncRail(
+                            title: _activeFilter.label,
+                            icon: _iconForFilter(_activeFilter),
+                            iconColor: _activeFilter.label == 'Romance'
+                                ? PlumoraColors.orange
+                                : PlumoraColors.primary,
+                            query: _queryForCategory(
+                              searchQuery,
+                              activeCategory,
+                            ),
+                            rankItems: true,
+                            subtitle: _language == null
+                                ? 'Gutendex'
+                                : _language!.toUpperCase(),
+                          ),
+                        ] else ...[
+                          _PlumoraAsyncRail(
+                            title: 'Oeuvres Plumora',
+                            icon: Icons.auto_stories_outlined,
+                            iconColor: PlumoraColors.secondary,
+                            query: plumoraQuery,
+                          ),
+                          const SizedBox(height: 32),
+                          if (searchQuery.isNotEmpty) ...[
+                            _ExternalAsyncRail(
+                              title: 'Resultats',
+                              icon: Icons.search,
+                              query: ExternalBookSearchQuery(
+                                search: searchQuery,
+                                language: _language,
+                              ),
+                              rankItems: true,
+                              subtitle: 'Gutendex',
+                            ),
+                            const SizedBox(height: 32),
+                          ],
+                          _ExternalAsyncRail(
+                            title: 'Tendances',
+                            icon: Icons.trending_up,
+                            query: ExternalBookSearchQuery(language: _language),
+                            rankItems: true,
+                            subtitle: "Mis a jour aujourd'hui",
+                          ),
+                          const SizedBox(height: 32),
+                          _ExternalAsyncRail(
+                            title: 'Nouveautes',
+                            icon: Icons.bolt_outlined,
+                            iconColor: PlumoraColors.accent,
+                            query: ExternalBookSearchQuery(
+                              language: _language,
+                              page: 1,
+                            ),
+                            badge: 'NOUVEAU',
+                            loadDelay: const Duration(milliseconds: 250),
+                          ),
+                          const SizedBox(height: 32),
+                          _ExternalAsyncRail(
+                            title: 'Fantasy',
+                            icon: Icons.auto_awesome,
+                            query: ExternalBookSearchQuery(
+                              search: 'fantasy',
+                              language: _language,
+                            ),
+                            loadDelay: const Duration(milliseconds: 650),
+                          ),
+                          const SizedBox(height: 32),
+                          _ExternalAsyncRail(
+                            title: 'Romance',
+                            icon: Icons.favorite_border,
+                            iconColor: PlumoraColors.orange,
+                            query: ExternalBookSearchQuery(
+                              search: 'romance',
+                              language: _language,
+                            ),
+                            loadDelay: const Duration(milliseconds: 950),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-                FilledButton(
-                  onPressed: () => context.go(AppRoutes.mukemeRecommendation),
-                  child: const Text('Essayer'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          _DiscoverFilterTabs(
-            filters: _filters,
-            activeFilter: _activeFilter,
-            onSelected: (filter) => setState(() => _activeFilter = filter),
-          ),
-          const SizedBox(height: 12),
-          _LanguageTabs(
-            language: _language,
-            onSelected: (language) => setState(() => _language = language),
-          ),
-          const SizedBox(height: 26),
-          if (hasCategory) ...[
-            _PlumoraAsyncRail(
-              title: 'Oeuvres Plumora',
-              icon: Icons.auto_stories_outlined,
-              iconColor: PlumoraColors.secondary,
-              query: plumoraQuery,
-            ),
-            const SizedBox(height: 26),
-            _ExternalAsyncRail(
-              title: _activeFilter.label,
-              icon: _iconForFilter(_activeFilter),
-              iconColor: _activeFilter.label == 'Romance'
-                  ? PlumoraColors.orange
-                  : PlumoraColors.primary,
-              query: _queryForCategory(searchQuery, activeCategory),
-              rankItems: true,
-              subtitle: _language == null
-                  ? 'Gutendex'
-                  : _language!.toUpperCase(),
-            ),
-          ] else ...[
-            _PlumoraAsyncRail(
-              title: 'Oeuvres Plumora',
-              icon: Icons.auto_stories_outlined,
-              iconColor: PlumoraColors.secondary,
-              query: plumoraQuery,
-            ),
-            const SizedBox(height: 26),
-            if (searchQuery.isNotEmpty) ...[
-              _ExternalAsyncRail(
-                title: 'Resultats',
-                icon: Icons.search,
-                query: ExternalBookSearchQuery(
-                  search: searchQuery,
-                  language: _language,
-                ),
-                rankItems: true,
-                subtitle: 'Gutendex',
               ),
-              const SizedBox(height: 26),
-            ],
-            _ExternalAsyncRail(
-              title: 'Tendances',
-              icon: Icons.trending_up,
-              query: ExternalBookSearchQuery(language: _language),
-              rankItems: true,
-            ),
-            const SizedBox(height: 26),
-            _ExternalAsyncRail(
-              title: 'Nouveautes',
-              icon: Icons.bolt_outlined,
-              iconColor: PlumoraColors.accent,
-              query: ExternalBookSearchQuery(language: _language, page: 1),
-              badge: 'NOUVEAU',
-              loadDelay: const Duration(milliseconds: 250),
-            ),
-            const SizedBox(height: 26),
-            _ExternalAsyncRail(
-              title: 'Fantasy',
-              icon: Icons.auto_awesome,
-              query: ExternalBookSearchQuery(
-                search: 'fantasy',
-                language: _language,
-              ),
-              loadDelay: const Duration(milliseconds: 650),
-            ),
-            const SizedBox(height: 26),
-            _ExternalAsyncRail(
-              title: 'Romance',
-              icon: Icons.favorite_border,
-              iconColor: PlumoraColors.orange,
-              query: ExternalBookSearchQuery(
-                search: 'romance',
-                language: _language,
-              ),
-              loadDelay: const Duration(milliseconds: 950),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -254,6 +226,162 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       default:
         return Icons.auto_awesome;
     }
+  }
+}
+
+class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _DiscoverHeaderDelegate({
+    required this.searchController,
+    required this.onSearch,
+    required this.onMukemeTap,
+  });
+
+  final TextEditingController searchController;
+  final VoidCallback onSearch;
+  final VoidCallback onMukemeTap;
+
+  static const _height = 218.0;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: PlumoraColors.background.withValues(alpha: 0.95),
+            border: const Border(
+              bottom: BorderSide(color: PlumoraColors.border),
+            ),
+            boxShadow: overlapsContent
+                ? const [
+                    BoxShadow(
+                      color: Color(0x0F000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1280),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Decouvrir',
+                      style: TextStyle(
+                        color: PlumoraColors.textPrimary,
+                        fontFamily: 'Playfair Display',
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 50,
+                      child: TextField(
+                        controller: searchController,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => onSearch(),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.search),
+                          hintText: 'Titre, auteur, genre...',
+                          suffixIcon: IconButton(
+                            tooltip: 'Rechercher',
+                            onPressed: onSearch,
+                            icon: const Icon(Icons.arrow_forward, size: 18),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _MukemeHeaderCard(onTap: onMukemeTap),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _DiscoverHeaderDelegate oldDelegate) {
+    return oldDelegate.searchController != searchController ||
+        oldDelegate.onSearch != onSearch ||
+        oldDelegate.onMukemeTap != onMukemeTap;
+  }
+}
+
+class _MukemeHeaderCard extends StatelessWidget {
+  const _MukemeHeaderCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FigmaCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(14),
+      radius: 16,
+      color: PlumoraColors.primary.withValues(alpha: 0.05),
+      borderColor: PlumoraColors.primary.withValues(alpha: 0.12),
+      shadow: false,
+      child: Row(
+        children: [
+          const FigmaGradientIcon(icon: Icons.auto_awesome, size: 48),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Trouver avec Mukeme',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    height: 1.15,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Recommandations personnalisees par IA',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton(onPressed: onTap, child: const Text('Essayer')),
+        ],
+      ),
+    );
   }
 }
 

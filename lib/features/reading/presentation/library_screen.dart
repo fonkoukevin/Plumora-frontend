@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -39,79 +41,175 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final invitationsAsync = ref.watch(betaInvitationsProvider);
     final query = _searchController.text.trim().toLowerCase();
 
-    return FigmaScreen(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Bibliotheque',
-            style: TextStyle(
-              color: PlumoraColors.textPrimary,
-              fontFamily: 'Playfair Display',
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
+    return ColoredBox(
+      color: PlumoraColors.background,
+      child: SafeArea(
+        bottom: false,
+        child: CustomScrollView(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _LibraryHeaderDelegate(
+                searchController: _searchController,
+                activeTab: _activeTab,
+                onSearchChanged: () => setState(() {}),
+                onTabSelected: (tab) => setState(() => _activeTab = tab),
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _searchController,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Rechercher un livre ou auteur...',
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 14),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                FigmaPillTab(
-                  label: 'Lectures',
-                  icon: Icons.menu_book_outlined,
-                  selected: _activeTab == 'readings',
-                  onTap: () => setState(() => _activeTab = 'readings'),
+            SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
+                    child: _activeTab == 'readings'
+                        ? _ReadingsTab(
+                            readingsAsync: readingsAsync,
+                            query: query,
+                            onRetry: () =>
+                                ref.invalidate(myReadingProgressProvider),
+                          )
+                        : _activeTab == 'favorites'
+                        ? _FavoritesTab(
+                            favoritesAsync: favoritesAsync,
+                            query: query,
+                            onRetry: () => ref.invalidate(myFavoritesProvider),
+                          )
+                        : _BetaTab(
+                            invitationsAsync: invitationsAsync,
+                            query: query,
+                            onRetry: () =>
+                                ref.invalidate(betaInvitationsProvider),
+                          ),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                FigmaPillTab(
-                  label: 'Favoris',
-                  icon: Icons.favorite_border,
-                  selected: _activeTab == 'favorites',
-                  onTap: () => setState(() => _activeTab = 'favorites'),
-                ),
-                const SizedBox(width: 8),
-                FigmaPillTab(
-                  label: 'Beta',
-                  icon: Icons.edit_note_outlined,
-                  selected: _activeTab == 'beta',
-                  onTap: () => setState(() => _activeTab = 'beta'),
-                ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 18),
-          if (_activeTab == 'readings')
-            _ReadingsTab(
-              readingsAsync: readingsAsync,
-              query: query,
-              onRetry: () => ref.invalidate(myReadingProgressProvider),
-            )
-          else if (_activeTab == 'favorites')
-            _FavoritesTab(
-              favoritesAsync: favoritesAsync,
-              query: query,
-              onRetry: () => ref.invalidate(myFavoritesProvider),
-            )
-          else
-            _BetaTab(
-              invitationsAsync: invitationsAsync,
-              query: query,
-              onRetry: () => ref.invalidate(betaInvitationsProvider),
-            ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+}
+
+class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _LibraryHeaderDelegate({
+    required this.searchController,
+    required this.activeTab,
+    required this.onSearchChanged,
+    required this.onTabSelected,
+  });
+
+  final TextEditingController searchController;
+  final String activeTab;
+  final VoidCallback onSearchChanged;
+  final ValueChanged<String> onTabSelected;
+
+  static const _height = 180.0;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: PlumoraColors.background.withValues(alpha: 0.95),
+            border: const Border(
+              bottom: BorderSide(color: PlumoraColors.border),
+            ),
+            boxShadow: overlapsContent
+                ? const [
+                    BoxShadow(
+                      color: Color(0x0F000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1280),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Bibliotheque',
+                      style: TextStyle(
+                        color: PlumoraColors.textPrimary,
+                        fontFamily: 'Playfair Display',
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 48,
+                      child: TextField(
+                        controller: searchController,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.search),
+                          hintText: 'Rechercher un livre ou auteur...',
+                        ),
+                        onChanged: (_) => onSearchChanged(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          FigmaPillTab(
+                            label: 'Lectures',
+                            icon: Icons.menu_book_outlined,
+                            selected: activeTab == 'readings',
+                            onTap: () => onTabSelected('readings'),
+                          ),
+                          const SizedBox(width: 8),
+                          FigmaPillTab(
+                            label: 'Favoris',
+                            icon: Icons.favorite_border,
+                            selected: activeTab == 'favorites',
+                            onTap: () => onTabSelected('favorites'),
+                          ),
+                          const SizedBox(width: 8),
+                          FigmaPillTab(
+                            label: 'Beta',
+                            icon: Icons.edit_note_outlined,
+                            selected: activeTab == 'beta',
+                            onTap: () => onTabSelected('beta'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _LibraryHeaderDelegate oldDelegate) {
+    return oldDelegate.searchController != searchController ||
+        oldDelegate.activeTab != activeTab;
   }
 }
 
@@ -159,8 +257,18 @@ class _ReadingsTab extends StatelessWidget {
                   active.toString(),
                   Icons.bookmark_added_outlined,
                 ),
-                _Stat('Termines', finished.toString(), Icons.bar_chart),
-                _Stat('Moyenne', '$average%', Icons.schedule),
+                _Stat(
+                  'Termines',
+                  finished.toString(),
+                  Icons.bar_chart,
+                  color: PlumoraColors.accent,
+                ),
+                _Stat(
+                  'Moyenne',
+                  '$average%',
+                  Icons.schedule,
+                  color: PlumoraColors.primaryLight,
+                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -674,46 +782,76 @@ class _ResponsiveStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 720;
-        final children = [
-          for (final stat in stats)
-            FigmaStatCard(
-              label: stat.label,
-              value: stat.value,
-              icon: stat.icon,
+    return Row(
+      children: [
+        for (var index = 0; index < stats.length; index++) ...[
+          Expanded(child: _LibraryStatCard(stat: stats[index])),
+          if (index != stats.length - 1) const SizedBox(width: 10),
+        ],
+      ],
+    );
+  }
+}
+
+class _LibraryStatCard extends StatelessWidget {
+  const _LibraryStatCard({required this.stat});
+
+  final _Stat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    return FigmaCard(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+      shadow: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(stat.icon, size: 17, color: stat.color),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              stat.value,
+              maxLines: 1,
+              style: TextStyle(
+                color: stat.color,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
             ),
-        ];
-        if (compact) {
-          return Column(
-            children: [
-              for (final child in children) ...[
-                child,
-                const SizedBox(height: 12),
-              ],
-            ],
-          );
-        }
-        return Row(
-          children: [
-            for (var index = 0; index < children.length; index++) ...[
-              Expanded(child: children[index]),
-              if (index != children.length - 1) const SizedBox(width: 10),
-            ],
-          ],
-        );
-      },
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              stat.label,
+              maxLines: 1,
+              style: const TextStyle(
+                color: PlumoraColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _Stat {
-  const _Stat(this.label, this.value, this.icon);
+  const _Stat(
+    this.label,
+    this.value,
+    this.icon, {
+    this.color = PlumoraColors.primary,
+  });
 
   final String label;
   final String value;
   final IconData icon;
+  final Color color;
 }
 
 class _Loading extends StatelessWidget {

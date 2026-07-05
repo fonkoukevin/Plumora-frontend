@@ -6,7 +6,7 @@ import 'plumora_logo_mark.dart';
 class FigmaScreen extends StatelessWidget {
   const FigmaScreen({
     required this.child,
-    this.maxWidth = 1180,
+    this.maxWidth = 1280,
     this.padding = const EdgeInsets.fromLTRB(16, 24, 16, 88),
     this.scroll = true,
     this.center = true,
@@ -77,9 +77,9 @@ class FigmaCard extends StatelessWidget {
         boxShadow: shadow
             ? const [
                 BoxShadow(
-                  color: Color(0x12000000),
-                  blurRadius: 14,
-                  offset: Offset(0, 6),
+                  color: Color(0x10000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
                 ),
               ]
             : null,

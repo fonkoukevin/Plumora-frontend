@@ -50,7 +50,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
     final hasSelection = _selectedRoles.isNotEmpty;
 
     return AuthScreenShell(
-      maxPanelWidth: 860,
+      maxPanelWidth: 768,
       topPadding: 58,
       horizontalPadding: 16,
       bottomPadding: 32,
@@ -58,7 +58,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 720;
           final cardWidth = isWide
-              ? (constraints.maxWidth - 32) / 3
+              ? (constraints.maxWidth - 48) / 3
               : constraints.maxWidth;
 
           return Column(
@@ -89,8 +89,8 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                 const SizedBox(height: 16),
               ],
               Wrap(
-                spacing: 16,
-                runSpacing: 16,
+                spacing: 24,
+                runSpacing: 24,
                 children: [
                   for (final role in _roleChoices)
                     SizedBox(
