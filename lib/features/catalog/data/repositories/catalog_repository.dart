@@ -19,6 +19,31 @@ final catalogBooksProvider =
           .books(genre: genre.trim().isEmpty ? null : genre);
     });
 
+final plumoraCatalogBooksProvider =
+    FutureProvider.family<List<CatalogBookModel>, PlumoraCatalogQuery>((
+      ref,
+      query,
+    ) async {
+      final repository = ref.watch(catalogRepositoryProvider);
+      final search = query.search.trim();
+      final genre = query.genre.trim();
+      final books = search.isEmpty
+          ? await repository.books(genre: genre.isEmpty ? null : genre)
+          : await repository.search(search);
+
+      return books.where((book) {
+        if (!book.isPlumoraOriginal) {
+          return false;
+        }
+
+        if (genre.isEmpty || search.isEmpty) {
+          return true;
+        }
+
+        return (book.genre ?? '').trim().toLowerCase() == genre.toLowerCase();
+      }).toList();
+    });
+
 final latestCatalogBooksProvider = FutureProvider<List<CatalogBookModel>>((
   ref,
 ) {
@@ -45,6 +70,23 @@ final catalogBookDetailProvider =
     FutureProvider.family<CatalogBookDetailModel, String>((ref, bookId) {
       return ref.watch(catalogRepositoryProvider).bookDetail(bookId);
     });
+
+class PlumoraCatalogQuery {
+  const PlumoraCatalogQuery({this.search = '', this.genre = ''});
+
+  final String search;
+  final String genre;
+
+  @override
+  bool operator ==(Object other) {
+    return other is PlumoraCatalogQuery &&
+        other.search == search &&
+        other.genre == genre;
+  }
+
+  @override
+  int get hashCode => Object.hash(search, genre);
+}
 
 class CatalogRepository {
   const CatalogRepository(this._apiService);

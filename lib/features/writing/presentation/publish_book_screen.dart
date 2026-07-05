@@ -5,10 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
-import '../../../core/widgets/plumora_ui.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/models/chapter_model.dart';
-import '../../book/data/repositories/book_cover_cache.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
 import '../../book/presentation/widgets/book_status_badge.dart';
@@ -31,79 +30,85 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
     final bookAsync = ref.watch(authorBookProvider(widget.bookId));
     final chaptersAsync = ref.watch(bookChaptersProvider(widget.bookId));
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontal = constraints.maxWidth >= 760 ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 92.0;
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            28,
-            horizontal,
-            bottomPadding,
+    return FigmaScreen(
+      maxWidth: 840,
+      padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FigmaBackButton(
+            label: 'Retour',
+            onTap: () =>
+                context.go(AppRoutes.authorBookDetailPath(widget.bookId)),
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 820),
-              child: bookAsync.when(
-                loading: () => const _LoadingCard(),
-                error: (error, _) => _ErrorCard(
-                  title: 'Livre introuvable',
-                  message: AppError.messageFor(error),
-                  onRetry: () =>
-                      ref.invalidate(authorBookProvider(widget.bookId)),
+          const SizedBox(height: 18),
+          const Text(
+            'Preparer la publication',
+            style: TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'La publication est directe dans le catalogue Plumora.',
+            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 15),
+          ),
+          const SizedBox(height: 24),
+          bookAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(48),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, _) => _ErrorPanel(
+              message: AppError.messageFor(error),
+              onRetry: () => ref.invalidate(authorBookProvider(widget.bookId)),
+            ),
+            data: (book) => chaptersAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(48),
+                  child: CircularProgressIndicator(),
                 ),
-                data: (book) => chaptersAsync.when(
-                  loading: () => const _LoadingCard(),
-                  error: (error, _) => _ErrorCard(
-                    title: 'Chapitres indisponibles',
-                    message: AppError.messageFor(error),
-                    onRetry: () =>
-                        ref.invalidate(bookChaptersProvider(widget.bookId)),
-                  ),
-                  data: (chapters) => _PublishContent(
-                    book: book,
-                    chapters: chapters,
-                    error: _error,
-                    isPublishing: _isPublishing,
-                    onBack: () => context.go(
-                      AppRoutes.authorBookDetailPath(widget.bookId),
-                    ),
-                    onOpenEditor: () =>
-                        context.go(AppRoutes.chapterEditorPath(widget.bookId)),
-                    onPublish: _canSubmit(book, chapters)
-                        ? () => _publish(book.id)
-                        : null,
-                  ),
-                ),
+              ),
+              error: (error, _) => _ErrorPanel(
+                message: AppError.messageFor(error),
+                onRetry: () =>
+                    ref.invalidate(bookChaptersProvider(widget.bookId)),
+              ),
+              data: (chapters) => _PublishContent(
+                book: book,
+                chapters: chapters,
+                isPublishing: _isPublishing,
+                error: _error,
+                onPublish: _publish,
               ),
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  bool _canSubmit(BookModel book, List<ChapterModel> chapters) {
-    return book.canPublish && chapters.isNotEmpty && !_isPublishing;
-  }
-
-  Future<void> _publish(String bookId) async {
+  Future<void> _publish() async {
     setState(() {
       _isPublishing = true;
       _error = null;
     });
 
     try {
-      await ref.read(bookRepositoryProvider).publishBook(bookId);
-      ref.invalidate(authorBookProvider(bookId));
+      final published = await ref
+          .read(bookRepositoryProvider)
+          .publishBook(widget.bookId);
+      ref.invalidate(authorBookProvider(widget.bookId));
+      ref.invalidate(authorBookProvider(published.id));
       ref.invalidate(myBooksProvider);
+      ref.invalidate(bookChaptersProvider(widget.bookId));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Livre soumis à publication.')),
-        );
-        context.go(AppRoutes.authorBookDetailPath(bookId));
+        context.go(AppRoutes.authorBookDetailPath(published.id));
       }
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
@@ -115,292 +120,235 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
   }
 }
 
-class _PublishContent extends ConsumerWidget {
+class _PublishContent extends StatelessWidget {
   const _PublishContent({
     required this.book,
     required this.chapters,
-    required this.onBack,
-    required this.onOpenEditor,
-    required this.onPublish,
     required this.isPublishing,
+    required this.onPublish,
     this.error,
   });
 
   final BookModel book;
   final List<ChapterModel> chapters;
-  final VoidCallback onBack;
-  final VoidCallback onOpenEditor;
-  final VoidCallback? onPublish;
   final bool isPublishing;
+  final VoidCallback onPublish;
   final String? error;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hasTitle = book.title.trim().isNotEmpty;
-    final hasDescription = book.description.trim().isNotEmpty;
-    final hasChapters = chapters.isNotEmpty;
-    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+  Widget build(BuildContext context) {
+    final checklist = [
+      _CheckItem('Titre renseigne', book.title.trim().isNotEmpty),
+      _CheckItem('Resume renseigne', book.description.trim().isNotEmpty),
+      _CheckItem(
+        'Categorie / genre renseigne',
+        (book.genre ?? '').trim().isNotEmpty,
+      ),
+      _CheckItem('Au moins un chapitre', chapters.isNotEmpty),
+      _CheckItem(
+        'Chapitres avec contenu',
+        chapters.isNotEmpty &&
+            chapters.every((chapter) => chapter.content.trim().isNotEmpty),
+      ),
+      _CheckItem('Livre non archive', !book.isArchived),
+    ];
+    final completed = checklist.where((item) => item.done).length;
+    final progress = completed / checklist.length;
+    final canPublish = checklist.every((item) => item.done) && book.canPublish;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextButton.icon(
-          onPressed: isPublishing ? null : onBack,
-          style: TextButton.styleFrom(
-            padding: EdgeInsets.zero,
-            minimumSize: const Size(0, 32),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            foregroundColor: PlumoraColors.textSecondary,
-          ),
-          icon: const Icon(Icons.arrow_back, size: 16),
-          label: const Text('Retour'),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Soumettre à publication',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: PlumoraColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Vérifie ton manuscrit avant de le publier dans Plumora.',
-          style: TextStyle(color: PlumoraColors.textSecondary),
-        ),
-        const SizedBox(height: 24),
-        PlumoraCard(
+        FigmaCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  PlumoraBookCover(
-                    colors: _bookCoverColors(book),
-                    imageUrl: book.coverUrl,
-                    imageBytes: cachedCover,
-                    width: 70,
-                    height: 100,
-                    radius: 12,
-                  ),
-                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          hasTitle ? book.title : 'Livre sans titre',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w900),
+                          book.title.isEmpty ? 'Livre sans titre' : book.title,
+                          style: const TextStyle(
+                            color: PlumoraColors.textPrimary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        BookStatusBadge(status: book.status),
+                        const SizedBox(height: 4),
+                        Text(
+                          book.status.shortFrenchLabel,
+                          style: const TextStyle(
+                            color: PlumoraColors.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              if (error != null) ...[
-                const SizedBox(height: 16),
-                _InlineError(message: error!),
-              ],
-              const SizedBox(height: 24),
-              _ChecklistItem(
-                label: 'Titre du livre',
-                valid: hasTitle,
-                detail: hasTitle ? book.title : 'Titre requis',
-              ),
-              const SizedBox(height: 12),
-              _ChecklistItem(
-                label: 'Résumé court',
-                valid: hasDescription,
-                detail: hasDescription
-                    ? 'Résumé renseigné'
-                    : 'Ajoute un résumé avant publication',
-              ),
-              const SizedBox(height: 12),
-              _ChecklistItem(
-                label: 'Chapitres',
-                valid: hasChapters,
-                detail: hasChapters
-                    ? '${chapters.length} chapitre(s) prêt(s)'
-                    : 'Ajoute au moins un chapitre',
-              ),
-              const SizedBox(height: 12),
-              _ChecklistItem(
-                label: 'Statut',
-                valid: book.canPublish,
-                detail: book.canPublish
-                    ? 'Publication possible'
-                    : 'Ce statut ne permet pas la publication',
-              ),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: isPublishing ? null : onOpenEditor,
-                    icon: const Icon(Icons.edit_note_outlined, size: 18),
-                    label: const Text('Ouvrir l’éditeur'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: onPublish,
-                    icon: const Icon(Icons.cloud_upload_outlined, size: 18),
-                    label: Text(
-                      isPublishing
-                          ? 'Publication...'
-                          : 'Confirmer la publication',
+                  Text(
+                    '${(progress * 100).round()}%',
+                    style: const TextStyle(
+                      color: PlumoraColors.primary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 14),
+              FigmaProgressBar(value: progress, height: 10),
             ],
           ),
+        ),
+        const SizedBox(height: 18),
+        FigmaCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Checklist de publication',
+                style: TextStyle(
+                  color: PlumoraColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 14),
+              for (final item in checklist) ...[
+                Container(
+                  padding: const EdgeInsets.all(13),
+                  decoration: BoxDecoration(
+                    color: item.done
+                        ? PlumoraColors.success.withValues(alpha: 0.08)
+                        : PlumoraColors.muted.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        item.done
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: item.done
+                            ? PlumoraColors.success
+                            : PlumoraColors.textSecondary,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          item.label,
+                          style: TextStyle(
+                            color: item.done
+                                ? PlumoraColors.textPrimary
+                                : PlumoraColors.textSecondary,
+                            fontWeight: item.done
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 9),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        FigmaCard(
+          color: PlumoraColors.primary.withValues(alpha: 0.06),
+          borderColor: PlumoraColors.primary.withValues(alpha: 0.18),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: PlumoraColors.primary),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Paiements, royalties, abonnements et validation admin ne sont pas inclus dans le MVP actuel.",
+                  style: TextStyle(height: 1.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (error != null) ...[
+          const SizedBox(height: 14),
+          Text(
+            error!,
+            style: const TextStyle(
+              color: PlumoraColors.destructive,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: isPublishing
+                    ? null
+                    : () => context.go(AppRoutes.authorBookDetailPath(book.id)),
+                child: const Text('Continuer plus tard'),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: canPublish && !isPublishing ? onPublish : null,
+                icon: isPublishing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send_outlined),
+                label: Text(isPublishing ? 'Publication...' : 'Publier'),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _ChecklistItem extends StatelessWidget {
-  const _ChecklistItem({
-    required this.label,
-    required this.valid,
-    required this.detail,
-  });
+class _CheckItem {
+  const _CheckItem(this.label, this.done);
 
   final String label;
-  final bool valid;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = valid ? PlumoraColors.success : PlumoraColors.warning;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: valid ? const Color(0xFFEAF9EF) : const Color(0xFFFFF7E6),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            valid ? Icons.check_circle_outline : Icons.info_outline,
-            color: color,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  detail,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  final bool done;
 }
 
-class _InlineError extends StatelessWidget {
-  const _InlineError({required this.message});
+class _ErrorPanel extends StatelessWidget {
+  const _ErrorPanel({required this.message, required this.onRetry});
 
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7E0DC),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        message,
-        style: const TextStyle(
-          color: PlumoraColors.destructive,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadingCard extends StatelessWidget {
-  const _LoadingCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(48),
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
-}
-
-class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({
-    required this.title,
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String title;
   final String message;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
+    return FigmaCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          const Text(
+            'Publication indisponible',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(
             message,
             style: const TextStyle(color: PlumoraColors.textSecondary),
           ),
-          const SizedBox(height: 16),
-          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
+          const SizedBox(height: 14),
+          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],
       ),
     );
   }
-}
-
-List<Color> _bookCoverColors(BookModel book) {
-  final palettes = [
-    [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
-    [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
-    [const Color(0xFFDC2626), const Color(0xFFEA580C)],
-    [const Color(0xFF8FA889), const Color(0xFF5F7A5A)],
-  ];
-  final key = book.id.isEmpty ? book.title : book.id;
-  final index =
-      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
-  return palettes[index];
 }

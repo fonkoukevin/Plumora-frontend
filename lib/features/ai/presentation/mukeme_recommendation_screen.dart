@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/ai_models.dart';
@@ -21,35 +22,12 @@ class MukemeRecommendationScreen extends ConsumerStatefulWidget {
 class _MukemeRecommendationScreenState
     extends ConsumerState<MukemeRecommendationScreen> {
   final _queryController = TextEditingController();
-  String? _selectedMood;
-  String? _selectedDuration;
-  String? _selectedGenre;
-  List<AiRecommendedBookModel> _recommendations = const [];
-  bool _isLoading = false;
+  final Set<String> _moods = {};
+  final Set<String> _genres = {};
+  String _duration = '';
+  bool _loading = false;
   String? _error;
-
-  static const _moods = [
-    _ChoiceValue('Calme', 'CALM', '🌙'),
-    _ChoiceValue('Romance', 'ROMANCE', '💕'),
-    _ChoiceValue('Suspense', 'SUSPENSE', '😱'),
-    _ChoiceValue('Motivation', 'MOTIVATION', '💪'),
-    _ChoiceValue('Évasion', 'EVASION', '✈️'),
-  ];
-
-  static const _durations = [
-    _ChoiceValue('Court', 'SHORT', '< 2h'),
-    _ChoiceValue('Moyen', 'MEDIUM', '2-5h'),
-    _ChoiceValue('Long', 'LONG', '> 5h'),
-  ];
-
-  static const _genres = [
-    _ChoiceValue('Thriller', 'Thriller', ''),
-    _ChoiceValue('Romance', 'Romance', ''),
-    _ChoiceValue('Fantasy', 'Fantasy', ''),
-    _ChoiceValue('Science-Fiction', 'Science-Fiction', ''),
-    _ChoiceValue('Mystère', 'Mystère', ''),
-    _ChoiceValue('Développement personnel', 'Développement personnel', ''),
-  ];
+  List<AiRecommendedBookModel>? _results;
 
   @override
   void dispose() {
@@ -59,334 +37,381 @@ class _MukemeRecommendationScreenState
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontal = constraints.maxWidth >= 760 ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 92.0;
+    if (_results != null) {
+      return _MukemeResults(
+        recommendations: _results!,
+        loading: _loading,
+        error: _error,
+        onBack: () => setState(() {
+          _results = null;
+          _error = null;
+        }),
+        onRetry: _submit,
+      );
+    }
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            28,
-            horizontal,
-            bottomPadding,
+    return FigmaScreen(
+      maxWidth: 840,
+      padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FigmaBackButton(
+            label: 'Retour',
+            onTap: () => context.go(AppRoutes.discover),
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 980),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextButton.icon(
-                    onPressed: _isLoading
-                        ? null
-                        : () => context.go(AppRoutes.discover),
-                    icon: const Icon(Icons.arrow_back, size: 16),
-                    label: const Text('Retour'),
+          const SizedBox(height: 22),
+          const Center(
+            child: Column(
+              children: [
+                FigmaGradientIcon(
+                  icon: Icons.auto_awesome,
+                  size: 78,
+                  iconSize: 38,
+                ),
+                SizedBox(height: 14),
+                Text(
+                  'Mukeme',
+                  style: TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 38,
+                    fontWeight: FontWeight.w900,
                   ),
-                  const SizedBox(height: 20),
-                  const _Header(),
-                  const SizedBox(height: 28),
-                  _PromptCard(
-                    controller: _queryController,
-                    selectedMood: _selectedMood,
-                    selectedDuration: _selectedDuration,
-                    selectedGenre: _selectedGenre,
-                    moods: _moods,
-                    durations: _durations,
-                    genres: _genres,
-                    isLoading: _isLoading,
-                    error: _error,
-                    onMoodChanged: (value) => setState(
-                      () => _selectedMood = _toggle(value, _selectedMood),
-                    ),
-                    onDurationChanged: (value) => setState(
-                      () =>
-                          _selectedDuration = _toggle(value, _selectedDuration),
-                    ),
-                    onGenreChanged: (value) => setState(
-                      () => _selectedGenre = _toggle(value, _selectedGenre),
-                    ),
-                    onSubmit: _recommend,
+                ),
+                Text(
+                  'Assistant de lecture',
+                  style: TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 20,
                   ),
-                  const SizedBox(height: 28),
-                  _ResultsSection(
-                    recommendations: _recommendations,
-                    isLoading: _isLoading,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        );
-      },
+          const SizedBox(height: 26),
+          FigmaCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Quel type de livre veux-tu lire aujourd'hui ?",
+                  style: TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _queryController,
+                  onChanged: (_) => setState(() {}),
+                  minLines: 4,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    hintText:
+                        'Je veux une histoire courte, sombre, avec du suspense et une fin surprenante.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          _ChoiceCard(
+            title: 'Humeur du moment',
+            children: [
+              for (final mood in const [
+                ('calm', 'Calme', Icons.nightlight_round),
+                ('romance', 'Romance', Icons.favorite_border),
+                ('suspense', 'Suspense', Icons.visibility_outlined),
+                ('motivation', 'Motivation', Icons.fitness_center),
+                ('evasion', 'Evasion', Icons.flight_takeoff),
+              ])
+                _ChoiceButton(
+                  label: mood.$2,
+                  icon: mood.$3,
+                  selected: _moods.contains(mood.$1),
+                  onTap: () => setState(() {
+                    _moods.contains(mood.$1)
+                        ? _moods.remove(mood.$1)
+                        : _moods.add(mood.$1);
+                  }),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _ChoiceCard(
+            title: 'Duree de lecture',
+            children: [
+              for (final duration in const [
+                ('short', 'Court', '< 2h'),
+                ('medium', 'Moyen', '2-5h'),
+                ('long', 'Long', '> 5h'),
+              ])
+                _ChoiceButton(
+                  label: duration.$2,
+                  subtitle: duration.$3,
+                  selected: _duration == duration.$1,
+                  onTap: () => setState(() => _duration = duration.$1),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _ChoiceCard(
+            title: 'Genres preferes',
+            children: [
+              for (final genre in const [
+                ('Thriller', 'Thriller'),
+                ('Romance', 'Romance'),
+                ('Fantasy', 'Fantasy'),
+                ('Science-Fiction', 'Science-Fiction'),
+                ('Developpement personnel', 'Developpement personnel'),
+                ('Mystere', 'Mystere'),
+              ])
+                _ChoiceButton(
+                  label: genre.$2,
+                  selected: _genres.contains(genre.$1),
+                  onTap: () => setState(() {
+                    _genres.contains(genre.$1)
+                        ? _genres.remove(genre.$1)
+                        : _genres.add(genre.$1);
+                  }),
+                ),
+            ],
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              style: const TextStyle(
+                color: PlumoraColors.destructive,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed:
+                  (_queryController.text.trim().isEmpty && _moods.isEmpty) ||
+                      _loading
+                  ? null
+                  : _submit,
+              icon: _loading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_awesome),
+              label: Text(_loading ? 'Recherche...' : 'Me recommander'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  String? _toggle(String value, String? currentValue) {
-    return currentValue == value ? null : value;
-  }
-
-  Future<void> _recommend() async {
-    final query = _queryController.text.trim();
-    if (query.isEmpty &&
-        _selectedMood == null &&
-        _selectedDuration == null &&
-        _selectedGenre == null) {
-      setState(() {
-        _error = 'Décris ton envie ou choisis au moins un critère.';
-      });
-      return;
-    }
-
+  Future<void> _submit() async {
     setState(() {
-      _isLoading = true;
+      _loading = true;
       _error = null;
     });
 
     try {
+      final request = AiRecommendationRequest(
+        queryText: _queryController.text.trim().isEmpty
+            ? 'Recommande-moi un livre.'
+            : _queryController.text,
+        mood: _moods.join(', '),
+        preferredDuration: _duration,
+        preferredGenre: _genres.join(', '),
+      );
       final results = await ref
           .read(aiRepositoryProvider)
-          .recommendBooks(
-            AiRecommendationRequest(
-              queryText: query.isEmpty ? 'Recommandation personnalisée' : query,
-              mood: _selectedMood,
-              preferredDuration: _selectedDuration,
-              preferredGenre: _selectedGenre,
-            ),
-          );
-      ref.invalidate(aiRecommendationRequestsProvider);
-      setState(() => _recommendations = results);
+          .recommendBooks(request);
+      setState(() => _results = results);
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _loading = false);
       }
     }
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header();
+class _ChoiceCard extends StatelessWidget {
+  const _ChoiceCard({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Center(
-          child: PlumoraIconTile(
-            size: 80,
-            radius: 24,
-            backgroundColor: PlumoraColors.primary,
-            child: Icon(Icons.auto_awesome, color: Colors.white, size: 40),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Mukeme',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-            color: PlumoraColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Center(
-          child: Text(
-            'Assistant de lecture',
-            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 18),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PromptCard extends StatelessWidget {
-  const _PromptCard({
-    required this.controller,
-    required this.selectedMood,
-    required this.selectedDuration,
-    required this.selectedGenre,
-    required this.moods,
-    required this.durations,
-    required this.genres,
-    required this.isLoading,
-    required this.onMoodChanged,
-    required this.onDurationChanged,
-    required this.onGenreChanged,
-    required this.onSubmit,
-    this.error,
-  });
-
-  final TextEditingController controller;
-  final String? selectedMood;
-  final String? selectedDuration;
-  final String? selectedGenre;
-  final List<_ChoiceValue> moods;
-  final List<_ChoiceValue> durations;
-  final List<_ChoiceValue> genres;
-  final bool isLoading;
-  final ValueChanged<String> onMoodChanged;
-  final ValueChanged<String> onDurationChanged;
-  final ValueChanged<String> onGenreChanged;
-  final VoidCallback onSubmit;
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
+    return FigmaCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Quel type de livre veux-tu lire aujourd'hui ?",
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: controller,
-            minLines: 4,
-            maxLines: 7,
-            textAlignVertical: TextAlignVertical.top,
-            decoration: const InputDecoration(
-              hintText:
-                  'Je veux une histoire courte, sombre, avec du suspense et une fin surprenante.',
+            title,
+            style: const TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 22),
-          _ChoiceSection(
-            title: 'Humeur du moment',
-            values: moods,
-            selectedValue: selectedMood,
-            onChanged: onMoodChanged,
-          ),
-          const SizedBox(height: 20),
-          _ChoiceSection(
-            title: 'Durée de lecture',
-            values: durations,
-            selectedValue: selectedDuration,
-            onChanged: onDurationChanged,
-          ),
-          const SizedBox(height: 20),
-          _ChoiceSection(
-            title: 'Genre préféré',
-            values: genres,
-            selectedValue: selectedGenre,
-            onChanged: onGenreChanged,
-          ),
-          if (error != null) ...[
-            const SizedBox(height: 18),
-            _InlineError(message: error!),
-          ],
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: isLoading ? null : onSubmit,
-            icon: isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.auto_awesome, size: 18),
-            label: Text(isLoading ? 'Recherche...' : 'Me recommander'),
-          ),
+          const SizedBox(height: 14),
+          Wrap(spacing: 10, runSpacing: 10, children: children),
         ],
       ),
     );
   }
 }
 
-class _ChoiceSection extends StatelessWidget {
-  const _ChoiceSection({
-    required this.title,
-    required this.values,
-    required this.selectedValue,
-    required this.onChanged,
+class _ChoiceButton extends StatelessWidget {
+  const _ChoiceButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.icon,
+    this.subtitle,
   });
 
-  final String title;
-  final List<_ChoiceValue> values;
-  final String? selectedValue;
-  final ValueChanged<String> onChanged;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final IconData? icon;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 150,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected
+              ? PlumoraColors.primary.withValues(alpha: 0.07)
+              : Colors.transparent,
+          border: Border.all(
+            color: selected ? PlumoraColors.primary : PlumoraColors.border,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
           children: [
-            for (final value in values)
-              ChoiceChip(
-                label: Text(
-                  value.extra.isEmpty
-                      ? value.label
-                      : '${value.extra} ${value.label}',
+            if (icon != null)
+              Icon(icon, color: PlumoraColors.primary, size: 26),
+            if (icon != null) const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: PlumoraColors.textPrimary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            if (subtitle != null)
+              Text(
+                subtitle!,
+                style: const TextStyle(
+                  color: PlumoraColors.textSecondary,
+                  fontSize: 12,
                 ),
-                selected: selectedValue == value.value,
-                onSelected: (_) => onChanged(value.value),
               ),
           ],
         ),
-      ],
+      ),
     );
   }
 }
 
-class _ResultsSection extends StatelessWidget {
-  const _ResultsSection({
+class _MukemeResults extends StatelessWidget {
+  const _MukemeResults({
     required this.recommendations,
-    required this.isLoading,
+    required this.loading,
+    required this.onBack,
+    required this.onRetry,
+    this.error,
   });
 
   final List<AiRecommendedBookModel> recommendations;
-  final bool isLoading;
+  final bool loading;
+  final String? error;
+  final VoidCallback onBack;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading && recommendations.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (recommendations.isEmpty) {
-      return const PlumoraCard(
-        shadow: false,
-        child: Text(
-          'Les recommandations de Mukeme apparaîtront ici.',
-          style: TextStyle(color: PlumoraColors.textSecondary),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Sélection personnalisée',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 16),
-        for (final recommendation in recommendations) ...[
-          _RecommendationCard(recommendation: recommendation),
-          const SizedBox(height: 16),
+    return FigmaScreen(
+      maxWidth: 1120,
+      padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FigmaBackButton(label: 'Nouvelle recherche', onTap: onBack),
+          const SizedBox(height: 24),
+          const Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  color: PlumoraColors.primary,
+                  size: 34,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Selection personnalisee',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
+          if (error != null)
+            FigmaCard(
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: PlumoraColors.destructive,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(error!)),
+                  TextButton(
+                    onPressed: onRetry,
+                    child: const Text('Reessayer'),
+                  ),
+                ],
+              ),
+            )
+          else if (recommendations.isEmpty)
+            const FigmaEmptyState(
+              title: 'Aucune recommandation',
+              message: "Mukeme n'a renvoye aucun livre pour cette demande.",
+              icon: Icons.auto_awesome,
+            )
+          else
+            for (final recommendation in recommendations) ...[
+              _RecommendationCard(recommendation: recommendation),
+              const SizedBox(height: 16),
+            ],
+          Center(
+            child: OutlinedButton(
+              onPressed: loading ? null : onBack,
+              child: const Text('Affiner la recherche'),
+            ),
+          ),
         ],
-      ],
+      ),
     );
   }
 }
@@ -400,161 +425,152 @@ class _RecommendationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final book = recommendation.book;
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
-    return PlumoraCard(
-      onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+
+    return FigmaCard(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < 620;
+          final wide = constraints.maxWidth >= 700;
           final cover = PlumoraBookCover(
-            colors: _coverColors(book.id.isEmpty ? book.title : book.id),
+            width: wide ? 170 : double.infinity,
+            height: wide ? 250 : 250,
+            colors: _coverColors(book.id),
             imageUrl: book.coverUrl,
             imageBytes: cachedCover,
-            width: compact ? double.infinity : 148,
-            height: compact ? 220 : 220,
+            radius: 14,
           );
-          final details = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      book.title.isEmpty ? 'Livre sans titre' : book.title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
+          final detail = Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            book.title.isEmpty
+                                ? 'Livre sans titre'
+                                : book.title,
+                            style: const TextStyle(
+                              color: PlumoraColors.textPrimary,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          Text(
+                            book.authorName,
+                            style: const TextStyle(
+                              color: PlumoraColors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  if (recommendation.matchScore > 0)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 18,
-                          color: PlumoraColors.primary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${recommendation.matchScore}%',
-                          style: const TextStyle(
-                            color: PlumoraColors.primary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
+                    if (recommendation.matchScore > 0)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome,
+                                color: PlumoraColors.primary,
+                              ),
+                              Text(
+                                '${recommendation.matchScore}%',
+                                style: const TextStyle(
+                                  color: PlumoraColors.primary,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
+                          const Text(
+                            'Correspondance',
+                            style: TextStyle(
+                              color: PlumoraColors.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    if (book.genre != null) FigmaBadge(label: book.genre!),
+                    if (book.estimatedReadingMinutes > 0)
+                      FigmaBadge(label: '${book.estimatedReadingMinutes} min'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber, size: 17),
+                    Text(' ${book.rating.toStringAsFixed(1)}'),
+                    const SizedBox(width: 18),
+                    const Icon(Icons.menu_book_outlined, size: 17),
+                    Text(' ${book.readCount} lectures'),
+                  ],
+                ),
+                if (recommendation.reasons.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  FigmaCard(
+                    color: PlumoraColors.primary.withValues(alpha: 0.06),
+                    shadow: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final reason in recommendation.reasons)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              reason,
+                              style: const TextStyle(height: 1.4),
+                            ),
+                          ),
                       ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                book.authorName,
-                style: const TextStyle(color: PlumoraColors.textSecondary),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (book.genre != null) PlumoraBadge(label: book.genre!),
-                  if (book.estimatedReadingMinutes > 0)
-                    PlumoraBadge(
-                      label: '${book.estimatedReadingMinutes} min',
-                      backgroundColor: PlumoraColors.muted,
-                      foregroundColor: PlumoraColors.textSecondary,
-                      icon: Icons.schedule,
-                    ),
-                ],
-              ),
-              if (recommendation.reasons.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF4E8FF),
-                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Pourquoi ce livre ?',
-                        style: TextStyle(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 8),
-                      for (final reason in recommendation.reasons)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text('• $reason'),
-                        ),
-                    ],
+                ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: book.id.isEmpty
+                        ? null
+                        : () => context.go(
+                            AppRoutes.catalogBookDetailPath(book.id),
+                          ),
+                    icon: const Icon(Icons.menu_book_outlined),
+                    label: const Text('En savoir plus'),
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    context.go(AppRoutes.catalogBookDetailPath(book.id)),
-                icon: const Icon(Icons.menu_book_outlined, size: 18),
-                label: const Text('En savoir plus'),
-              ),
-            ],
+            ),
           );
-
-          if (compact) {
+          if (!wide) {
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [cover, const SizedBox(height: 18), details],
+              children: [
+                cover,
+                const SizedBox(height: 18),
+                Row(children: [detail]),
+              ],
             );
           }
-
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              cover,
-              const SizedBox(width: 22),
-              Expanded(child: details),
-            ],
+            children: [cover, const SizedBox(width: 22), detail],
           );
         },
       ),
     );
   }
-}
-
-class _InlineError extends StatelessWidget {
-  const _InlineError({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7E0DC),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        message,
-        style: const TextStyle(
-          color: PlumoraColors.destructive,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _ChoiceValue {
-  const _ChoiceValue(this.label, this.value, this.extra);
-
-  final String label;
-  final String value;
-  final String extra;
 }
 
 List<Color> _coverColors(String key) {

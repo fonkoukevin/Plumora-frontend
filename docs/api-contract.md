@@ -8,6 +8,8 @@ Base URL:
 POST `/auth/register`
 POST `/auth/login`
 GET `/auth/me`
+GET `/users/me`
+PUT `/users/me/roles`
 
 ## Books
 
@@ -52,6 +54,31 @@ GET `/catalog/books/latest`
 
 Only books with status PUBLISHED and visibility PUBLIC are returned in the catalog.
 
+## External Books
+
+GET `/external-books`
+GET `/external-books/{gutendexId}`
+POST `/books/import/gutendex/{gutendexId}`
+
+Importing a Gutendex book is available to any authenticated user. It must not be
+restricted to ADMIN users.
+
+External book search accepts optional query params:
+- `search`
+- `language`
+- `topic`
+- `page`
+
+The frontend only calls Plumora API routes for external books. It never calls
+Gutendex or Open Library directly.
+
+External book DTOs should include:
+- `imported`: whether this Gutendex book already exists in the Plumora catalog
+- `internalBookId`: Plumora book id when `imported` is true
+
+After importing a Gutendex book, the frontend reads it through:
+GET `/books/{bookId}/read`
+
 ## Reading
 
 GET `/books/{bookId}/read`
@@ -72,9 +99,16 @@ GET `/books/{bookId}/favorites/status`
 
 POST `/books/{bookId}/reviews`
 GET `/books/{bookId}/reviews`
+POST `/external-books/{gutendexId}/reviews`
+GET `/external-books/{gutendexId}/reviews`
 GET `/reviews/my`
 PUT `/reviews/{reviewId}`
 DELETE `/reviews/{reviewId}`
+
+External book reviews use the same payload as internal book reviews:
+`{ "rating": 1..5, "comment": "..." }`.
+Creating a review for an external book must not require importing the book into
+the Plumora catalog first.
 
 ## Beta-reading
 

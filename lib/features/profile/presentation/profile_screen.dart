@@ -4,399 +4,335 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
-import '../../../core/widgets/plumora_ui.dart';
+import '../../../core/widgets/figma_plumora.dart';
+import '../../auth/data/models/user_model.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
+import '../../book/data/repositories/book_repository.dart';
+import '../../reading/data/repositories/favorite_repository.dart';
+import '../../reading/data/repositories/reading_repository.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(authControllerProvider).valueOrNull;
-    final user = session?.user;
-    final fullName = user?.displayName.toString().trim().isNotEmpty == true
-        ? user!.displayName
-        : 'Kevin Martin';
-    final email = user?.email.toString().trim().isNotEmpty == true
-        ? user!.email
-        : 'kevin@plumora.app';
-    final initials = _initials(fullName);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 760;
-        final horizontal = isWide ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 82.0;
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            28,
-            horizontal,
-            bottomPadding,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 900),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _HeroProfile(fullName: fullName, initials: initials),
-                  const SizedBox(height: 16),
-                  const _ProfileStats(),
-                  const SizedBox(height: 24),
-                  _Section(
-                    title: 'À propos',
-                    child: const PlumoraCard(
-                      shadow: false,
-                      child: Text(
-                        "Passionné d'écriture depuis mon plus jeune âge, je crée des mondes où la magie rencontre l'émotion.",
-                        style: TextStyle(
-                          color: PlumoraColors.textSecondary,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _Section(
-                    title: 'Compte',
-                    child: Column(
-                      children: [
-                        _SettingsTile(
-                          icon: Icons.mail_outline,
-                          title: email,
-                          subtitle: 'Adresse email principale',
-                        ),
-                        const SizedBox(height: 12),
-                        const _SettingsTile(
-                          icon: Icons.person_outline,
-                          title: 'Informations personnelles',
-                          subtitle: 'Modifier votre nom, email et photo',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _Section(
-                    title: 'Paramètres',
-                    child: Column(
-                      children: [
-                        _SettingsTile(
-                          icon: Icons.notifications_none_outlined,
-                          title: 'Notifications',
-                          subtitle: 'Gérer vos préférences de notification',
-                          background: Color(0xFFE8F0F5),
-                          color: PlumoraColors.info,
-                          onTap: () => context.go(AppRoutes.notifications),
-                        ),
-                        const SizedBox(height: 12),
-                        _SettingsTile(
-                          icon: Icons.auto_awesome,
-                          title: 'Assistant Mukeme',
-                          subtitle: "Configurer votre assistant IA d'écriture",
-                          background: Color(0xFFE6EFE4),
-                          color: PlumoraColors.mukemeAccent,
-                          onTap: () => context.go(AppRoutes.mukemeWriting),
-                        ),
-                        const SizedBox(height: 12),
-                        const _SettingsTile(
-                          icon: Icons.shield_outlined,
-                          title: 'Confidentialité & sécurité',
-                          subtitle:
-                              'Mot de passe, authentification et visibilité',
-                          background: Color(0xFFE6F0E7),
-                          color: PlumoraColors.success,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await ref
-                            .read(authControllerProvider.notifier)
-                            .logout();
-                        if (context.mounted) {
-                          context.go(AppRoutes.landing);
-                        }
-                      },
-                      icon: const Icon(Icons.logout, size: 18),
-                      label: const Text('Se déconnecter'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: PlumoraColors.destructive,
-                        side: const BorderSide(
-                          color: PlumoraColors.destructive,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  static String _initials(String name) {
-    final parts = name
-        .split(RegExp(r'\s+'))
-        .where((part) => part.trim().isNotEmpty)
-        .toList(growable: false);
-    if (parts.isEmpty) {
-      return 'PM';
-    }
-    if (parts.length == 1) {
-      return parts.first.characters.first.toUpperCase();
-    }
-    return '${parts.first.characters.first}${parts.last.characters.first}'
-        .toUpperCase();
-  }
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _HeroProfile extends StatelessWidget {
-  const _HeroProfile({required this.fullName, required this.initials});
-
-  final String fullName;
-  final String initials;
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _showPersonalInfo = false;
+  bool _loggingOut = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: PlumoraColors.primary,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 16,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -36,
-            right: -30,
-            child: Container(
-              width: 110,
-              height: 110,
-              decoration: const BoxDecoration(
-                color: Color(0x22FFFFFF),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Column(
+    final authState = ref.watch(authControllerProvider);
+    final session = authState.valueOrNull;
+    final user = session?.user;
+
+    if (user == null) {
+      return FigmaScreen(
+        maxWidth: 560,
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 92),
+        child: FigmaCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 78,
-                height: 78,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withAlpha(36),
-                  border: Border.all(
-                    color: Colors.white.withAlpha(80),
-                    width: 2,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                fullName,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 4),
               const Text(
-                'Auteur passionné',
-                style: TextStyle(color: Colors.white, fontSize: 14),
+                'Profil indisponible',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
               ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Modifier le profil'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withAlpha(90)),
-                    backgroundColor: Colors.white.withAlpha(22),
-                  ),
-                ),
+              const SizedBox(height: 8),
+              const Text(
+                'Connecte-toi pour afficher les donnees de ton compte.',
+                style: TextStyle(color: PlumoraColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => context.go(AppRoutes.login),
+                child: const Text('Se connecter'),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
+        ),
+      );
+    }
 
-class _ProfileStats extends StatelessWidget {
-  const _ProfileStats();
+    if (_showPersonalInfo) {
+      return _PersonalInfoView(
+        user: user,
+        onBack: () => setState(() => _showPersonalInfo = false),
+      );
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: const [
-          _ProfileStat(
-            icon: Icons.menu_book_outlined,
-            value: '12',
-            label: 'Manuscrits',
-          ),
-          _ProfileStat(icon: Icons.draw_outlined, value: '248K', label: 'Mots'),
-          _ProfileStat(icon: Icons.schedule, value: '456', label: 'Heures'),
-          _ProfileStat(
-            icon: Icons.emoji_events_outlined,
-            value: '8',
-            label: 'Prix',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileStat extends StatelessWidget {
-  const _ProfileStat({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Flexible(
+    return FigmaScreen(
+      maxWidth: 860,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 92),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: PlumoraColors.textSecondary, size: 20),
-          const SizedBox(height: 7),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+          FigmaCard(
+            padding: const EdgeInsets.all(28),
+            borderColor: Colors.transparent,
+            gradient: const LinearGradient(
+              colors: [Color(0xFF8B5E3C), Color(0xFF6D3A5D)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white30, width: 2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _initials(user),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  user.displayName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  _roleLabel(user),
+                  style: const TextStyle(color: Colors.white70, fontSize: 15),
+                ),
+                const SizedBox(height: 22),
+                OutlinedButton.icon(
+                  onPressed: () => setState(() => _showPersonalInfo = true),
+                  icon: const Icon(Icons.person_outline),
+                  label: const Text('Informations du compte'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white30),
+                    backgroundColor: Colors.white.withValues(alpha: 0.10),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
-              fontSize: 10,
+          const SizedBox(height: 18),
+          const _ProfileStats(),
+          const SizedBox(height: 24),
+          const Text(
+            'A propos',
+            style: TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          FigmaCard(
+            child: Text(
+              (user.bio ?? '').trim().isEmpty
+                  ? 'Aucune biographie renseignee.'
+                  : user.bio!,
+              style: const TextStyle(
+                color: PlumoraColors.textSecondary,
+                fontSize: 14,
+                height: 1.45,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Parametres',
+            style: TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _SettingsTile(
+            icon: Icons.person_outline,
+            title: 'Informations personnelles',
+            subtitle: 'Nom, email et roles',
+            color: const Color(0xFF8B5E3C),
+            onTap: () => setState(() => _showPersonalInfo = true),
+          ),
+          _SettingsTile(
+            icon: Icons.notifications_none,
+            title: 'Notifications',
+            subtitle: 'Voir les notifications du backend',
+            color: const Color(0xFF6D3A5D),
+            onTap: () => context.go(AppRoutes.notifications),
+          ),
+          _SettingsTile(
+            icon: Icons.auto_awesome,
+            title: 'Assistant Mukeme',
+            subtitle: 'Ouvrir les assistants IA',
+            color: const Color(0xFF6D3A5D),
+            onTap: () => context.go(AppRoutes.mukemeWriting),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: _loggingOut ? null : _logout,
+            icon: _loggingOut
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.logout),
+            label: Text(_loggingOut ? 'Deconnexion...' : 'Se deconnecter'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: PlumoraColors.destructive,
+              side: const BorderSide(color: PlumoraColors.destructive),
             ),
           ),
         ],
       ),
     );
   }
+
+  Future<void> _logout() async {
+    setState(() => _loggingOut = true);
+    await ref.read(authControllerProvider.notifier).logout();
+    if (mounted) {
+      context.go(AppRoutes.landing);
+    }
+  }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child});
+class _PersonalInfoView extends StatelessWidget {
+  const _PersonalInfoView({required this.user, required this.onBack});
 
-  final String title;
-  final Widget child;
+  final UserModel user;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 12),
-        child,
-      ],
+    final fields = [
+      (Icons.person_outline, 'Prenom', user.firstname),
+      (Icons.person_outline, 'Nom', user.lastname),
+      (Icons.mail_outline, 'Email', user.email),
+      (Icons.alternate_email, 'Nom utilisateur', user.username ?? ''),
+      (Icons.shield_outlined, 'Roles', _roleLabel(user)),
+      (Icons.edit_note_outlined, 'Biographie', user.bio ?? ''),
+    ];
+
+    return FigmaScreen(
+      maxWidth: 560,
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: onBack,
+                icon: const Icon(Icons.chevron_left),
+                label: const Text('Profil'),
+              ),
+              const Expanded(
+                child: Text(
+                  'Informations personnelles',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 76),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: 96,
+            height: 96,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF8B5E3C), Color(0xFF6D3A5D)],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                _initials(user),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          for (final field in fields) ...[
+            _InfoField(icon: field.$1, label: field.$2, value: field.$3),
+            const SizedBox(height: 10),
+          ],
+        ],
+      ),
     );
   }
 }
 
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
+class _InfoField extends StatelessWidget {
+  const _InfoField({
     required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.background = PlumoraColors.secondary,
-    this.color = PlumoraColors.primary,
-    this.onTap,
+    required this.label,
+    required this.value,
   });
 
   final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color background;
-  final Color color;
-  final VoidCallback? onTap;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
-      onTap: onTap,
-      padding: const EdgeInsets.all(16),
+    return FigmaCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      shadow: false,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PlumoraIconTile(
-            size: 46,
-            radius: 11,
-            backgroundColor: background,
-            child: Icon(icon, color: color, size: 23),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5E3C).withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: PlumoraColors.primary, size: 18),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  label,
                   style: const TextStyle(
                     color: PlumoraColors.textSecondary,
-                    fontSize: 12,
-                    height: 1.3,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value.trim().isEmpty ? 'Non renseigne' : value,
+                  style: const TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -406,4 +342,151 @@ class _SettingsTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ProfileStats extends ConsumerWidget {
+  const _ProfileStats();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final books = ref.watch(myBooksProvider).valueOrNull ?? const [];
+    final readings =
+        ref.watch(myReadingProgressProvider).valueOrNull ?? const [];
+    final favorites = ref.watch(myFavoritesProvider).valueOrNull ?? const [];
+    final wordCount = books.fold<int>(0, (sum, book) => sum + book.wordCount);
+    final stats = [
+      (Icons.menu_book_outlined, books.length.toString(), 'Manuscrits'),
+      (Icons.edit_outlined, _compactNumber(wordCount), 'Mots'),
+      (Icons.auto_stories_outlined, readings.length.toString(), 'Lectures'),
+      (Icons.favorite_border, favorites.length.toString(), 'Favoris'),
+    ];
+
+    return FigmaCard(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          for (final stat in stats)
+            Expanded(
+              child: Column(
+                children: [
+                  Icon(stat.$1, color: PlumoraColors.textSecondary, size: 21),
+                  const SizedBox(height: 8),
+                  Text(
+                    stat.$2,
+                    style: const TextStyle(
+                      color: PlumoraColors.textPrimary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    stat.$3,
+                    style: const TextStyle(
+                      color: PlumoraColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: FigmaCard(
+        onTap: onTap,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 21),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: PlumoraColors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: PlumoraColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _initials(UserModel user) {
+  final parts = [
+    user.firstname,
+    user.lastname,
+  ].map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
+  if (parts.isEmpty) {
+    final source = (user.username ?? user.email).trim();
+    return source.isEmpty ? 'P' : source.substring(0, 1).toUpperCase();
+  }
+  return parts.take(2).map((part) => part.substring(0, 1).toUpperCase()).join();
+}
+
+String _roleLabel(UserModel user) {
+  final roles = user.roles
+      .map((role) => role.name)
+      .where((name) => name.isNotEmpty);
+  if (roles.isEmpty) {
+    return 'Utilisateur Plumora';
+  }
+  return roles.join(', ');
+}
+
+String _compactNumber(int value) {
+  if (value >= 1000000) {
+    return '${(value / 1000000).toStringAsFixed(1)}M';
+  }
+  if (value >= 1000) {
+    return '${(value / 1000).toStringAsFixed(1)}K';
+  }
+  return value.toString();
 }

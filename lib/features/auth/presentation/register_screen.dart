@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../data/models/register_request.dart';
 import 'controllers/auth_controller.dart';
 import 'widgets/auth_screen_shell.dart';
@@ -65,26 +66,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final error = authState.hasError
         ? AppError.messageFor(authState.error!)
         : null;
-    final textTheme = Theme.of(context).textTheme;
 
     return AuthScreenShell(
-      topPadding: 108,
+      topPadding: 58,
       horizontalPadding: 16,
       bottomPadding: 32,
       child: Column(
         children: [
-          const AppWordmark(compact: true),
-          const SizedBox(height: 15),
-          Text(
-            'Créez votre compte',
-            style: textTheme.bodyMedium?.copyWith(
+          const FigmaBrandMark(size: 32, textSize: 38, gradient: false),
+          const SizedBox(height: 14),
+          const Text(
+            'Creez votre compte',
+            style: TextStyle(
               color: PlumoraColors.textSecondary,
-              fontSize: 13,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 28),
-          AuthFormCard(
-            padding: const EdgeInsets.fromLTRB(25, 27, 25, 22),
+          FigmaCard(
+            padding: const EdgeInsets.all(30),
+            shadow: true,
             child: Form(
               key: _formKey,
               child: Column(
@@ -94,34 +96,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     AuthErrorBanner(message: error),
                     const SizedBox(height: 16),
                   ],
-                  PlumoraTextField(
-                    controller: _firstnameController,
-                    label: 'Prénom',
-                    hint: 'Kevin',
-                    textInputAction: TextInputAction.next,
-                    validator: (value) {
-                      if ((value ?? '').trim().isEmpty) {
-                        return 'Prénom requis';
-                      }
-
-                      return null;
-                    },
+                  Row(
+                    children: [
+                      Expanded(
+                        child: PlumoraTextField(
+                          controller: _firstnameController,
+                          label: 'Prenom',
+                          hint: 'Kevin',
+                          textInputAction: TextInputAction.next,
+                          validator: (value) {
+                            if ((value ?? '').trim().isEmpty) {
+                              return 'Prenom requis';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: PlumoraTextField(
+                          controller: _lastnameController,
+                          label: 'Nom',
+                          hint: 'Martin',
+                          textInputAction: TextInputAction.next,
+                          validator: (value) {
+                            if ((value ?? '').trim().isEmpty) {
+                              return 'Nom requis';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 17),
-                  PlumoraTextField(
-                    controller: _lastnameController,
-                    label: 'Nom',
-                    hint: 'Martin',
-                    textInputAction: TextInputAction.next,
-                    validator: (value) {
-                      if ((value ?? '').trim().isEmpty) {
-                        return 'Nom requis';
-                      }
-
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 17),
+                  const SizedBox(height: 18),
                   PlumoraTextField(
                     controller: _emailController,
                     label: 'Email',
@@ -136,14 +144,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       if (!email.contains('@')) {
                         return 'Email invalide';
                       }
-
                       return null;
                     },
                   ),
-                  const SizedBox(height: 17),
+                  const SizedBox(height: 18),
                   PlumoraTextField(
                     controller: _passwordController,
                     label: 'Mot de passe',
+                    hint: '********',
                     obscureText: true,
                     textInputAction: TextInputAction.next,
                     validator: (value) {
@@ -151,14 +159,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       if (password.length < 8) {
                         return '8 caracteres minimum';
                       }
-
                       return null;
                     },
                   ),
-                  const SizedBox(height: 17),
+                  const SizedBox(height: 18),
                   PlumoraTextField(
                     controller: _confirmPasswordController,
                     label: 'Confirmer le mot de passe',
+                    hint: '********',
                     obscureText: true,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => isLoading ? null : _submit(),
@@ -166,24 +174,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       if (value != _passwordController.text) {
                         return 'Les mots de passe ne correspondent pas';
                       }
-
                       return null;
                     },
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 24),
                   FilledButton(
                     onPressed: isLoading ? null : _submit,
                     child: LoadingButtonChild(
-                      label: 'Créer mon compte',
+                      label: 'Creer mon compte',
                       isLoading: isLoading,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
                   TextButton(
                     onPressed: isLoading
                         ? null
                         : () => context.go(AppRoutes.login),
-                    child: const Text('Déjà un compte ? Se connecter'),
+                    child: const Text('Deja un compte ? Se connecter'),
                   ),
                 ],
               ),

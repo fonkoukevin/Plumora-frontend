@@ -140,6 +140,7 @@ class PlumoraBadge extends StatelessWidget {
     this.backgroundColor = const Color(0xFFEADFCF),
     this.foregroundColor = PlumoraColors.primary,
     this.icon,
+    this.maxWidth,
     super.key,
   });
 
@@ -147,10 +148,11 @@ class PlumoraBadge extends StatelessWidget {
   final Color backgroundColor;
   final Color foregroundColor;
   final IconData? icon;
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -163,16 +165,39 @@ class PlumoraBadge extends StatelessWidget {
             Icon(icon, size: 13, color: foregroundColor),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              color: foregroundColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          if (maxWidth == null)
+            Text(
+              label,
+              style: TextStyle(
+                color: foregroundColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            )
+          else
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: foregroundColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-          ),
         ],
       ),
+    );
+
+    if (maxWidth == null) {
+      return badge;
+    }
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth!),
+      child: badge,
     );
   }
 }
@@ -365,6 +390,7 @@ class PlumoraBookCover extends StatelessWidget {
             Image.network(
               normalizedImageUrl,
               fit: BoxFit.cover,
+              webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
               errorBuilder: (context, error, stackTrace) =>
                   const SizedBox.shrink(),
             ),

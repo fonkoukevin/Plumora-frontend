@@ -14,6 +14,14 @@ function GoogleIcon() {
   );
 }
 
+function GitHubIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M9 0C4.0275 0 0 4.13211 0 9.22838C0 13.3065 2.5785 16.7648 6.15375 17.9841C6.60375 18.0709 6.76875 17.7853 6.76875 17.5403C6.76875 17.3212 6.76125 16.7405 6.7575 15.9712C4.254 16.5277 3.726 14.7332 3.726 14.7332C3.3165 13.6681 2.72475 13.3832 2.72475 13.3832C1.9095 12.8111 2.78775 12.8229 2.78775 12.8229C3.6915 12.8871 4.16625 13.7737 4.16625 13.7737C4.96875 15.1847 6.273 14.777 6.7875 14.5414C6.8685 13.9443 7.10025 13.5381 7.3575 13.3082C5.35875 13.0783 3.258 12.2829 3.258 8.74642C3.258 7.73961 3.60675 6.91578 4.18425 6.27044C4.083 6.03821 3.77925 5.09739 4.263 3.82132C4.263 3.82132 5.01675 3.57407 6.738 4.76579C7.458 4.56311 8.223 4.46177 8.988 4.45847C9.753 4.46177 10.518 4.56311 11.238 4.76579C12.948 3.57407 13.7017 3.82132 13.7017 3.82132C14.1855 5.09739 13.8818 6.03821 13.7917 6.27044C14.3655 6.91578 14.7142 7.73961 14.7142 8.74642C14.7142 12.2923 12.6105 13.0745 10.608 13.3007C10.923 13.5863 11.2155 14.1438 11.2155 15.0013C11.2155 16.2403 11.2043 17.2344 11.2043 17.5403C11.2043 17.7877 11.3625 18.0756 11.8207 17.9832C15.4207 16.7609 18 13.3046 18 9.22838C18 4.13211 13.9703 0 9 0Z" fill="#24292E"/>
+    </svg>
+  );
+}
+
 interface LoginPageProps {
   onNavigate: (page: string) => void;
 }
@@ -31,8 +39,8 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-3">
           <div className="flex items-center justify-center mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg">
-              <Feather className="w-9 h-9 text-white" strokeWidth={1.5} />
+            <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-md">
+              <span className="text-white font-bold text-2xl">P</span>
             </div>
           </div>
           <h1 className="text-3xl font-bold text-foreground">Bienvenue sur Plumora</h1>
@@ -90,13 +98,23 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
             </div>
           </div>
 
-          <button
-            onClick={() => onNavigate('role-selection')}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-border rounded-xl hover:bg-muted transition-colors"
-          >
-            <GoogleIcon />
-            <span className="font-medium text-foreground">Continuer avec Google</span>
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => onNavigate('role-selection')}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-border rounded-xl hover:bg-muted transition-colors"
+            >
+              <GoogleIcon />
+              <span className="font-medium text-foreground">Continuer avec Google</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('role-selection')}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-border rounded-xl hover:bg-muted transition-colors"
+            >
+              <GitHubIcon />
+              <span className="font-medium text-foreground">Continuer avec GitHub</span>
+            </button>
+          </div>
 
           <div className="text-center text-sm text-muted-foreground pt-2">
             Pas encore de compte ?{' '}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Card } from '../components/Card';
+import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { MobileNav } from '../components/MobileNav';
 import {
@@ -11,8 +12,6 @@ import {
   DollarSign,
   Eye,
   Upload,
-  Trash2,
-  Edit2,
 } from 'lucide-react';
 
 interface WritePageProps {
@@ -21,13 +20,6 @@ interface WritePageProps {
 
 export function WritePage({ onNavigate }: WritePageProps) {
   const [activeTab, setActiveTab] = useState('manuscripts');
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-
-  const handleDelete = (id: number) => {
-    // Ici on supprimerait le manuscrit
-    console.log('Suppression du manuscrit:', id);
-    setDeleteConfirm(null);
-  };
 
   const manuscripts = [
     {
@@ -128,22 +120,11 @@ export function WritePage({ onNavigate }: WritePageProps) {
                   <div className="relative space-y-4">
                     <div className="flex items-start justify-between">
                       <h3 className="text-xl font-bold pr-4">{manuscript.title}</h3>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => onNavigate('create-book')}
-                          className="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center transition-colors"
-                          title="Éditer"
-                        >
-                          <Edit2 className="w-4 h-4 text-primary" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(manuscript.id)}
-                          className="w-8 h-8 rounded-lg hover:bg-destructive/10 flex items-center justify-center transition-colors"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </button>
-                      </div>
+                      <Badge variant={manuscript.status}>
+                        {manuscript.status === 'draft' && '✏️ Brouillon'}
+                        {manuscript.status === 'beta' && '🔍 Bêta-test'}
+                        {manuscript.status === 'ready' && '✅ Prêt'}
+                      </Badge>
                     </div>
 
                     <div className="space-y-3">
@@ -153,14 +134,14 @@ export function WritePage({ onNavigate }: WritePageProps) {
                             <Clock className="w-4 h-4" />
                             Modifié {manuscript.lastModified.toLowerCase()}
                           </div>
-                          <div className="space-y-2 bg-amber-50 rounded-xl p-4">
+                          <div className="space-y-2 bg-purple-50 rounded-xl p-4">
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground font-medium">Progression</span>
                               <span className="font-bold text-primary">{manuscript.progress}%</span>
                             </div>
                             <div className="h-3 bg-white rounded-full overflow-hidden border border-primary/20">
                               <div
-                                className="h-full bg-gradient-to-r from-primary to-amber-700 transition-all"
+                                className="h-full bg-gradient-to-r from-primary to-purple-600 transition-all"
                                 style={{ width: `${manuscript.progress}%` }}
                               />
                             </div>
@@ -270,7 +251,7 @@ export function WritePage({ onNavigate }: WritePageProps) {
               </div>
             ) : (
               <div className="text-center py-20">
-                <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-50 to-amber-50 flex items-center justify-center mb-6">
+                <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center mb-6">
                   <MessageSquare className="w-12 h-12 text-primary" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">Aucun retour bêta pour le moment</h3>
@@ -289,7 +270,7 @@ export function WritePage({ onNavigate }: WritePageProps) {
           <div className="space-y-6">
             <Card className="border-l-4 border-l-primary">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-amber-800 flex items-center justify-center shrink-0">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-purple-700 flex items-center justify-center shrink-0">
                   <Upload className="w-7 h-7 text-white" />
                 </div>
                 <div className="flex-1">
@@ -322,41 +303,6 @@ export function WritePage({ onNavigate }: WritePageProps) {
           </div>
         )}
       </div>
-
-      {/* Modale de confirmation de suppression */}
-      {deleteConfirm !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl p-6 max-w-md w-full shadow-xl">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
-                <Trash2 className="w-6 h-6 text-destructive" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-lg mb-2">Supprimer ce manuscrit ?</h3>
-                <p className="text-sm text-muted-foreground">
-                  Cette action est irréversible. Le manuscrit sera définitivement supprimé.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setDeleteConfirm(null)}
-              >
-                Annuler
-              </Button>
-              <Button
-                className="flex-1 bg-destructive hover:bg-destructive/90"
-                onClick={() => handleDelete(deleteConfirm)}
-              >
-                <Trash2 className="w-4 h-4" />
-                Supprimer
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <MobileNav currentPage="write" onNavigate={onNavigate} />
     </div>

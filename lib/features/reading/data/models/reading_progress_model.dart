@@ -30,11 +30,14 @@ class ReadingProgressModel {
   factory ReadingProgressModel.fromJson(Object? value) {
     final json = _readMap(value);
     final bookJson = _readBookMap(json);
+    final mergedBookJson = {...bookJson, ...json};
     final progress = _readProgress(json);
     return ReadingProgressModel(
       bookId: _readString(json, [
         'bookId',
         'book_id',
+        'readingBookId',
+        'reading_book_id',
         'id',
       ], fallback: _readString(bookJson, ['id', 'bookId', 'book_id'])),
       chapterId: _readNullableString(json, [
@@ -43,9 +46,14 @@ class ReadingProgressModel {
         'currentChapterId',
         'current_chapter_id',
       ]),
-      bookTitle: _readString(bookJson, ['title', 'name']),
-      authorName: _readAuthorName(bookJson),
-      coverUrl: _readNullableString(bookJson, [
+      bookTitle: _readString(mergedBookJson, [
+        'bookTitle',
+        'book_title',
+        'title',
+        'name',
+      ]),
+      authorName: _readAuthorName(mergedBookJson),
+      coverUrl: _readNullableString(mergedBookJson, [
         'coverUrl',
         'cover_url',
         'coverImageUrl',
@@ -53,13 +61,13 @@ class ReadingProgressModel {
         'imageUrl',
         'image_url',
       ]),
-      rating: _readDouble(bookJson, [
+      rating: _readDouble(mergedBookJson, [
         'rating',
         'averageRating',
         'average_rating',
         'avgRating',
       ]),
-      ratingCount: _readInt(bookJson, [
+      ratingCount: _readInt(mergedBookJson, [
         'ratingCount',
         'ratingsCount',
         'reviewCount',
@@ -217,11 +225,44 @@ String _readAuthorName(Map<String, dynamic> json) {
   final direct = _readNullableString(json, [
     'authorName',
     'author_name',
+    'bookAuthorName',
+    'book_author_name',
+    'writer',
     'author',
     'writerName',
   ]);
   if (direct != null) {
     return direct;
+  }
+
+  final topLevelName = _readNullableString(json, [
+    'authorFullName',
+    'author_full_name',
+    'writerFullName',
+    'writer_full_name',
+  ]);
+  if (topLevelName != null) {
+    return topLevelName;
+  }
+
+  final topLevelFirstName = _readNullableString(json, [
+    'authorFirstName',
+    'author_first_name',
+    'writerFirstName',
+    'writer_first_name',
+  ]);
+  final topLevelLastName = _readNullableString(json, [
+    'authorLastName',
+    'author_last_name',
+    'writerLastName',
+    'writer_last_name',
+  ]);
+  final topLevelCombined = [
+    topLevelFirstName,
+    topLevelLastName,
+  ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
+  if (topLevelCombined.isNotEmpty) {
+    return topLevelCombined;
   }
 
   final author = json['author'];
@@ -234,11 +275,17 @@ String _readAuthorName(Map<String, dynamic> json) {
     );
   }
 
-  return 'Auteur Plumora';
+  return 'Plumora';
 }
 
 String _readAuthorNameFromMap(Map<String, dynamic> author) {
-  final fullName = _readNullableString(author, ['fullName', 'name']);
+  final fullName = _readNullableString(author, [
+    'displayName',
+    'fullName',
+    'full_name',
+    'name',
+    'username',
+  ]);
   if (fullName != null) {
     return fullName;
   }
@@ -249,7 +296,7 @@ String _readAuthorNameFromMap(Map<String, dynamic> author) {
     firstName,
     lastName,
   ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
-  return combined.isEmpty ? 'Auteur Plumora' : combined;
+  return combined.isEmpty ? 'Plumora' : combined;
 }
 
 bool _readBool(Map<String, dynamic> json, List<String> keys) {

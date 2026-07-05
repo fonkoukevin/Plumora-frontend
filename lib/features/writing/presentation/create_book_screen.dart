@@ -1,6 +1,3 @@
-import 'dart:typed_data';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,9 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
-import '../../../core/widgets/plumora_ui.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../book/data/models/book_model.dart';
-import '../../book/data/repositories/book_cover_cache.dart';
 import '../../book/data/repositories/book_repository.dart';
 
 class CreateBookScreen extends ConsumerStatefulWidget {
@@ -23,642 +19,328 @@ class CreateBookScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-
-  String? _selectedGenre;
+  final _summaryController = TextEditingController();
+  String _genre = '';
   String _visibility = 'PRIVATE';
-  String? _loadedBookId;
-  String? _existingCoverUrl;
-  String? _selectedCoverFileName;
-  Uint8List? _selectedCoverBytes;
-  bool _isSaving = false;
+  String? _hydratedBookId;
+  bool _isSubmitting = false;
   String? _error;
 
-  static const _genres = [
-    'Fantasy',
-    'Romance',
-    'Thriller',
-    'Science-fiction',
-    'Mystère',
-    'Poésie',
-    'Essai',
-    'Autre',
-  ];
+  bool get _editing =>
+      widget.bookId != null && widget.bookId!.trim().isNotEmpty;
 
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
+    _summaryController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bookId = widget.bookId?.trim();
-    if (bookId != null && bookId.isNotEmpty) {
-      final bookAsync = ref.watch(authorBookProvider(bookId));
-      return bookAsync.when(
-        loading: () => const _CreateBookLoader(),
-        error: (error, _) => _CreateBookLoadError(
-          message: AppError.messageFor(error),
-          onRetry: () => ref.invalidate(authorBookProvider(bookId)),
-        ),
-        data: (book) {
-          _syncBook(book);
-          return _buildFormLayout(context, isEditing: true, bookId: bookId);
-        },
-      );
-    }
+    final AsyncValue<BookModel?> bookAsync = _editing
+        ? ref.watch(authorBookProvider(widget.bookId!)).whenData((book) => book)
+        : const AsyncValue.data(null);
 
-    return _buildFormLayout(context, isEditing: false, bookId: null);
-  }
-
-  Widget _buildFormLayout(
-    BuildContext context, {
-    required bool isEditing,
-    required String? bookId,
-  }) {
-    final cachedCover = bookId == null
-        ? null
-        : ref.watch(bookCoverBytesProvider(bookId));
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const horizontal = 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 92.0;
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            32,
-            horizontal,
-            bottomPadding,
+    return bookAsync.when(
+      loading: () => const FigmaScreen(
+        maxWidth: 780,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(48),
+            child: CircularProgressIndicator(),
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: constraints.maxWidth >= 760 ? 768 : 430,
+        ),
+      ),
+      error: (error, _) => FigmaScreen(
+        maxWidth: 780,
+        padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+        child: _ErrorPanel(
+          message: AppError.messageFor(error),
+          onRetry: () => ref.invalidate(authorBookProvider(widget.bookId!)),
+        ),
+      ),
+      data: (book) {
+        if (book != null) {
+          _hydrateFrom(book);
+        }
+
+        return FigmaScreen(
+          maxWidth: 780,
+          padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FigmaBackButton(
+                label: 'Retour',
+                onTap: () => context.go(AppRoutes.write),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextButton.icon(
-                    onPressed: _isSaving
-                        ? null
-                        : () {
-                            if (isEditing && bookId != null) {
-                              context.go(
-                                AppRoutes.authorBookDetailPath(bookId),
-                              );
-                            } else if (context.canPop()) {
-                              context.pop();
-                            } else {
-                              context.go(AppRoutes.write);
-                            }
-                          },
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(0, 32),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: PlumoraColors.textSecondary,
+              const SizedBox(height: 18),
+              Text(
+                _editing ? 'Modifier le livre' : 'Creer un nouveau livre',
+                style: const TextStyle(
+                  color: PlumoraColors.textPrimary,
+                  fontSize: 36,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Les informations enregistrees ici alimentent directement le backend Plumora.',
+                style: TextStyle(
+                  color: PlumoraColors.textSecondary,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 26),
+              FigmaCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Labelled(
+                      label: 'Titre du livre',
+                      child: TextField(
+                        controller: _titleController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          hintText: 'Ex: La Nuit Rouge',
+                        ),
+                      ),
                     ),
-                    icon: const Icon(Icons.arrow_back, size: 16),
-                    label: const Text('Retour'),
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    isEditing ? 'Modifier le livre' : 'Créer un nouveau livre',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: PlumoraColors.textPrimary,
-                      fontSize: 36,
-                      fontWeight: FontWeight.w700,
-                      height: 1.15,
+                    const SizedBox(height: 18),
+                    _Labelled(
+                      label: 'Genre',
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _genre.isEmpty ? null : _genre,
+                        hint: const Text('Selectionner un genre'),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Fantasy',
+                            child: Text('Fantasy'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Romance',
+                            child: Text('Romance'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Thriller',
+                            child: Text('Thriller'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Science-Fiction',
+                            child: Text('Science-Fiction'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Mystere',
+                            child: Text('Mystere'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Horreur',
+                            child: Text('Horreur'),
+                          ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _genre = value ?? ''),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    isEditing
-                        ? 'Mets à jour les informations de ton manuscrit'
-                        : 'Remplissez les informations pour commencer votre nouveau projet',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: PlumoraColors.textSecondary,
-                      fontSize: 14,
+                    const SizedBox(height: 18),
+                    _Labelled(
+                      label: 'Resume court',
+                      child: TextField(
+                        controller: _summaryController,
+                        minLines: 5,
+                        maxLines: 8,
+                        decoration: const InputDecoration(
+                          hintText:
+                              'Decrivez votre livre en quelques lignes...',
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  PlumoraCard(
-                    radius: 16,
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                    const SizedBox(height: 22),
+                    const Text(
+                      'Visibilite',
+                      style: TextStyle(
+                        color: PlumoraColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _VisibilityOption(
+                      selected: _visibility == 'PRIVATE',
+                      title: 'Prive',
+                      subtitle: 'Visible uniquement par vous',
+                      onTap: () => setState(() => _visibility = 'PRIVATE'),
+                    ),
+                    _VisibilityOption(
+                      selected: _visibility == 'BETA_ONLY',
+                      title: 'Beta-test uniquement',
+                      subtitle: 'Accessible aux beta-testeurs selectionnes',
+                      onTap: () => setState(() => _visibility = 'BETA_ONLY'),
+                    ),
+                    _VisibilityOption(
+                      selected: _visibility == 'PUBLIC',
+                      title: 'Publication interne',
+                      subtitle: 'Visible par tous les utilisateurs de Plumora',
+                      onTap: () => setState(() => _visibility = 'PUBLIC'),
+                    ),
+                    const SizedBox(height: 20),
+                    FigmaCard(
+                      color: PlumoraColors.muted.withValues(alpha: 0.45),
+                      shadow: false,
+                      child: Row(
                         children: [
-                          if (_error != null) ...[
-                            _ErrorBanner(message: _error!),
-                            const SizedBox(height: 14),
-                          ],
-                          const _FieldLabel('Titre du livre'),
-                          TextFormField(
-                            controller: _titleController,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              hintText: 'Ex: La Nuit Rouge',
-                            ),
-                            validator: (value) {
-                              if ((value ?? '').trim().isEmpty) {
-                                return 'Titre requis';
-                              }
-                              return null;
-                            },
+                          const Icon(
+                            Icons.image_outlined,
+                            color: PlumoraColors.primary,
                           ),
-                          const SizedBox(height: 24),
-                          const _FieldLabel('Genre'),
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedGenre,
-                            isExpanded: true,
-                            decoration: const InputDecoration(
-                              hintText: 'Sélectionner un genre',
-                            ),
-                            items: [
-                              for (final genre in _genreOptions)
-                                DropdownMenuItem(
-                                  value: genre,
-                                  child: Text(genre),
-                                ),
-                            ],
-                            onChanged: _isSaving
-                                ? null
-                                : (value) => setState(() {
-                                    _selectedGenre = value;
-                                  }),
-                          ),
-                          const SizedBox(height: 24),
-                          const _FieldLabel('Résumé court'),
-                          TextFormField(
-                            controller: _descriptionController,
-                            maxLines: 5,
-                            minLines: 5,
-                            textAlignVertical: TextAlignVertical.top,
-                            decoration: const InputDecoration(
-                              hintText:
-                                  'Décrivez votre livre en quelques lignes...',
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          const _FieldLabel('Image du livre'),
-                          _CoverPicker(
-                            fileName: _selectedCoverFileName,
-                            bytes: _selectedCoverBytes ?? cachedCover,
-                            existingUrl: _existingCoverUrl,
-                            isSaving: _isSaving,
-                            canClear: _selectedCoverBytes != null,
-                            onPick: _pickCoverImage,
-                            onClear: _clearSelectedCover,
-                          ),
-                          const SizedBox(height: 24),
-                          const _FieldLabel('Visibilité'),
-                          RadioGroup<String>(
-                            groupValue: _visibility,
-                            onChanged: _setVisibility,
-                            child: Column(
-                              children: [
-                                _VisibilityOption(
-                                  value: 'PRIVATE',
-                                  selected: _visibility == 'PRIVATE',
-                                  title: 'Privé',
-                                  subtitle: 'Visible uniquement par vous',
-                                  onTap: () => _setVisibility('PRIVATE'),
-                                ),
-                                const SizedBox(height: 8),
-                                _VisibilityOption(
-                                  value: 'BETA_ONLY',
-                                  selected: _visibility == 'BETA_ONLY',
-                                  title: 'Bêta-test uniquement',
-                                  subtitle:
-                                      'Accessible aux bêta-testeurs sélectionnés',
-                                  onTap: () => _setVisibility('BETA_ONLY'),
-                                ),
-                                const SizedBox(height: 8),
-                                _VisibilityOption(
-                                  value: 'PUBLIC',
-                                  selected: _visibility == 'PUBLIC',
-                                  title: 'Publication interne',
-                                  subtitle:
-                                      'Visible par tous les utilisateurs de Plumora',
-                                  onTap: () => _setVisibility('PUBLIC'),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _isSaving
-                                      ? null
-                                      : () {
-                                          if (isEditing && bookId != null) {
-                                            context.go(
-                                              AppRoutes.authorBookDetailPath(
-                                                bookId,
-                                              ),
-                                            );
-                                          } else {
-                                            context.go(AppRoutes.write);
-                                          }
-                                        },
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size(0, 42),
-                                  ),
-                                  child: const Text('Annuler'),
-                                ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              book?.coverUrl?.trim().isNotEmpty == true
+                                  ? 'Couverture existante conservee.'
+                                  : 'La couverture pourra etre ajoutee depuis une mise a jour dediee.',
+                              style: const TextStyle(
+                                color: PlumoraColors.textSecondary,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: FilledButton(
-                                  onPressed: _isSaving ? null : _submit,
-                                  style: FilledButton.styleFrom(
-                                    minimumSize: const Size(0, 42),
-                                  ),
-                                  child: Text(
-                                    _isSaving
-                                        ? isEditing
-                                              ? 'Sauvegarde...'
-                                              : 'Création...'
-                                        : isEditing
-                                        ? 'Enregistrer'
-                                        : 'Créer le livre',
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                    if (_error != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: PlumoraColors.destructive,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isSubmitting
+                                ? null
+                                : () => context.go(AppRoutes.write),
+                            child: const Text('Annuler'),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed:
+                                _isSubmitting ||
+                                    _titleController.text.trim().isEmpty
+                                ? null
+                                : _submit,
+                            child: Text(
+                              _isSubmitting
+                                  ? 'Enregistrement...'
+                                  : _editing
+                                  ? 'Enregistrer'
+                                  : 'Creer le livre',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         );
       },
     );
   }
 
-  List<String> get _genreOptions {
-    final selectedGenre = _selectedGenre?.trim();
-    if (selectedGenre == null ||
-        selectedGenre.isEmpty ||
-        _genres.contains(selectedGenre)) {
-      return _genres;
-    }
-
-    return [..._genres, selectedGenre];
-  }
-
-  void _syncBook(BookModel book) {
-    if (_loadedBookId == book.id) {
+  void _hydrateFrom(BookModel book) {
+    if (_hydratedBookId == book.id) {
       return;
     }
-
-    _loadedBookId = book.id;
+    _hydratedBookId = book.id;
     _titleController.text = book.title;
-    _descriptionController.text = book.description;
-    _existingCoverUrl = book.coverUrl;
-    _selectedCoverFileName = null;
-    _selectedCoverBytes = null;
-    _selectedGenre = book.genre?.trim().isEmpty ?? true
-        ? null
-        : book.genre?.trim();
+    _summaryController.text = book.description;
+    _genre = book.genre ?? '';
     _visibility = _normalizeVisibility(book.visibility);
-    _error = null;
-  }
-
-  String _normalizeVisibility(String? visibility) {
-    final normalized = visibility?.trim().toUpperCase();
-    return switch (normalized) {
-      'PUBLIC' || 'INTERNAL' => 'PUBLIC',
-      'BETA' || 'BETA_ONLY' || 'BETA_TEST' => 'BETA_ONLY',
-      _ => 'PRIVATE',
-    };
-  }
-
-  void _setVisibility(String? value) {
-    if (value == null || _isSaving) {
-      return;
-    }
-    setState(() => _visibility = value);
   }
 
   Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
     setState(() {
-      _isSaving = true;
+      _isSubmitting = true;
       _error = null;
     });
 
     try {
       final request = BookUpsertRequest(
         title: _titleController.text,
-        description: _descriptionController.text,
-        genre: _selectedGenre,
+        description: _summaryController.text,
+        genre: _genre,
         visibility: _visibility,
-        coverUrl: _selectedCoverBytes == null ? _existingCoverUrl : null,
-        coverImage: _selectedCoverBytes == null
-            ? null
-            : BookCoverUpload(
-                fileName: _selectedCoverFileName ?? 'couverture-plumora.jpg',
-                bytes: _selectedCoverBytes,
-              ),
       );
-      final bookId = widget.bookId?.trim();
-      final book = bookId == null || bookId.isEmpty
-          ? await ref.read(bookRepositoryProvider).createBook(request)
-          : await ref.read(bookRepositoryProvider).updateBook(bookId, request);
+      final repository = ref.read(bookRepositoryProvider);
+      final saved = _editing
+          ? await repository.updateBook(widget.bookId!, request)
+          : await repository.createBook(request);
+
       ref.invalidate(myBooksProvider);
-      if (bookId != null && bookId.isNotEmpty) {
-        ref.invalidate(authorBookProvider(bookId));
+      ref.invalidate(authorBookProvider(saved.id));
+      if (_editing) {
+        ref.invalidate(authorBookProvider(widget.bookId!));
       }
 
       if (mounted) {
-        final targetBookId = book.id.isEmpty ? (bookId ?? '') : book.id;
-        if (_selectedCoverBytes != null && targetBookId.isNotEmpty) {
-          ref
-              .read(bookCoverCacheProvider.notifier)
-              .put(targetBookId, _selectedCoverBytes!);
-        }
-        if (_selectedCoverBytes != null &&
-            (book.coverUrl == null || book.coverUrl!.trim().isEmpty)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "Livre sauvegardé, mais l'API ne prend pas encore l'import d'image.",
-              ),
-            ),
-          );
-        }
-        if (bookId == null || bookId.isEmpty) {
-          context.go(AppRoutes.chapterEditorPath(targetBookId));
-        } else {
-          context.go(AppRoutes.authorBookDetailPath(targetBookId));
-        }
+        context.go(AppRoutes.authorBookDetailPath(saved.id));
       }
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        setState(() => _isSubmitting = false);
       }
     }
   }
-
-  Future<void> _pickCoverImage() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
-        allowMultiple: false,
-        withData: true,
-      );
-      final file = result?.files.single;
-      final bytes = file?.bytes;
-      if (file == null || bytes == null) {
-        return;
-      }
-
-      if (bytes.length > 5 * 1024 * 1024) {
-        setState(() {
-          _error = 'Image trop lourde : 5 Mo maximum.';
-        });
-        return;
-      }
-
-      setState(() {
-        _selectedCoverFileName = file.name;
-        _selectedCoverBytes = bytes;
-        _error = null;
-      });
-    } catch (error) {
-      setState(() => _error = AppError.messageFor(error));
-    }
-  }
-
-  void _clearSelectedCover() {
-    setState(() {
-      _selectedCoverFileName = null;
-      _selectedCoverBytes = null;
-    });
-  }
 }
 
-class _CreateBookLoader extends StatelessWidget {
-  const _CreateBookLoader();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(48),
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
-}
-
-class _CreateBookLoadError extends StatelessWidget {
-  const _CreateBookLoadError({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontal = constraints.maxWidth >= 760 ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 82.0;
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            28,
-            horizontal,
-            bottomPadding,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: PlumoraCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Livre introuvable',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      message,
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: onRetry,
-                      child: const Text('Réessayer'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.label);
+class _Labelled extends StatelessWidget {
+  const _Labelled({required this.label, required this.child});
 
   final String label;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: PlumoraColors.textPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: PlumoraColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _CoverPicker extends StatelessWidget {
-  const _CoverPicker({
-    required this.fileName,
-    required this.bytes,
-    required this.existingUrl,
-    required this.isSaving,
-    required this.canClear,
-    required this.onPick,
-    required this.onClear,
-  });
-
-  final String? fileName;
-  final Uint8List? bytes;
-  final String? existingUrl;
-  final bool isSaving;
-  final bool canClear;
-  final VoidCallback onPick;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasImportedImage = bytes != null;
-    final hasExistingImage = existingUrl?.trim().isNotEmpty ?? false;
-    final hasImage = hasImportedImage || hasExistingImage;
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 118),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFBF8F2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: PlumoraColors.border),
-      ),
-      child: Row(
-        children: [
-          PlumoraBookCover(
-            colors: const [Color(0xFFB08F54), Color(0xFFE8D9C4)],
-            imageUrl: hasImportedImage ? null : existingUrl,
-            imageBytes: bytes,
-            width: 64,
-            height: 90,
-            radius: 10,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  hasImportedImage
-                      ? fileName ?? 'Image importée'
-                      : hasExistingImage
-                      ? 'Couverture actuelle'
-                      : 'Couverture optionnelle',
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  hasImage
-                      ? 'Cette image sera utilisée dans le catalogue, les favoris et la bibliothèque.'
-                      : 'Importe une image depuis ton ordinateur ou ton téléphone.',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: isSaving ? null : onPick,
-                      icon: const Icon(Icons.upload_file_outlined, size: 17),
-                      label: Text(hasImage ? 'Changer' : 'Importer'),
-                    ),
-                    if (hasImportedImage && canClear)
-                      TextButton(
-                        onPressed: isSaving ? null : onClear,
-                        child: const Text('Annuler'),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        const SizedBox(height: 8),
+        child,
+      ],
     );
   }
 }
 
 class _VisibilityOption extends StatelessWidget {
   const _VisibilityOption({
-    required this.value,
     required this.selected,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
-  final String value;
   final bool selected;
   final String title;
   final String subtitle;
@@ -666,78 +348,114 @@ class _VisibilityOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 72),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: PlumoraColors.cards,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? PlumoraColors.primary : PlumoraColors.border,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: selected
+                ? PlumoraColors.primary.withValues(alpha: 0.06)
+                : Colors.transparent,
+            border: Border.all(
+              color: selected ? PlumoraColors.primary : PlumoraColors.border,
+              width: selected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-        child: Row(
-          children: [
-            Radio<String>(
-              value: value,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: PlumoraColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
+          child: Row(
+            children: [
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected
+                        ? PlumoraColors.primary
+                        : PlumoraColors.border,
+                    width: 2,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: PlumoraColors.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+                ),
+                child: selected
+                    ? Center(
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: PlumoraColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      )
+                    : null,
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: PlumoraColors.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: PlumoraColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
+class _ErrorPanel extends StatelessWidget {
+  const _ErrorPanel({required this.message, required this.onRetry});
 
   final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7E0DC),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        message,
-        style: const TextStyle(
-          color: PlumoraColors.destructive,
-          fontWeight: FontWeight.w700,
-        ),
+    return FigmaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Livre indisponible',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(color: PlumoraColors.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+        ],
       ),
     );
   }
+}
+
+String _normalizeVisibility(String? visibility) {
+  final normalized = visibility?.trim().toUpperCase();
+  return switch (normalized) {
+    'PUBLIC' => 'PUBLIC',
+    'BETA' || 'BETA_ONLY' || 'BETA_READING' => 'BETA_ONLY',
+    _ => 'PRIVATE',
+  };
 }

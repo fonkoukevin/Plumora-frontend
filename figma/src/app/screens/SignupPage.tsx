@@ -8,8 +8,7 @@ interface SignupPageProps {
 }
 
 export function SignupPage({ onNavigate }: SignupPageProps) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,21 +30,12 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
 
         <div className="bg-card border border-border rounded-2xl p-8 shadow-sm space-y-6">
           <Input
-            id="firstName"
-            label="Prénom"
+            id="name"
+            label="Nom complet"
             type="text"
-            placeholder="Kevin"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-          />
-
-          <Input
-            id="lastName"
-            label="Nom"
-            type="text"
-            placeholder="Martin"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Kevin Martin"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
 
           <Input

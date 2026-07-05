@@ -19,6 +19,13 @@ final bookReviewsProvider = FutureProvider.family<List<ReviewModel>, String>((
   return ref.watch(reviewRepositoryProvider).reviewsForBook(bookId);
 });
 
+final externalBookReviewsProvider =
+    FutureProvider.family<List<ReviewModel>, String>((ref, gutendexId) {
+      return ref
+          .watch(reviewRepositoryProvider)
+          .reviewsForExternalBook(gutendexId);
+    });
+
 final myReviewsProvider = FutureProvider<List<ReviewModel>>((ref) {
   return ref.watch(reviewRepositoryProvider).myReviews();
 });
@@ -43,8 +50,19 @@ class ReviewRepository {
     return _apiService.createReview(bookId, request);
   }
 
+  Future<ReviewModel> createExternalBookReview(
+    String gutendexId,
+    ReviewUpsertRequest request,
+  ) {
+    return _apiService.createExternalBookReview(gutendexId, request);
+  }
+
   Future<List<ReviewModel>> reviewsForBook(String bookId) {
     return _apiService.reviewsForBook(bookId);
+  }
+
+  Future<List<ReviewModel>> reviewsForExternalBook(String gutendexId) {
+    return _apiService.reviewsForExternalBook(gutendexId);
   }
 
   Future<List<ReviewModel>> myReviews() {

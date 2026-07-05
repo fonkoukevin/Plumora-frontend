@@ -16,9 +16,9 @@ abstract final class PlumoraTheme {
           surface: PlumoraColors.background,
           onSurface: PlumoraColors.textPrimary,
           onSurfaceVariant: PlumoraColors.textSecondary,
-          primaryContainer: PlumoraColors.secondary,
+          primaryContainer: const Color(0xFFEDE7F6),
           onPrimaryContainer: PlumoraColors.textPrimary,
-          secondaryContainer: const Color(0xFFDCE8D8),
+          secondaryContainer: PlumoraColors.muted,
           onSecondaryContainer: PlumoraColors.textPrimary,
           surfaceContainerHighest: PlumoraColors.cards,
           outlineVariant: PlumoraColors.border,
@@ -57,7 +57,7 @@ abstract final class PlumoraTheme {
       textTheme: Typography.material2021().black.apply(
         bodyColor: colorScheme.onSurface,
         displayColor: colorScheme.onSurface,
-        fontFamily: 'Roboto',
+        fontFamily: 'Nunito',
       ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -76,7 +76,7 @@ abstract final class PlumoraTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return const Color(0xFFD7C49E);
+              return const Color(0xFFB9A7D7);
             }
             if (states.contains(WidgetState.hovered) ||
                 states.contains(WidgetState.pressed)) {
@@ -90,15 +90,15 @@ abstract final class PlumoraTheme {
           ),
           elevation: const WidgetStatePropertyAll(1),
           shadowColor: const WidgetStatePropertyAll(Color(0x1A000000)),
-          minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+          minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
           textStyle: const WidgetStatePropertyAll(
-            TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -121,18 +121,18 @@ abstract final class PlumoraTheme {
           overlayColor: WidgetStatePropertyAll(
             PlumoraColors.primary.withValues(alpha: 0.08),
           ),
-          minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+          minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
           side: const WidgetStatePropertyAll(
-            BorderSide(color: PlumoraColors.primary, width: 2),
+            BorderSide(color: PlumoraColors.border, width: 2),
           ),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
           textStyle: const WidgetStatePropertyAll(
-            TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -161,10 +161,10 @@ abstract final class PlumoraTheme {
         isDense: true,
         filled: true,
         fillColor: PlumoraColors.cards,
-        constraints: const BoxConstraints(minHeight: 44),
+        constraints: const BoxConstraints(minHeight: 48),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 10,
+          vertical: 12,
         ),
         labelStyle: const TextStyle(
           color: PlumoraColors.textPrimary,
@@ -174,11 +174,11 @@ abstract final class PlumoraTheme {
           color: PlumoraColors.textPrimary,
           fontSize: 14,
         ),
-        hintStyle: const TextStyle(color: Color(0xFF9E9A96), fontSize: 14),
+        hintStyle: const TextStyle(color: PlumoraColors.textSecondary),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE4D7C7)),
+          borderSide: const BorderSide(color: PlumoraColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

@@ -11,8 +11,9 @@ void main() {
 
     expect(find.text('Plumora'), findsOneWidget);
     expect(find.text('Se connecter'), findsOneWidget);
-    expect(find.text('Créer un compte'), findsOneWidget);
+    expect(find.text('Rejoindre gratuitement'), findsOneWidget);
   });
+
   testWidgets('PlumoraBookCover resolves backend upload cover URLs', (
     tester,
   ) async {

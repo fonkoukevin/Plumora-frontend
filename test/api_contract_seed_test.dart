@@ -18,8 +18,12 @@ import 'package:plumora_app/features/book/data/models/book_model.dart';
 import 'package:plumora_app/features/book/data/models/chapter_model.dart';
 import 'package:plumora_app/features/book/data/services/book_api_service.dart';
 import 'package:plumora_app/features/book/data/services/chapter_api_service.dart';
+import 'package:plumora_app/features/catalog/data/models/catalog_book_model.dart';
 import 'package:plumora_app/features/catalog/data/services/catalog_api_service.dart';
+import 'package:plumora_app/features/catalog/data/models/external_book_model.dart';
+import 'package:plumora_app/features/catalog/data/services/external_book_api_service.dart';
 import 'package:plumora_app/features/notification/data/services/notification_api_service.dart';
+import 'package:plumora_app/features/reading/data/models/favorite_model.dart';
 import 'package:plumora_app/features/reading/data/models/reading_progress_model.dart';
 import 'package:plumora_app/features/reading/data/models/review_model.dart';
 import 'package:plumora_app/features/reading/data/services/favorite_api_service.dart';
@@ -40,6 +44,8 @@ void main() {
           AppRoutes.roleSelection,
           AppRoutes.home,
           AppRoutes.discover,
+          AppRoutes.publicDomainCatalog,
+          AppRoutes.publicDomainBookDetail,
           AppRoutes.catalogSearch,
           AppRoutes.catalogBookDetail,
           AppRoutes.mukemeRecommendation,
@@ -77,10 +83,26 @@ void main() {
         '/discover/search?q=nuit+rouge',
       );
       expect(
+        AppRoutes.publicDomainCatalogPath(
+          search: 'Hugo',
+          language: 'fr',
+          topic: 'fiction',
+        ),
+        '/discover/public-domain?search=Hugo&language=fr&topic=fiction',
+      );
+      expect(
+        AppRoutes.publicDomainBookDetailPath('123'),
+        '/discover/public-domain/123',
+      );
+      expect(
         AppRoutes.catalogBookDetailPath('book-1'),
         '/catalog/books/book-1',
       );
       expect(AppRoutes.readingPath('book-1'), '/books/book-1/read');
+      expect(
+        AppRoutes.readingPath('book-1', chapterId: 'chapter-3'),
+        '/books/book-1/read?chapterId=chapter-3',
+      );
       expect(AppRoutes.editBookPath('book-1'), '/books/book-1/edit');
       expect(AppRoutes.chapterEditorPath('book-1'), '/books/book-1/editor');
       expect(AppRoutes.publishBookPath('book-1'), '/books/book-1/publish');
@@ -124,6 +146,155 @@ void main() {
     });
   });
 
+  group('Reader model compatibility', () {
+    test('reads flat reading progress book aliases from backend', () {
+      final progress = ReadingProgressModel.fromJson({
+        'bookId': 'book-91',
+        'chapterId': 'chapter-2',
+        'bookTitle': 'La Mer Sans Sommeil',
+        'authorFirstName': 'Kevin',
+        'authorLastName': 'Fonkou',
+        'coverUrl': 'uploads/book-covers/cover.png',
+        'progressPercentage': 25,
+      });
+
+      expect(progress.bookTitle, 'La Mer Sans Sommeil');
+      expect(progress.authorName, 'Kevin Fonkou');
+      expect(progress.progressPercent, 25);
+      expect(progress.coverUrl, 'uploads/book-covers/cover.png');
+    });
+
+    test('reads flat favorite book title aliases from backend', () {
+      final favorite = FavoriteModel.fromJson({
+        'id': 'favorite-4',
+        'bookId': 'book-42',
+        'bookTitle': 'Les Chroniques d’Eldoria',
+        'authorName': 'Sophie Martin',
+        'coverUrl': 'uploads/book-covers/eldoria.png',
+      });
+
+      expect(favorite.book.id, 'book-42');
+      expect(favorite.book.title, 'Les Chroniques d’Eldoria');
+      expect(favorite.book.authorName, 'Sophie Martin');
+      expect(favorite.book.coverUrl, 'uploads/book-covers/eldoria.png');
+    });
+
+    test('reads catalog author display names from backend', () {
+      final book = CatalogBookModel.fromJson({
+        'id': 'book-2701',
+        'title': 'Moby Dick; Or, The Whale',
+        'authorUsername': 'eli_reader',
+        'authorDisplayName': 'Melville, Herman',
+        'externalSource': 'GUTENDEX',
+        'externalAuthors': ['Melville, Herman'],
+      });
+
+      expect(book.authorName, 'Melville, Herman');
+      expect(book.externalSource, 'GUTENDEX');
+      expect(book.isExternalImport, isTrue);
+
+      final internalBook = CatalogBookModel.fromJson({
+        'id': 'book-lumen',
+        'title': 'Dernier Tram pour Lumen',
+        'authorDisplayName': 'Bruno Kassel',
+        'externalSource': null,
+      });
+
+      expect(internalBook.authorName, 'Bruno Kassel');
+      expect(internalBook.isPlumoraOriginal, isTrue);
+    });
+
+    test('reads reviewer names from flat and nested backend aliases', () {
+      final flat = ReviewModel.fromJson({
+        'idReview': 'review-42',
+        'idBook': 'book-42',
+        'idUser': 'user-42',
+        'reviewerFirstName': 'Clara',
+        'reviewerLastName': 'Martin',
+        'rating': 5,
+        'comment': 'Super lecture.',
+      });
+      final nested = ReviewModel.fromJson({
+        'id': 'review-43',
+        'bookId': 'book-42',
+        'userName': 'Lecteur Plumora',
+        'rating': 4,
+        'comment': 'Tres bon rythme.',
+        'user': {'firstname': 'Sarah', 'lastname': 'Kouam'},
+      });
+
+      expect(flat.id, 'review-42');
+      expect(flat.bookId, 'book-42');
+      expect(flat.userId, 'user-42');
+      expect(flat.userName, 'Clara Martin');
+      expect(nested.userName, 'Sarah Kouam');
+    });
+
+    test('reads external review Gutendex aliases from backend', () {
+      final review = ReviewModel.fromJson({
+        'id': 'external-review-42',
+        'externalId': '123',
+        'userName': 'Lecteur externe',
+        'rating': 5,
+        'comment': 'Tres belle decouverte.',
+      });
+
+      expect(review.id, 'external-review-42');
+      expect(review.bookId, '123');
+      expect(review.userName, 'Lecteur externe');
+    });
+  });
+
+  group('External book model compatibility', () {
+    test(
+      'reads nullable lists, formats and optional URLs from backend DTO',
+      () {
+        final page = ExternalBookPage.fromJson({
+          'content': [
+            {
+              'externalId': '123',
+              'source': 'GUTENDEX',
+              'title': 'Les Miserables',
+              'authors': ['Victor Hugo', null],
+              'summary': 'Un roman social.',
+              'subjects': ['French fiction'],
+              'languages': ['fr'],
+              'copyright': false,
+              'mediaType': 'Text',
+              'downloadCount': '42',
+              'coverUrl': null,
+              'readUrl': null,
+              'formats': {'text/html': 'https://example.test/read.html'},
+              'sourceUrl': 'https://www.gutenberg.org/ebooks/123',
+              'imported': true,
+              'internalBookId': 'book-3',
+            },
+          ],
+          'page': 0,
+          'size': 32,
+          'totalElements': 100,
+          'totalPages': 4,
+          'first': true,
+          'last': false,
+        });
+
+        final book = page.content.single;
+
+        expect(page.totalPages, 4);
+        expect(page.last, isFalse);
+        expect(book.externalId, '123');
+        expect(book.authorLabel, 'Victor Hugo');
+        expect(book.coverUrl, isNull);
+        expect(book.readUrl, isNull);
+        expect(book.formats['text/html'], 'https://example.test/read.html');
+        expect(book.downloadCount, 42);
+        expect(book.imported, isTrue);
+        expect(book.internalBookId, 'book-3');
+        expect(book.canReadInPlumora, isTrue);
+      },
+    );
+  });
+
   group('API contract services with seed data', () {
     test('call every MVP endpoint through Dio services', () async {
       final adapter = _SeedHttpClientAdapter(_seedResponses());
@@ -134,6 +305,7 @@ void main() {
       final books = BookApiService(dio);
       final chapters = ChapterApiService(dio);
       final catalog = CatalogApiService(dio);
+      final externalBooks = ExternalBookApiService(dio);
       final reading = ReadingApiService(dio);
       final favorites = FavoriteApiService(dio);
       final reviews = ReviewApiService(dio);
@@ -239,6 +411,15 @@ void main() {
       final popularBooks = await catalog.popular();
       final searchBooks = await catalog.search('nuit');
       final catalogDetail = await catalog.bookDetail('book-1');
+      final externalPage = await externalBooks.searchExternalBooks(
+        search: 'Hugo',
+        language: 'fr',
+        page: 0,
+      );
+      final externalDetail = await externalBooks.getExternalBook('123');
+      final importedExternalBook = await externalBooks.importGutendexBook(
+        '123',
+      );
 
       expect(catalogBooks.single.title, 'La Nuit Rouge');
       expect(catalogBooks.single.coverUrl, createdBook.coverUrl);
@@ -246,6 +427,12 @@ void main() {
       expect(popularBooks.single.id, 'book-1');
       expect(searchBooks.single.id, 'book-1');
       expect(catalogDetail.chapters.single.id, 'chapter-1');
+      expect(externalPage.content.single.title, 'Les Miserables');
+      expect(externalPage.content.single.imported, isFalse);
+      expect(externalPage.last, isFalse);
+      expect(externalDetail.formats, containsPair('text/html', 'https://read'));
+      expect(externalDetail.internalBookId, isNull);
+      expect(importedExternalBook.id, 'book-3');
 
       final readBook = await reading.readBook('book-1');
       final myProgress = await reading.myProgress();
@@ -291,6 +478,14 @@ void main() {
         const ReviewUpsertRequest(rating: 5, comment: 'Excellent.'),
       );
       final bookReviews = await reviews.reviewsForBook('book-1');
+      final externalBookReviews = await reviews.reviewsForExternalBook('123');
+      final createdExternalReview = await reviews.createExternalBookReview(
+        '123',
+        const ReviewUpsertRequest(
+          rating: 5,
+          comment: 'Lecture externe excellente.',
+        ),
+      );
       final myReviews = await reviews.myReviews();
       final updatedReview = await reviews.updateReview(
         'review-1',
@@ -299,7 +494,13 @@ void main() {
       await reviews.deleteReview('review-1');
 
       expect(createdReview.bookId, 'book-1');
-      expect(bookReviews.single.rating, 5);
+      expect(bookReviews, hasLength(2));
+      expect(
+        bookReviews.map((review) => review.userName),
+        containsAll(['Lecteur Seed', 'Clara Martin']),
+      );
+      expect(externalBookReviews.single.bookId, '123');
+      expect(createdExternalReview.bookId, '123');
       expect(myReviews.single.id, 'review-1');
       expect(updatedReview.rating, 4);
 
@@ -421,6 +622,9 @@ void main() {
           'GET /catalog/books/popular',
           'GET /catalog/books/search',
           'GET /catalog/books/book-1',
+          'GET /external-books',
+          'GET /external-books/123',
+          'POST /books/import/gutendex/123',
           'GET /books/book-1/read',
           'GET /reading-progress/my',
           'GET /books/book-1/reading-progress',
@@ -433,6 +637,8 @@ void main() {
           'GET /books/book-1/favorites/status',
           'POST /books/book-1/reviews',
           'GET /books/book-1/reviews',
+          'GET /external-books/123/reviews',
+          'POST /external-books/123/reviews',
           'GET /reviews/my',
           'PUT /reviews/review-1',
           'DELETE /reviews/review-1',
@@ -467,6 +673,13 @@ void main() {
         (request) => request.key == 'GET /catalog/books/search',
       );
       expect(searchRequest.query['q'], 'nuit');
+
+      final externalSearchRequest = adapter.requests.firstWhere(
+        (request) => request.key == 'GET /external-books',
+      );
+      expect(externalSearchRequest.query['search'], 'Hugo');
+      expect(externalSearchRequest.query['language'], 'fr');
+      expect(externalSearchRequest.query['page'], 0);
 
       final roleRequest = adapter.requests.firstWhere(
         (request) => request.key == 'PUT /users/me/roles',
@@ -640,6 +853,32 @@ Map<String, Object?> _seedResponses() {
     ...catalogBook,
     'chapters': [chapter],
   };
+  final externalBook = {
+    'externalId': '123',
+    'source': 'GUTENDEX',
+    'title': 'Les Miserables',
+    'authors': ['Victor Hugo'],
+    'summary': 'Un roman social.',
+    'subjects': ['French fiction'],
+    'languages': ['fr'],
+    'copyright': false,
+    'mediaType': 'Text',
+    'downloadCount': 42,
+    'coverUrl': 'https://covers.openlibrary.org/b/id/987-L.jpg?default=false',
+    'readUrl': 'https://read',
+    'formats': {'text/html': 'https://read'},
+    'sourceUrl': 'https://www.gutenberg.org/ebooks/123',
+    'imported': false,
+    'internalBookId': null,
+  };
+  final importedExternalBook = {
+    ...publishedBook,
+    'id': 'book-3',
+    'title': 'Les Miserables',
+    'description': 'Un roman social.',
+    'genre': 'Classique',
+    'coverUrl': 'https://covers.openlibrary.org/b/id/987-L.jpg?default=false',
+  };
   final progress = {
     'bookId': 'book-1',
     'chapterId': 'chapter-1',
@@ -655,6 +894,24 @@ Map<String, Object?> _seedResponses() {
     'rating': 5,
     'comment': 'Excellent.',
     'book': catalogBook,
+  };
+  final secondReview = {
+    'id': 'review-2',
+    'bookId': 'book-1',
+    'userId': 'user-3',
+    'userName': 'Lecteur Plumora',
+    'rating': 4,
+    'comment': 'Belle ambiance.',
+    'book': catalogBook,
+    'user': {'firstName': 'Clara', 'lastName': 'Martin'},
+  };
+  final externalReview = {
+    'id': 'external-review-1',
+    'externalId': '123',
+    'userId': 'user-4',
+    'userName': 'Lecteur externe',
+    'rating': 5,
+    'comment': 'Lecture externe excellente.',
   };
   final campaign = {
     'id': 'campaign-1',
@@ -763,6 +1020,17 @@ Map<String, Object?> _seedResponses() {
       'books': [catalogBook],
     },
     'GET /catalog/books/book-1': catalogDetail,
+    'GET /external-books': {
+      'content': [externalBook],
+      'page': 0,
+      'size': 32,
+      'totalElements': 100,
+      'totalPages': 4,
+      'first': true,
+      'last': false,
+    },
+    'GET /external-books/123': externalBook,
+    'POST /books/import/gutendex/123': importedExternalBook,
     'GET /books/book-1/read': catalogDetail,
     'GET /reading-progress/my': {
       'progress': [progress],
@@ -785,8 +1053,12 @@ Map<String, Object?> _seedResponses() {
     'GET /books/book-1/favorites/status': {'favorite': true},
     'POST /books/book-1/reviews': review,
     'GET /books/book-1/reviews': {
-      'reviews': [review],
+      'reviews': [review, secondReview],
     },
+    'GET /external-books/123/reviews': {
+      'reviews': [externalReview],
+    },
+    'POST /external-books/123/reviews': externalReview,
     'GET /reviews/my': {
       'reviews': [review],
     },

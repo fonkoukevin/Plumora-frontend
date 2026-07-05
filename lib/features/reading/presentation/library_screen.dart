@@ -5,12 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
-import '../../beta_reading/presentation/beta_invitations_screen.dart';
+import '../../beta_reading/data/models/beta_invitation_model.dart';
+import '../../beta_reading/data/repositories/beta_reading_repository.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
+import '../data/models/favorite_model.dart';
 import '../data/models/reading_progress_model.dart';
+import '../data/repositories/favorite_repository.dart';
 import '../data/repositories/reading_repository.dart';
-import 'my_favorites_screen.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -20,9 +23,8 @@ class LibraryScreen extends ConsumerStatefulWidget {
 }
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
-  String _activeTab = 'Mes lectures';
-  String _libraryQuery = '';
-  final TextEditingController _searchController = TextEditingController();
+  final _searchController = TextEditingController();
+  String _activeTab = 'readings';
 
   @override
   void dispose() {
@@ -32,400 +34,388 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 760;
-        final horizontal = isWide ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 82.0;
+    final readingsAsync = ref.watch(myReadingProgressProvider);
+    final favoritesAsync = ref.watch(myFavoritesProvider);
+    final invitationsAsync = ref.watch(betaInvitationsProvider);
+    final query = _searchController.text.trim().toLowerCase();
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            28,
-            horizontal,
-            bottomPadding,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1120),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Bibliothèque',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: PlumoraColors.textPrimary,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Tous vos livres au même endroit',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: PlumoraColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _LibrarySearchField(
-                    controller: _searchController,
-                    onChanged: (value) =>
-                        setState(() => _libraryQuery = value.trim()),
-                    onSubmitted: _submitSearch,
-                  ),
-                  const SizedBox(height: 24),
-                  PlumoraSegmentedTabs(
-                    tabs: const ['Mes lectures', 'Favoris', 'Bêta-lectures'],
-                    selectedTab: _activeTab,
-                    onSelected: (value) => setState(() => _activeTab = value),
-                  ),
-                  const SizedBox(height: 26),
-                  if (_activeTab == 'Mes lectures')
-                    _ReadingsTab(query: _libraryQuery),
-                  if (_activeTab == 'Favoris')
-                    MyFavoritesScreen(query: _libraryQuery),
-                  if (_activeTab == 'Bêta-lectures')
-                    _BetaReadingsTab(query: _libraryQuery),
-                ],
-              ),
+    return FigmaScreen(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Bibliotheque',
+            style: TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontFamily: 'Playfair Display',
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
             ),
           ),
-        );
-      },
+          const SizedBox(height: 14),
+          TextField(
+            controller: _searchController,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Rechercher un livre ou auteur...',
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 14),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                FigmaPillTab(
+                  label: 'Lectures',
+                  icon: Icons.menu_book_outlined,
+                  selected: _activeTab == 'readings',
+                  onTap: () => setState(() => _activeTab = 'readings'),
+                ),
+                const SizedBox(width: 8),
+                FigmaPillTab(
+                  label: 'Favoris',
+                  icon: Icons.favorite_border,
+                  selected: _activeTab == 'favorites',
+                  onTap: () => setState(() => _activeTab = 'favorites'),
+                ),
+                const SizedBox(width: 8),
+                FigmaPillTab(
+                  label: 'Beta',
+                  icon: Icons.edit_note_outlined,
+                  selected: _activeTab == 'beta',
+                  onTap: () => setState(() => _activeTab = 'beta'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          if (_activeTab == 'readings')
+            _ReadingsTab(
+              readingsAsync: readingsAsync,
+              query: query,
+              onRetry: () => ref.invalidate(myReadingProgressProvider),
+            )
+          else if (_activeTab == 'favorites')
+            _FavoritesTab(
+              favoritesAsync: favoritesAsync,
+              query: query,
+              onRetry: () => ref.invalidate(myFavoritesProvider),
+            )
+          else
+            _BetaTab(
+              invitationsAsync: invitationsAsync,
+              query: query,
+              onRetry: () => ref.invalidate(betaInvitationsProvider),
+            ),
+        ],
+      ),
     );
-  }
-
-  void _submitSearch(String value) {
-    setState(() => _libraryQuery = value.trim());
   }
 }
 
-class _LibrarySearchField extends StatelessWidget {
-  const _LibrarySearchField({
-    required this.controller,
-    required this.onChanged,
-    required this.onSubmitted,
+class _ReadingsTab extends StatelessWidget {
+  const _ReadingsTab({
+    required this.readingsAsync,
+    required this.query,
+    required this.onRetry,
   });
 
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
+  final AsyncValue<List<ReadingProgressModel>> readingsAsync;
+  final String query;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: TextField(
-        controller: controller,
-        textInputAction: TextInputAction.search,
-        onChanged: onChanged,
-        onSubmitted: onSubmitted,
-        style: const TextStyle(
-          color: PlumoraColors.textPrimary,
-          fontSize: 14,
-          height: 1.2,
-        ),
-        decoration: const InputDecoration(
-          hintText: 'Rechercher un livre ou un auteur...',
-          prefixIcon: Icon(
-            Icons.search,
-            color: PlumoraColors.textSecondary,
-            size: 22,
-          ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        ),
-      ),
-    );
-  }
-}
-
-class _ReadingsTab extends ConsumerWidget {
-  const _ReadingsTab({required this.query});
-
-  final String query;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final progressAsync = ref.watch(myReadingProgressProvider);
-    final normalizedQuery = query.trim();
-
-    return progressAsync.when(
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(),
-        ),
-      ),
-      error: (error, _) => _LibraryStateCard(
-        title: 'Lectures indisponibles',
-        subtitle: AppError.messageFor(error),
-        action: FilledButton(
-          onPressed: () => ref.invalidate(myReadingProgressProvider),
-          child: const Text('Réessayer'),
-        ),
-      ),
+    return readingsAsync.when(
+      loading: () => const _Loading(),
+      error: (error, _) =>
+          _ErrorPanel(message: AppError.messageFor(error), onRetry: onRetry),
       data: (readings) {
-        final filteredReadings = readings
-            .where((reading) => _matchesReading(reading, normalizedQuery))
-            .toList(growable: false);
-
-        if (filteredReadings.isEmpty) {
-          return _LibraryStateCard(
-            title: normalizedQuery.isEmpty
-                ? 'Aucune lecture en cours'
-                : 'Aucun résultat',
-            subtitle: normalizedQuery.isEmpty
-                ? 'Les livres que tu commences à lire apparaîtront ici.'
-                : 'Aucune lecture personnelle ne correspond à cette recherche.',
-            action: normalizedQuery.isEmpty
-                ? FilledButton.icon(
-                    onPressed: () => context.go(AppRoutes.discover),
-                    icon: const Icon(Icons.menu_book_outlined, size: 18),
-                    label: const Text('Découvrir un livre'),
-                  )
-                : null,
-          );
-        }
-
+        final filtered = readings.where((reading) {
+          if (query.isEmpty) {
+            return true;
+          }
+          return reading.bookTitle.toLowerCase().contains(query) ||
+              reading.authorName.toLowerCase().contains(query);
+        }).toList();
         final finished = readings.where((reading) => reading.finished).length;
+        final active = readings.length - finished;
+        final average = readings.isEmpty
+            ? 0
+            : (readings
+                          .map((reading) => reading.progressPercent)
+                          .reduce((a, b) => a + b) /
+                      readings.length)
+                  .round();
 
         return Column(
           children: [
-            for (final reading in filteredReadings) ...[
-              _ReadingProgressCard(reading: reading),
-              const SizedBox(height: 16),
-            ],
-            _LibraryStats(savedCount: readings.length, finishedCount: finished),
+            _ResponsiveStats(
+              stats: [
+                _Stat(
+                  'En cours',
+                  active.toString(),
+                  Icons.bookmark_added_outlined,
+                ),
+                _Stat('Termines', finished.toString(), Icons.bar_chart),
+                _Stat('Moyenne', '$average%', Icons.schedule),
+              ],
+            ),
+            const SizedBox(height: 18),
+            if (filtered.isEmpty)
+              const FigmaEmptyState(
+                title: 'Aucune lecture',
+                message:
+                    'Tes lectures reprises depuis le backend apparaitront ici.',
+                icon: Icons.menu_book_outlined,
+              )
+            else
+              for (final reading in filtered) ...[
+                _ReadingTile(reading: reading),
+                const SizedBox(height: 12),
+              ],
           ],
         );
       },
     );
   }
-
-  bool _matchesReading(ReadingProgressModel reading, String query) {
-    if (query.isEmpty) {
-      return true;
-    }
-
-    final normalizedQuery = query.toLowerCase();
-    return reading.bookTitle.toLowerCase().contains(normalizedQuery) ||
-        reading.authorName.toLowerCase().contains(normalizedQuery);
-  }
 }
 
-class _ReadingProgressCard extends ConsumerWidget {
-  const _ReadingProgressCard({required this.reading});
+class _FavoritesTab extends StatelessWidget {
+  const _FavoritesTab({
+    required this.favoritesAsync,
+    required this.query,
+    required this.onRetry,
+  });
 
-  final ReadingProgressModel reading;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final title = reading.bookTitle.trim().isEmpty
-        ? 'Livre sans titre'
-        : reading.bookTitle;
-    final isFinished = reading.finished;
-    final cachedCover = ref.watch(bookCoverBytesProvider(reading.bookId));
-
-    return PlumoraCard(
-      leftAccent: PlumoraColors.primary,
-      onTap: () => context.go(AppRoutes.readingPath(reading.bookId)),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 480;
-          final cover = PlumoraBookCover(
-            colors: _coverColors(reading.bookId),
-            imageUrl: reading.coverUrl,
-            imageBytes: cachedCover,
-            width: compact ? 72 : 96,
-            height: compact ? 104 : 128,
-          );
-
-          final details = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  PlumoraBadge(
-                    label: isFinished ? 'Terminé ✓' : 'En cours',
-                    backgroundColor: isFinished
-                        ? const Color(0xFFEADFCF)
-                        : const Color(0xFFE6EFE4),
-                    foregroundColor: isFinished
-                        ? const Color(0xFF7A5E2F)
-                        : const Color(0xFF5F7A5A),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'par ${reading.authorName}',
-                style: const TextStyle(
-                  color: PlumoraColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFAE9),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Progression de lecture',
-                            style: TextStyle(
-                              color: PlumoraColors.textSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${reading.progressPercent}%',
-                          style: const TextStyle(
-                            color: PlumoraColors.primary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        minHeight: 8,
-                        value: reading.progress.clamp(0, 1).toDouble(),
-                        backgroundColor: Colors.white,
-                        color: PlumoraColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                children: [
-                  _Meta(
-                    icon: Icons.schedule,
-                    label: _lastReadLabel(reading.updatedAt),
-                  ),
-                  _RatingStars(rating: reading.rating.round().clamp(0, 5)),
-                ],
-              ),
-            ],
-          );
-
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [cover, const SizedBox(height: 14), details],
-            );
-          }
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              cover,
-              const SizedBox(width: 18),
-              Expanded(child: details),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _BetaReadingsTab extends StatelessWidget {
-  const _BetaReadingsTab({required this.query});
-
+  final AsyncValue<List<FavoriteModel>> favoritesAsync;
   final String query;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return BetaInvitationsScreen(embedded: true, query: query);
-  }
-}
+    return favoritesAsync.when(
+      loading: () => const _Loading(),
+      error: (error, _) =>
+          _ErrorPanel(message: AppError.messageFor(error), onRetry: onRetry),
+      data: (favorites) {
+        final filtered = favorites.where((favorite) {
+          if (query.isEmpty) {
+            return true;
+          }
+          final book = favorite.book;
+          return book.title.toLowerCase().contains(query) ||
+              book.authorName.toLowerCase().contains(query);
+        }).toList();
 
-class _LibraryStats extends StatelessWidget {
-  const _LibraryStats({required this.savedCount, required this.finishedCount});
-
-  final int savedCount;
-  final int finishedCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final inProgressCount = savedCount - finishedCount;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 650 ? 3 : 1;
-        const spacing = 16.0;
-        final width = columns == 1
-            ? constraints.maxWidth
-            : (constraints.maxWidth - spacing * 2) / 3;
-
-        return Wrap(
-          spacing: spacing,
-          runSpacing: 14,
+        return Column(
           children: [
-            _LibraryStat(label: 'Mes lectures', value: savedCount.toString()),
-            _LibraryStat(
-              label: 'Livres terminés',
-              value: finishedCount.toString(),
+            _LibraryBanner(
+              title: 'Mes Favoris',
+              subtitle: '${favorites.length} livres sauvegardes',
+              icon: Icons.favorite,
+              colors: const [PlumoraColors.destructive, Color(0xFFB03030)],
             ),
-            _LibraryStat(label: 'En cours', value: inProgressCount.toString()),
-          ].map((card) => SizedBox(width: width, child: card)).toList(),
+            const SizedBox(height: 18),
+            if (filtered.isEmpty)
+              const FigmaEmptyState(
+                title: 'Aucun favori',
+                message: 'Ajoute un livre en favori depuis sa fiche catalogue.',
+                icon: Icons.favorite_border,
+              )
+            else
+              _FavoritesGrid(favorites: filtered),
+          ],
         );
       },
     );
   }
 }
 
-class _LibraryStat extends StatelessWidget {
-  const _LibraryStat({required this.label, required this.value});
+class _BetaTab extends StatelessWidget {
+  const _BetaTab({
+    required this.invitationsAsync,
+    required this.query,
+    required this.onRetry,
+  });
 
-  final String label;
-  final String value;
+  final AsyncValue<List<BetaInvitationModel>> invitationsAsync;
+  final String query;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
-      shadow: false,
-      padding: const EdgeInsets.all(18),
-      child: Column(
+    return invitationsAsync.when(
+      loading: () => const _Loading(),
+      error: (error, _) =>
+          _ErrorPanel(message: AppError.messageFor(error), onRetry: onRetry),
+      data: (invitations) {
+        final filtered = invitations.where((invitation) {
+          if (query.isEmpty) {
+            return true;
+          }
+          return invitation.bookTitle.toLowerCase().contains(query) ||
+              invitation.authorName.toLowerCase().contains(query);
+        }).toList();
+
+        return Column(
+          children: [
+            _LibraryBanner(
+              title: 'Espace Beta-lecture',
+              subtitle:
+                  '${invitations.length} invitation(s) liee(s) a ton compte',
+              icon: Icons.chat_bubble_outline,
+              colors: const [PlumoraColors.secondary, PlumoraColors.primary],
+            ),
+            const SizedBox(height: 18),
+            if (filtered.isEmpty)
+              const FigmaEmptyState(
+                title: 'Aucune beta-lecture',
+                message:
+                    'Tes invitations acceptees ou en attente apparaitront ici.',
+                icon: Icons.edit_note_outlined,
+              )
+            else
+              for (final invitation in filtered) ...[
+                _BetaTile(invitation: invitation),
+                const SizedBox(height: 12),
+              ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => context.go(AppRoutes.betaInvitations),
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: const Text('Gerer les invitations'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ReadingTile extends ConsumerWidget {
+  const _ReadingTile({required this.reading});
+
+  final ReadingProgressModel reading;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final complete = reading.finished;
+    final cachedCover = ref.watch(bookCoverBytesProvider(reading.bookId));
+
+    return FigmaCard(
+      onTap: () => context.go(
+        AppRoutes.readingPath(reading.bookId, chapterId: reading.chapterId),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
-              fontSize: 12,
-            ),
+          PlumoraBookCover(
+            width: 64,
+            height: 96,
+            radius: 12,
+            colors: _coverColors(reading.bookId),
+            imageUrl: reading.coverUrl,
+            imageBytes: cachedCover,
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              color: PlumoraColors.primary,
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        reading.bookTitle.isEmpty
+                            ? 'Livre sans titre'
+                            : reading.bookTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: PlumoraColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    FigmaBadge(
+                      label: complete ? 'Termine' : 'En cours',
+                      backgroundColor: complete
+                          ? PlumoraColors.success.withValues(alpha: 0.15)
+                          : PlumoraColors.primary.withValues(alpha: 0.15),
+                      foregroundColor: complete
+                          ? PlumoraColors.success
+                          : PlumoraColors.primary,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'par ${reading.authorName}',
+                  style: const TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text(
+                      'Progression',
+                      style: TextStyle(
+                        color: PlumoraColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${reading.progressPercent}%',
+                      style: const TextStyle(
+                        color: PlumoraColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                FigmaProgressBar(value: reading.progress),
+                const SizedBox(height: 9),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.schedule,
+                      color: PlumoraColors.textSecondary,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      reading.updatedAt == null
+                          ? 'Progression sauvegardee'
+                          : 'Lu le ${_shortDate(reading.updatedAt!)}',
+                      style: const TextStyle(
+                        color: PlumoraColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                    if (reading.rating > 0) ...[
+                      const SizedBox(width: 12),
+                      const Icon(Icons.star, size: 13, color: Colors.amber),
+                      Text(
+                        ' ${reading.rating.toStringAsFixed(1)}',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -434,117 +424,356 @@ class _LibraryStat extends StatelessWidget {
   }
 }
 
-class _LibraryStateCard extends StatelessWidget {
-  const _LibraryStateCard({
+class _FavoritesGrid extends StatelessWidget {
+  const _FavoritesGrid({required this.favorites});
+
+  final List<FavoriteModel> favorites;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 720 ? 6 : 3;
+        final spacing = 12.0;
+        final width =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 18,
+          children: [
+            for (final favorite in favorites)
+              SizedBox(
+                width: width,
+                child: _FavoriteTile(favorite: favorite),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FavoriteTile extends ConsumerWidget {
+  const _FavoriteTile({required this.favorite});
+
+  final FavoriteModel favorite;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final book = favorite.book;
+    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+
+    return InkWell(
+      onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 2 / 3,
+            child: PlumoraBookCover(
+              width: double.infinity,
+              height: double.infinity,
+              colors: _coverColors(book.id),
+              imageUrl: book.coverUrl,
+              imageBytes: cachedCover,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            book.title.isEmpty ? 'Livre sans titre' : book.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+          Text(
+            book.authorName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: PlumoraColors.textSecondary,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BetaTile extends ConsumerWidget {
+  const _BetaTile({required this.invitation});
+
+  final BetaInvitationModel invitation;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = invitation.chaptersAvailable == 0
+        ? 0.0
+        : invitation.chaptersRead / invitation.chaptersAvailable;
+    final cachedCover = ref.watch(bookCoverBytesProvider(invitation.bookId));
+
+    return FigmaCard(
+      onTap: invitation.campaignId.isEmpty
+          ? null
+          : () => context.go(
+              AppRoutes.betaChaptersPath(
+                invitation.campaignId,
+                invitationId: invitation.id,
+                bookId: invitation.bookId,
+              ),
+            ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          PlumoraBookCover(
+            width: 64,
+            height: 96,
+            radius: 12,
+            colors: _coverColors(invitation.bookId),
+            imageUrl: invitation.coverUrl,
+            imageBytes: cachedCover,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        invitation.bookTitle.isEmpty
+                            ? 'Manuscrit sans titre'
+                            : invitation.bookTitle,
+                        style: const TextStyle(
+                          color: PlumoraColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    FigmaBadge(label: _statusLabel(invitation.status)),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'par ${invitation.authorName}',
+                  style: const TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 9),
+                if (invitation.deadline != null)
+                  FigmaBadge(
+                    label: 'Deadline : ${_shortDate(invitation.deadline!)}',
+                    icon: Icons.schedule,
+                    backgroundColor: PlumoraColors.orange.withValues(
+                      alpha: 0.12,
+                    ),
+                    foregroundColor: PlumoraColors.orange,
+                  ),
+                if (invitation.chaptersAvailable > 0) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Text(
+                        '${invitation.chaptersRead}/${invitation.chaptersAvailable} chapitres',
+                        style: const TextStyle(
+                          color: PlumoraColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${(progress * 100).round()}%',
+                        style: const TextStyle(
+                          color: PlumoraColors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  FigmaProgressBar(
+                    value: progress,
+                    colors: const [
+                      PlumoraColors.secondary,
+                      PlumoraColors.primary,
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibraryBanner extends StatelessWidget {
+  const _LibraryBanner({
     required this.title,
     required this.subtitle,
-    this.action,
+    required this.icon,
+    required this.colors,
   });
 
   final String title;
   final String subtitle;
-  final Widget? action;
+  final IconData icon;
+  final List<Color> colors;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return FigmaCard(
+      color: colors.first.withValues(alpha: 0.06),
+      child: Row(
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          FigmaGradientIcon(icon: icon, colors: colors, size: 44),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
-          if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),
     );
   }
 }
 
-class _Meta extends StatelessWidget {
-  const _Meta({required this.icon, required this.label});
+class _ResponsiveStats extends StatelessWidget {
+  const _ResponsiveStats({required this.stats});
 
-  final IconData icon;
+  final List<_Stat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 720;
+        final children = [
+          for (final stat in stats)
+            FigmaStatCard(
+              label: stat.label,
+              value: stat.value,
+              icon: stat.icon,
+            ),
+        ];
+        if (compact) {
+          return Column(
+            children: [
+              for (final child in children) ...[
+                child,
+                const SizedBox(height: 12),
+              ],
+            ],
+          );
+        }
+        return Row(
+          children: [
+            for (var index = 0; index < children.length; index++) ...[
+              Expanded(child: children[index]),
+              if (index != children.length - 1) const SizedBox(width: 10),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _Stat {
+  const _Stat(this.label, this.value, this.icon);
+
   final String label;
+  final String value;
+  final IconData icon;
+}
+
+class _Loading extends StatelessWidget {
+  const _Loading();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: PlumoraColors.textSecondary),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: const TextStyle(
-            color: PlumoraColors.textSecondary,
-            fontSize: 12,
-          ),
-        ),
-      ],
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(48),
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 }
 
-class _RatingStars extends StatelessWidget {
-  const _RatingStars({required this.rating});
+class _ErrorPanel extends StatelessWidget {
+  const _ErrorPanel({required this.message, required this.onRetry});
 
-  final int rating;
+  final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    if (rating == 0) {
-      return const Text(
-        'Aucune note',
-        style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 12),
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var index = 0; index < rating; index++)
-          const Icon(Icons.star, size: 15, color: Color(0xFFF5C84C)),
-        const SizedBox(width: 5),
-        Text(
-          '$rating/5',
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
+    return FigmaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Donnees indisponibles',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(color: PlumoraColors.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+        ],
+      ),
     );
   }
 }
 
-String _lastReadLabel(DateTime? updatedAt) {
-  if (updatedAt == null) {
-    return 'Lecture récente';
-  }
-
-  final now = DateTime.now();
-  final difference = now.difference(updatedAt.toLocal());
-  if (difference.inHours < 1) {
-    return "Lu à l'instant";
-  }
-  if (difference.inHours < 24) {
-    return 'Lu il y a ${difference.inHours} heure${difference.inHours > 1 ? 's' : ''}';
-  }
-  if (difference.inDays == 1) {
-    return 'Lu hier';
-  }
-  return 'Lu il y a ${difference.inDays} jours';
+String _statusLabel(BetaInvitationStatus status) {
+  return switch (status) {
+    BetaInvitationStatus.pending => 'En attente',
+    BetaInvitationStatus.accepted => 'Acceptee',
+    BetaInvitationStatus.refused => 'Refusee',
+    BetaInvitationStatus.unknown => 'Inconnue',
+  };
 }
 
-List<Color> _coverColors(String seed) {
+String _shortDate(DateTime date) {
+  return '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/${date.year}';
+}
+
+List<Color> _coverColors(String key) {
   final palettes = [
     [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
     [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
@@ -554,6 +783,6 @@ List<Color> _coverColors(String seed) {
     [const Color(0xFF059669), const Color(0xFF0D9488)],
   ];
   final index =
-      seed.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
+      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
   return palettes[index];
 }

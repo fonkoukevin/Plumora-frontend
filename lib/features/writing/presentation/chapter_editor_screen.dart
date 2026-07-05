@@ -5,12 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
-import '../../../core/widgets/plumora_ui.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
-import '../../book/presentation/widgets/book_status_badge.dart';
 
 class ChapterEditorScreen extends ConsumerStatefulWidget {
   const ChapterEditorScreen({this.bookId, super.key});
@@ -26,11 +25,9 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   String? _selectedChapterId;
-  String? _loadedChapterId;
+  String? _hydratedChapterId;
+  bool _isNewChapter = false;
   bool _isSaving = false;
-  bool _isCreating = false;
-  final bool _isPublishing = false;
-  bool _isDeleting = false;
   String? _error;
 
   @override
@@ -42,185 +39,190 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bookId = widget.bookId;
+    final bookId = widget.bookId?.trim();
     if (bookId == null || bookId.isEmpty) {
-      return const _EditorBookPicker();
+      return _BookSelectionView(
+        booksAsync: ref.watch(myBooksProvider),
+        onRetry: () => ref.invalidate(myBooksProvider),
+      );
     }
 
     final bookAsync = ref.watch(authorBookProvider(bookId));
     final chaptersAsync = ref.watch(bookChaptersProvider(bookId));
 
-    return bookAsync.when(
-      loading: () => const _FullPageLoader(),
-      error: (error, _) => _FullPageError(
-        title: 'Livre introuvable',
-        message: AppError.messageFor(error),
-        onRetry: () => ref.invalidate(authorBookProvider(bookId)),
-      ),
-      data: (book) => chaptersAsync.when(
-        loading: () => const _FullPageLoader(),
-        error: (error, _) => _FullPageError(
-          title: 'Chapitres indisponibles',
+    return Scaffold(
+      backgroundColor: PlumoraColors.background,
+      body: bookAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _CenteredError(
           message: AppError.messageFor(error),
-          onRetry: () => ref.invalidate(bookChaptersProvider(bookId)),
+          onRetry: () => ref.invalidate(authorBookProvider(bookId)),
         ),
-        data: (chapters) => _buildEditor(context, book, chapters),
+        data: (book) => chaptersAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => _CenteredError(
+            message: AppError.messageFor(error),
+            onRetry: () => ref.invalidate(bookChaptersProvider(bookId)),
+          ),
+          data: (chapters) {
+            final sorted = [...chapters]
+              ..sort((a, b) {
+                final orderCompare = a.order.compareTo(b.order);
+                return orderCompare == 0
+                    ? a.title.compareTo(b.title)
+                    : orderCompare;
+              });
+            _syncSelection(sorted);
+
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 820;
+                if (compact) {
+                  return _MobileEditor(
+                    book: book,
+                    chapters: sorted,
+                    selectedChapterId: _selectedChapterId,
+                    titleController: _titleController,
+                    contentController: _contentController,
+                    isSaving: _isSaving,
+                    error: _error,
+                    isNewChapter: _isNewChapter,
+                    onSelect: _selectChapter,
+                    onNew: () => _startNew(sorted),
+                    onSave: () => _save(book.id, sorted),
+                  );
+                }
+
+                return _DesktopEditor(
+                  book: book,
+                  chapters: sorted,
+                  selectedChapterId: _selectedChapterId,
+                  titleController: _titleController,
+                  contentController: _contentController,
+                  isSaving: _isSaving,
+                  error: _error,
+                  isNewChapter: _isNewChapter,
+                  onSelect: _selectChapter,
+                  onNew: () => _startNew(sorted),
+                  onSave: () => _save(book.id, sorted),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildEditor(
-    BuildContext context,
-    BookModel book,
-    List<ChapterModel> chapters,
-  ) {
-    final selectedChapter = _selectedChapter(chapters);
-    if (selectedChapter != null) {
-      _syncControllers(selectedChapter);
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 900;
-        if (isDesktop) {
-          return _DesktopEditor(
-            book: book,
-            chapters: chapters,
-            selectedChapter: selectedChapter,
-            titleController: _titleController,
-            contentController: _contentController,
-            error: _error,
-            isSaving: _isSaving,
-            isCreating: _isCreating,
-            isPublishing: _isPublishing,
-            isDeleting: _isDeleting,
-            onSelectChapter: _selectChapter,
-            onCreateChapter: () => _createChapter(book.id, chapters.length),
-            onSave: selectedChapter == null
-                ? null
-                : () => _saveChapter(selectedChapter),
-            onDelete: selectedChapter == null
-                ? null
-                : () => _confirmDeleteChapter(selectedChapter),
-            onPublish: book.canPublish
-                ? () => context.go(AppRoutes.publishBookPath(book.id))
-                : null,
-          );
-        }
-
-        return _MobileEditor(
-          book: book,
-          chapters: chapters,
-          selectedChapter: selectedChapter,
-          titleController: _titleController,
-          contentController: _contentController,
-          error: _error,
-          isSaving: _isSaving,
-          isCreating: _isCreating,
-          isPublishing: _isPublishing,
-          isDeleting: _isDeleting,
-          onSelectChapter: _selectChapter,
-          onCreateChapter: () => _createChapter(book.id, chapters.length),
-          onSave: selectedChapter == null
-              ? null
-              : () => _saveChapter(selectedChapter),
-          onDelete: selectedChapter == null
-              ? null
-              : () => _confirmDeleteChapter(selectedChapter),
-          onPublish: book.canPublish
-              ? () => context.go(AppRoutes.publishBookPath(book.id))
-              : null,
-        );
-      },
-    );
-  }
-
-  ChapterModel? _selectedChapter(List<ChapterModel> chapters) {
-    if (chapters.isEmpty) {
-      _loadedChapterId = null;
-      return null;
-    }
-
-    if (_selectedChapterId == null) {
-      return chapters.first;
-    }
-
-    return chapters.firstWhere(
-      (chapter) => chapter.id == _selectedChapterId,
-      orElse: () => chapters.first,
-    );
-  }
-
-  void _syncControllers(ChapterModel chapter) {
-    if (_loadedChapterId == chapter.id) {
+  void _syncSelection(List<ChapterModel> chapters) {
+    if (_isNewChapter) {
       return;
     }
 
-    _loadedChapterId = chapter.id;
-    _selectedChapterId = chapter.id;
-    _titleController.text = chapter.title;
-    _contentController.text = chapter.content;
+    final existing = _selectedChapterId == null
+        ? null
+        : chapters.cast<ChapterModel?>().firstWhere(
+            (chapter) => chapter?.id == _selectedChapterId,
+            orElse: () => null,
+          );
+    final selected = existing ?? (chapters.isEmpty ? null : chapters.first);
+    if (selected == null) {
+      if (_hydratedChapterId != '__new__') {
+        _selectedChapterId = null;
+        _hydratedChapterId = '__new__';
+        _isNewChapter = true;
+        _titleController.text = 'Chapitre 1';
+        _contentController.clear();
+      }
+      return;
+    }
+
+    if (_hydratedChapterId == selected.id) {
+      return;
+    }
+
+    _selectedChapterId = selected.id;
+    _hydratedChapterId = selected.id;
+    _titleController.text = selected.title;
+    _contentController.text = selected.content;
   }
 
   void _selectChapter(ChapterModel chapter) {
     setState(() {
       _selectedChapterId = chapter.id;
-      _loadedChapterId = null;
+      _hydratedChapterId = chapter.id;
+      _isNewChapter = false;
       _error = null;
+      _titleController.text = chapter.title;
+      _contentController.text = chapter.content;
     });
   }
 
-  Future<void> _createChapter(String bookId, int currentCount) async {
+  void _startNew(List<ChapterModel> chapters) {
+    final nextOrder = chapters.isEmpty
+        ? 1
+        : chapters
+                  .map((chapter) => chapter.order)
+                  .reduce((a, b) => a > b ? a : b) +
+              1;
     setState(() {
-      _isCreating = true;
+      _selectedChapterId = null;
+      _hydratedChapterId = '__new__';
+      _isNewChapter = true;
       _error = null;
+      _titleController.text = 'Chapitre $nextOrder';
+      _contentController.clear();
     });
-
-    try {
-      final chapter = await ref
-          .read(chapterRepositoryProvider)
-          .createChapter(
-            bookId,
-            ChapterUpsertRequest(
-              title: 'Nouveau chapitre',
-              content: '',
-              order: currentCount + 1,
-            ),
-          );
-      ref.invalidate(bookChaptersProvider(bookId));
-      ref.invalidate(authorBookProvider(bookId));
-      setState(() {
-        _selectedChapterId = chapter.id;
-        _loadedChapterId = null;
-      });
-    } catch (error) {
-      setState(() => _error = AppError.messageFor(error));
-    } finally {
-      if (mounted) {
-        setState(() => _isCreating = false);
-      }
-    }
   }
 
-  Future<void> _saveChapter(ChapterModel chapter) async {
+  Future<void> _save(String bookId, List<ChapterModel> chapters) async {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      setState(() => _error = 'Ajoute un titre de chapitre.');
+      return;
+    }
+
     setState(() {
       _isSaving = true;
       _error = null;
     });
 
     try {
-      await ref
-          .read(chapterRepositoryProvider)
-          .updateChapter(
-            chapter.id,
-            ChapterUpsertRequest(
-              title: _titleController.text,
-              content: _contentController.text,
-              order: chapter.order == 0 ? null : chapter.order,
-            ),
-          );
-      ref.invalidate(bookChaptersProvider(chapter.bookId));
-      ref.invalidate(authorBookProvider(chapter.bookId));
+      final repository = ref.read(chapterRepositoryProvider);
+      final order = _isNewChapter
+          ? (chapters.isEmpty
+                ? 1
+                : chapters
+                          .map((chapter) => chapter.order)
+                          .reduce((a, b) => a > b ? a : b) +
+                      1)
+          : chapters
+                .cast<ChapterModel?>()
+                .firstWhere(
+                  (chapter) => chapter?.id == _selectedChapterId,
+                  orElse: () => null,
+                )
+                ?.order;
+      final request = ChapterUpsertRequest(
+        title: title,
+        content: _contentController.text,
+        order: order,
+      );
+      final saved = _isNewChapter || _selectedChapterId == null
+          ? await repository.createChapter(bookId, request)
+          : await repository.updateChapter(_selectedChapterId!, request);
+
+      ref.invalidate(bookChaptersProvider(bookId));
+      ref.invalidate(authorBookProvider(bookId));
+      ref.invalidate(chapterProvider(saved.id));
+      ref.invalidate(myBooksProvider);
+      setState(() {
+        _selectedChapterId = saved.id;
+        _hydratedChapterId = saved.id;
+        _isNewChapter = false;
+        _titleController.text = saved.title;
+        _contentController.text = saved.content;
+      });
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
     } finally {
@@ -229,59 +231,119 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
       }
     }
   }
+}
 
-  Future<void> _confirmDeleteChapter(ChapterModel chapter) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.48),
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer ce chapitre ?'),
-        content: Text(
-          chapter.title.trim().isEmpty
-              ? 'Cette action est définitive.'
-              : '"${chapter.title}" sera définitivement supprimé.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
+class _BookSelectionView extends StatelessWidget {
+  const _BookSelectionView({required this.booksAsync, required this.onRetry});
+
+  final AsyncValue<List<BookModel>> booksAsync;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return FigmaScreen(
+      maxWidth: 900,
+      padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FigmaBackButton(
+            label: 'Retour',
+            onTap: () => context.go(AppRoutes.write),
           ),
-          FilledButton.icon(
-            onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(Icons.delete_outline, size: 16),
-            label: const Text('Supprimer'),
+          const SizedBox(height: 18),
+          const Text(
+            'Choisir un manuscrit',
+            style: TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontSize: 34,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 18),
+          booksAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(48),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, _) => _ErrorCard(
+              message: AppError.messageFor(error),
+              onRetry: onRetry,
+            ),
+            data: (books) {
+              if (books.isEmpty) {
+                return FigmaCard(
+                  child: Column(
+                    children: [
+                      const FigmaEmptyState(
+                        title: 'Aucun manuscrit',
+                        message: "Cree un livre avant d'ouvrir l'editeur.",
+                        icon: Icons.edit_outlined,
+                      ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => context.go(AppRoutes.createBook),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Creer un livre'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final book in books) ...[
+                    FigmaCard(
+                      onTap: () =>
+                          context.go(AppRoutes.chapterEditorPath(book.id)),
+                      child: Row(
+                        children: [
+                          const FigmaGradientIcon(icon: Icons.edit_outlined),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  book.title.isEmpty
+                                      ? 'Livre sans titre'
+                                      : book.title,
+                                  style: const TextStyle(
+                                    color: PlumoraColors.textPrimary,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                Text(
+                                  '${book.chapterCount} chapitres - ${book.wordCount} mots',
+                                  style: const TextStyle(
+                                    color: PlumoraColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: PlumoraColors.textSecondary,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            },
           ),
         ],
       ),
     );
-
-    if (confirmed == true) {
-      await _deleteChapter(chapter);
-    }
-  }
-
-  Future<void> _deleteChapter(ChapterModel chapter) async {
-    setState(() {
-      _isDeleting = true;
-      _error = null;
-    });
-
-    try {
-      await ref.read(chapterRepositoryProvider).deleteChapter(chapter.id);
-      ref.invalidate(bookChaptersProvider(chapter.bookId));
-      ref.invalidate(authorBookProvider(chapter.bookId));
-      ref.invalidate(myBooksProvider);
-      setState(() {
-        _selectedChapterId = null;
-        _loadedChapterId = null;
-      });
-    } catch (error) {
-      setState(() => _error = AppError.messageFor(error));
-    } finally {
-      if (mounted) {
-        setState(() => _isDeleting = false);
-      }
-    }
   }
 }
 
@@ -289,74 +351,54 @@ class _DesktopEditor extends StatelessWidget {
   const _DesktopEditor({
     required this.book,
     required this.chapters,
-    required this.selectedChapter,
+    required this.selectedChapterId,
     required this.titleController,
     required this.contentController,
-    required this.onSelectChapter,
-    required this.onCreateChapter,
-    required this.onSave,
-    required this.onDelete,
-    required this.onPublish,
     required this.isSaving,
-    required this.isCreating,
-    required this.isPublishing,
-    required this.isDeleting,
+    required this.isNewChapter,
+    required this.onSelect,
+    required this.onNew,
+    required this.onSave,
     this.error,
   });
 
   final BookModel book;
   final List<ChapterModel> chapters;
-  final ChapterModel? selectedChapter;
+  final String? selectedChapterId;
   final TextEditingController titleController;
   final TextEditingController contentController;
-  final ValueChanged<ChapterModel> onSelectChapter;
-  final VoidCallback onCreateChapter;
-  final VoidCallback? onSave;
-  final VoidCallback? onDelete;
-  final VoidCallback? onPublish;
   final bool isSaving;
-  final bool isCreating;
-  final bool isPublishing;
-  final bool isDeleting;
+  final bool isNewChapter;
+  final ValueChanged<ChapterModel> onSelect;
+  final VoidCallback onNew;
+  final VoidCallback onSave;
   final String? error;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 28, 28, 32),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 292,
-            child: _ChapterSidebar(
-              book: book,
-              chapters: chapters,
-              selectedChapter: selectedChapter,
-              onSelectChapter: onSelectChapter,
-              onCreateChapter: onCreateChapter,
-              isCreating: isCreating,
-            ),
+    return Row(
+      children: [
+        _Sidebar(
+          book: book,
+          chapters: chapters,
+          selectedChapterId: selectedChapterId,
+          isNewChapter: isNewChapter,
+          onSelect: onSelect,
+          onNew: onNew,
+        ),
+        Expanded(
+          child: _EditorPane(
+            book: book,
+            titleController: titleController,
+            contentController: contentController,
+            selectedChapterId: selectedChapterId,
+            isSaving: isSaving,
+            isNewChapter: isNewChapter,
+            error: error,
+            onSave: onSave,
           ),
-          const SizedBox(width: 22),
-          Expanded(
-            child: _EditorCard(
-              book: book,
-              selectedChapter: selectedChapter,
-              titleController: titleController,
-              contentController: contentController,
-              error: error,
-              onSave: onSave,
-              onDelete: onDelete,
-              onPublish: onPublish,
-              isSaving: isSaving,
-              isPublishing: isPublishing,
-              isDeleting: isDeleting,
-              expanded: true,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -365,260 +407,245 @@ class _MobileEditor extends StatelessWidget {
   const _MobileEditor({
     required this.book,
     required this.chapters,
-    required this.selectedChapter,
+    required this.selectedChapterId,
     required this.titleController,
     required this.contentController,
-    required this.onSelectChapter,
-    required this.onCreateChapter,
-    required this.onSave,
-    required this.onDelete,
-    required this.onPublish,
     required this.isSaving,
-    required this.isCreating,
-    required this.isPublishing,
-    required this.isDeleting,
+    required this.isNewChapter,
+    required this.onSelect,
+    required this.onNew,
+    required this.onSave,
     this.error,
   });
 
   final BookModel book;
   final List<ChapterModel> chapters;
-  final ChapterModel? selectedChapter;
+  final String? selectedChapterId;
   final TextEditingController titleController;
   final TextEditingController contentController;
-  final ValueChanged<ChapterModel> onSelectChapter;
-  final VoidCallback onCreateChapter;
-  final VoidCallback? onSave;
-  final VoidCallback? onDelete;
-  final VoidCallback? onPublish;
   final bool isSaving;
-  final bool isCreating;
-  final bool isPublishing;
-  final bool isDeleting;
+  final bool isNewChapter;
+  final ValueChanged<ChapterModel> onSelect;
+  final VoidCallback onNew;
+  final VoidCallback onSave;
   final String? error;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 84),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _BookEditorHeader(book: book),
-          const SizedBox(height: 16),
-          _MobileChapterSelector(
-            chapters: chapters,
-            selectedChapter: selectedChapter,
-            onSelectChapter: onSelectChapter,
-            onCreateChapter: onCreateChapter,
-            isCreating: isCreating,
-          ),
-          const SizedBox(height: 16),
-          _EditorCard(
-            book: book,
-            selectedChapter: selectedChapter,
-            titleController: titleController,
-            contentController: contentController,
-            error: error,
-            onSave: onSave,
-            onDelete: onDelete,
-            onPublish: onPublish,
-            isSaving: isSaving,
-            isPublishing: isPublishing,
-            isDeleting: isDeleting,
-            expanded: false,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChapterSidebar extends StatelessWidget {
-  const _ChapterSidebar({
-    required this.book,
-    required this.chapters,
-    required this.selectedChapter,
-    required this.onSelectChapter,
-    required this.onCreateChapter,
-    required this.isCreating,
-  });
-
-  final BookModel book;
-  final List<ChapterModel> chapters;
-  final ChapterModel? selectedChapter;
-  final ValueChanged<ChapterModel> onSelectChapter;
-  final VoidCallback onCreateChapter;
-  final bool isCreating;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _BookEditorHeader(book: book),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: isCreating ? null : onCreateChapter,
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(isCreating ? 'Création...' : 'Nouveau chapitre'),
+    return Column(
+      children: [
+        SafeArea(
+          bottom: false,
+          child: Container(
+            color: PlumoraColors.cards,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => context.go(AppRoutes.write),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Retour'),
+                    ),
+                    const Spacer(),
+                    PopupMenuButton<String>(
+                      tooltip: 'Chapitres',
+                      onSelected: (value) {
+                        if (value == '__new__') {
+                          onNew();
+                          return;
+                        }
+                        final chapter = chapters.firstWhere(
+                          (chapter) => chapter.id == value,
+                        );
+                        onSelect(chapter);
+                      },
+                      itemBuilder: (context) => [
+                        for (final chapter in chapters)
+                          PopupMenuItem(
+                            value: chapter.id,
+                            child: Text(
+                              chapter.title.isEmpty
+                                  ? 'Chapitre sans titre'
+                                  : chapter.title,
+                            ),
+                          ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: '__new__',
+                          child: Text('Nouveau chapitre'),
+                        ),
+                      ],
+                      child: const Icon(Icons.list_alt_outlined),
+                    ),
+                    IconButton(
+                      onPressed: isSaving ? null : onSave,
+                      icon: const Icon(Icons.save_outlined),
+                      color: PlumoraColors.primary,
+                    ),
+                  ],
+                ),
+                Text(
+                  book.title.isEmpty ? 'Livre sans titre' : book.title,
+                  style: const TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    filled: false,
+                    border: InputBorder.none,
+                    hintText: 'Titre du chapitre',
+                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                if (error != null)
+                  Text(
+                    error!,
+                    style: const TextStyle(
+                      color: PlumoraColors.destructive,
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
             ),
           ),
-          const SizedBox(height: 18),
-          if (chapters.isEmpty)
-            const Text(
-              'Aucun chapitre. Crée le premier pour commencer.',
-              style: TextStyle(color: PlumoraColors.textSecondary),
-            )
-          else
-            for (final chapter in chapters) ...[
-              _ChapterListItem(
-                chapter: chapter,
-                selected: chapter.id == selectedChapter?.id,
-                onTap: () => onSelectChapter(chapter),
-              ),
-              const SizedBox(height: 8),
-            ],
-        ],
-      ),
-    );
-  }
-}
-
-class _BookEditorHeader extends StatelessWidget {
-  const _BookEditorHeader({required this.book});
-
-  final BookModel book;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          book.title.isEmpty ? 'Livre sans titre' : book.title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
         ),
-        const SizedBox(height: 8),
-        BookStatusBadge(status: book.status),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: TextField(
+              controller: contentController,
+              expands: true,
+              maxLines: null,
+              minLines: null,
+              decoration: const InputDecoration(
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                hintText: 'Commencez a ecrire...',
+              ),
+              style: const TextStyle(
+                color: PlumoraColors.textPrimary,
+                fontSize: 16,
+                height: 1.8,
+              ),
+            ),
+          ),
+        ),
+        _StatsBar(controller: contentController),
       ],
     );
   }
 }
 
-class _ChapterListItem extends StatelessWidget {
-  const _ChapterListItem({
-    required this.chapter,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final ChapterModel chapter;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? PlumoraColors.secondary : PlumoraColors.background,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? PlumoraColors.primary : PlumoraColors.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            Text(
-              chapter.order == 0 ? '–' : chapter.order.toString(),
-              style: const TextStyle(
-                color: PlumoraColors.primary,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MobileChapterSelector extends StatelessWidget {
-  const _MobileChapterSelector({
+class _Sidebar extends StatelessWidget {
+  const _Sidebar({
+    required this.book,
     required this.chapters,
-    required this.selectedChapter,
-    required this.onSelectChapter,
-    required this.onCreateChapter,
-    required this.isCreating,
+    required this.selectedChapterId,
+    required this.isNewChapter,
+    required this.onSelect,
+    required this.onNew,
   });
 
+  final BookModel book;
   final List<ChapterModel> chapters;
-  final ChapterModel? selectedChapter;
-  final ValueChanged<ChapterModel> onSelectChapter;
-  final VoidCallback onCreateChapter;
-  final bool isCreating;
+  final String? selectedChapterId;
+  final bool isNewChapter;
+  final ValueChanged<ChapterModel> onSelect;
+  final VoidCallback onNew;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
-      padding: const EdgeInsets.all(14),
+    return Container(
+      width: 300,
+      color: PlumoraColors.cards,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (chapters.isNotEmpty)
-            DropdownButtonFormField<String>(
-              initialValue: selectedChapter?.id,
-              decoration: const InputDecoration(labelText: 'Chapitre'),
-              items: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  book.title.isEmpty ? 'Livre sans titre' : book.title,
+                  style: const TextStyle(
+                    color: PlumoraColors.primary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  book.genre ?? 'Manuscrit',
+                  style: const TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: PlumoraColors.border),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(10),
+              children: [
+                _EditorNavItem(
+                  icon: Icons.dashboard_outlined,
+                  label: 'Tableau de bord',
+                  onTap: () => context.go(AppRoutes.write),
+                ),
+                _EditorNavItem(
+                  icon: Icons.menu_book_outlined,
+                  label: 'Fiche du livre',
+                  onTap: () =>
+                      context.go(AppRoutes.authorBookDetailPath(book.id)),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Chapitres',
+                  style: TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (isNewChapter)
+                  const _ChapterNavTile(
+                    label: 'Nouveau chapitre',
+                    selected: true,
+                  ),
                 for (final chapter in chapters)
-                  DropdownMenuItem(
-                    value: chapter.id,
-                    child: Text(
-                      chapter.title.isEmpty
-                          ? 'Chapitre sans titre'
-                          : chapter.title,
-                    ),
+                  _ChapterNavTile(
+                    label: chapter.title.isEmpty
+                        ? 'Chapitre sans titre'
+                        : chapter.title,
+                    selected: chapter.id == selectedChapterId && !isNewChapter,
+                    onTap: () => onSelect(chapter),
                   ),
               ],
-              onChanged: (value) {
-                final selected = chapters.firstWhere(
-                  (chapter) => chapter.id == value,
-                  orElse: () => chapters.first,
-                );
-                onSelectChapter(selected);
-              },
-            )
-          else
-            const Text(
-              'Aucun chapitre pour ce livre.',
-              style: TextStyle(color: PlumoraColors.textSecondary),
             ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: isCreating ? null : onCreateChapter,
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(isCreating ? 'Création...' : 'Nouveau chapitre'),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onNew,
+                icon: const Icon(Icons.add),
+                label: const Text('Nouveau chapitre'),
+              ),
+            ),
           ),
         ],
       ),
@@ -626,397 +653,288 @@ class _MobileChapterSelector extends StatelessWidget {
   }
 }
 
-class _EditorCard extends StatelessWidget {
-  const _EditorCard({
+class _EditorPane extends StatelessWidget {
+  const _EditorPane({
     required this.book,
-    required this.selectedChapter,
     required this.titleController,
     required this.contentController,
-    required this.onSave,
-    required this.onDelete,
-    required this.onPublish,
+    required this.selectedChapterId,
     required this.isSaving,
-    required this.isPublishing,
-    required this.isDeleting,
-    required this.expanded,
+    required this.isNewChapter,
+    required this.onSave,
     this.error,
   });
 
   final BookModel book;
-  final ChapterModel? selectedChapter;
   final TextEditingController titleController;
   final TextEditingController contentController;
-  final VoidCallback? onSave;
-  final VoidCallback? onDelete;
-  final VoidCallback? onPublish;
+  final String? selectedChapterId;
   final bool isSaving;
-  final bool isPublishing;
-  final bool isDeleting;
-  final bool expanded;
+  final bool isNewChapter;
+  final VoidCallback onSave;
   final String? error;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
-      padding: const EdgeInsets.all(18),
-      child: SizedBox(
-        height: expanded ? MediaQuery.sizeOf(context).height - 112 : null,
-        child: selectedChapter == null
-            ? const _NoChapterState()
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Éditeur',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                      ),
-                      if (expanded) BookStatusBadge(status: book.status),
-                    ],
+    return Column(
+      children: [
+        Container(
+          color: PlumoraColors.cards,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    filled: false,
+                    border: InputBorder.none,
+                    hintText: 'Titre du chapitre',
                   ),
-                  if (error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      error!,
-                      style: const TextStyle(
-                        color: PlumoraColors.destructive,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: titleController,
-                    decoration: const InputDecoration(labelText: 'Titre'),
+                  style: const TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
                   ),
-                  const SizedBox(height: 14),
-                  if (expanded)
-                    Expanded(
-                      child: TextField(
-                        controller: contentController,
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: const InputDecoration(
-                          labelText: 'Contenu',
-                          alignLabelWithHint: true,
-                          hintText: 'Écris ton chapitre ici...',
-                        ),
-                      ),
-                    )
-                  else
-                    TextField(
-                      controller: contentController,
-                      minLines: 12,
-                      maxLines: 18,
-                      textAlignVertical: TextAlignVertical.top,
-                      decoration: const InputDecoration(
-                        labelText: 'Contenu',
-                        alignLabelWithHint: true,
-                        hintText: 'Écris ton chapitre ici...',
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    alignment: WrapAlignment.end,
-                    children: [
-                      TextButton.icon(
-                        onPressed: isDeleting || isSaving ? null : onDelete,
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        label: Text(
-                          isDeleting ? 'Suppression...' : 'Supprimer',
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: PlumoraColors.destructive,
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: selectedChapter == null
-                            ? null
-                            : () => context.go(
-                                AppRoutes.authorChapterDetailPath(
-                                  selectedChapter!.id,
-                                  bookId: book.id,
-                                ),
-                              ),
-                        icon: const Icon(Icons.open_in_new, size: 17),
-                        label: const Text('Détail'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: selectedChapter == null
-                            ? null
-                            : () => context.go(
-                                AppRoutes.mukemeWritingPath(
-                                  chapterId: selectedChapter!.id,
-                                ),
-                              ),
-                        icon: const Icon(Icons.auto_awesome, size: 17),
-                        label: const Text('Mukeme'),
-                      ),
-                      OutlinedButton(
-                        onPressed: isPublishing ? null : onPublish,
-                        child: Text(
-                          isPublishing ? 'Publication...' : 'Publier le livre',
-                        ),
-                      ),
-                      FilledButton(
-                        onPressed: isSaving ? null : onSave,
-                        child: Text(isSaving ? 'Sauvegarde...' : 'Sauvegarder'),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-      ),
+              TextButton.icon(
+                onPressed: selectedChapterId == null || isNewChapter
+                    ? null
+                    : () => context.go(
+                        AppRoutes.mukemeWritingPath(
+                          chapterId: selectedChapterId,
+                        ),
+                      ),
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Mukeme'),
+              ),
+              FilledButton.icon(
+                onPressed: isSaving ? null : onSave,
+                icon: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: Text(isSaving ? 'Sauvegarde...' : 'Enregistrer'),
+              ),
+            ],
+          ),
+        ),
+        if (error != null)
+          Container(
+            width: double.infinity,
+            color: PlumoraColors.destructive.withValues(alpha: 0.08),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+            child: Text(
+              error!,
+              style: const TextStyle(
+                color: PlumoraColors.destructive,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        const Divider(height: 1, color: PlumoraColors.border),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 840),
+                child: TextField(
+                  controller: contentController,
+                  expands: true,
+                  maxLines: null,
+                  minLines: null,
+                  keyboardType: TextInputType.multiline,
+                  decoration: const InputDecoration(
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    hintText: 'Commencez a ecrire votre histoire...',
+                  ),
+                  style: const TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 18,
+                    height: 1.8,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        _StatsBar(controller: contentController),
+      ],
     );
   }
 }
 
-class _NoChapterState extends StatelessWidget {
-  const _NoChapterState();
+class _ChapterNavTile extends StatelessWidget {
+  const _ChapterNavTile({
+    required this.label,
+    required this.selected,
+    this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Text(
-          'Crée un chapitre dans la liste pour commencer à écrire.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: PlumoraColors.textSecondary),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: selected ? PlumoraColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.description_outlined,
+                color: selected ? Colors.white : PlumoraColors.textPrimary,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: selected ? Colors.white : PlumoraColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _EditorBookPicker extends ConsumerWidget {
-  const _EditorBookPicker();
+class _StatsBar extends StatelessWidget {
+  const _StatsBar({required this.controller});
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final booksAsync = ref.watch(myBooksProvider);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontal = constraints.maxWidth >= 760 ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 82.0;
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            28,
-            horizontal,
-            bottomPadding,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 900),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Éditeur',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Choisis un livre pour ouvrir son éditeur de chapitres.',
-                    style: TextStyle(color: PlumoraColors.textSecondary),
-                  ),
-                  const SizedBox(height: 22),
-                  booksAsync.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(48),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                    error: (error, _) => _FullPageError(
-                      title: 'Impossible de charger les livres',
-                      message: AppError.messageFor(error),
-                      onRetry: () => ref.invalidate(myBooksProvider),
-                    ),
-                    data: (books) {
-                      if (books.isEmpty) {
-                        return PlumoraCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Aucun livre disponible',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Crée un livre avant d’ouvrir l’éditeur.',
-                                style: TextStyle(
-                                  color: PlumoraColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              FilledButton(
-                                onPressed: () =>
-                                    context.go(AppRoutes.createBook),
-                                child: const Text('Créer un livre'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return Column(
-                        children: [
-                          for (final book in books) ...[
-                            PlumoraCard(
-                              onTap: () => context.go(
-                                AppRoutes.chapterEditorPath(book.id),
-                              ),
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  PlumoraIconTile(
-                                    size: 46,
-                                    radius: 11,
-                                    backgroundColor:
-                                        book.status.backgroundColor,
-                                    child: Icon(
-                                      Icons.menu_book_outlined,
-                                      color: book.status.foregroundColor,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          book.title.isEmpty
-                                              ? 'Livre sans titre'
-                                              : book.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          book.status.frenchLabel,
-                                          style: const TextStyle(
-                                            color: PlumoraColors.textSecondary,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.chevron_right,
-                                    color: PlumoraColors.textSecondary,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _FullPageLoader extends StatelessWidget {
-  const _FullPageLoader();
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(48),
-        child: CircularProgressIndicator(),
+    final words = controller.text
+        .split(RegExp(r'\s+'))
+        .where((word) => word.trim().isNotEmpty)
+        .length;
+
+    return Container(
+      color: PlumoraColors.cards,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Row(
+        children: [
+          Text('$words mots'),
+          const SizedBox(width: 24),
+          Text('${controller.text.length} caracteres'),
+          const Spacer(),
+          const Text('Sauvegarde manuelle'),
+        ],
       ),
     );
   }
 }
 
-class _FullPageError extends StatelessWidget {
-  const _FullPageError({
-    required this.title,
-    required this.message,
-    required this.onRetry,
-  });
+class _EditorNavItem extends StatelessWidget {
+  const _EditorNavItem({required this.icon, required this.label, this.onTap});
 
-  final String title;
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: PlumoraColors.textSecondary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CenteredError extends StatelessWidget {
+  const _CenteredError({required this.message, required this.onRetry});
+
   final String message;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontal = constraints.maxWidth >= 760 ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 82.0;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: _ErrorCard(message: message, onRetry: onRetry),
+      ),
+    );
+  }
+}
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            28,
-            horizontal,
-            bottomPadding,
+class _ErrorCard extends StatelessWidget {
+  const _ErrorCard({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return FigmaCard(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Editeur indisponible',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: PlumoraCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      message,
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: onRetry,
-                      child: const Text('Réessayer'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(color: PlumoraColors.textSecondary),
           ),
-        );
-      },
+          const SizedBox(height: 14),
+          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+        ],
+      ),
     );
   }
 }

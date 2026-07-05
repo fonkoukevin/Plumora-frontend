@@ -5,13 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
-import '../../../core/widgets/plumora_ui.dart';
-import '../../beta_reading/presentation/author_beta_comments_screen.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../book/data/models/book_model.dart';
-import '../../book/data/repositories/book_cover_cache.dart';
 import '../../book/data/repositories/book_repository.dart';
-
-enum _AuthorTab { manuscripts, feedback, publication }
+import '../../book/presentation/widgets/book_status_badge.dart';
 
 class AuthorDashboardScreen extends ConsumerStatefulWidget {
   const AuthorDashboardScreen({super.key});
@@ -22,199 +19,93 @@ class AuthorDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
-  _AuthorTab _activeTab = _AuthorTab.manuscripts;
+  String _activeTab = 'manuscripts';
+
+  static const _tabs = [
+    ('manuscripts', 'Mes manuscrits'),
+    ('feedback', 'Retours beta'),
+    ('publication', 'Publication'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final booksAsync = ref.watch(myBooksProvider);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobilePanel = constraints.maxWidth < 520;
-        const horizontal = 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 92.0;
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            32,
-            horizontal,
-            bottomPadding,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isMobilePanel ? 430 : 1120),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Header(isCompact: constraints.maxWidth < 560),
-                  const SizedBox(height: 32),
-                  _AuthorTabs(
-                    activeTab: _activeTab,
-                    onChanged: (tab) => setState(() => _activeTab = tab),
-                  ),
-                  const SizedBox(height: 32),
-                  booksAsync.when(
-                    loading: () => const _LoadingPanel(),
-                    error: (error, _) => _ErrorPanel(
-                      message: AppError.messageFor(error),
-                      onRetry: () => ref.invalidate(myBooksProvider),
-                    ),
-                    data: (books) {
-                      return switch (_activeTab) {
-                        _AuthorTab.manuscripts => _ManuscriptsTab(
-                          books: books,
-                          onRefresh: () => ref.invalidate(myBooksProvider),
-                        ),
-                        _AuthorTab.feedback => const _FeedbackTab(),
-                        _AuthorTab.publication => _PublicationTab(
-                          books: books,
-                          onRefresh: () => ref.invalidate(myBooksProvider),
-                        ),
-                      };
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.isCompact});
-
-  final bool isCompact;
-
-  @override
-  Widget build(BuildContext context) {
-    final title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Écrire',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: PlumoraColors.textPrimary,
-            fontSize: 36,
-            fontWeight: FontWeight.w700,
-            height: 1.1,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          "Gérez vos manuscrits et votre activité d'auteur",
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: PlumoraColors.textSecondary,
-            fontSize: 14,
-            height: 1.45,
-          ),
-        ),
-      ],
-    );
-
-    final button = _NewBookButton(
-      onTap: () => context.go(AppRoutes.createBook),
-    );
-
-    if (isCompact) {
-      return Row(
+    return FigmaScreen(
+      padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: title),
-          const SizedBox(width: 12),
-          button,
-        ],
-      );
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: title),
-        button,
-      ],
-    );
-  }
-}
-
-class _NewBookButton extends StatelessWidget {
-  const _NewBookButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: PlumoraColors.primary,
-      borderRadius: BorderRadius.circular(12),
-      elevation: 2,
-      shadowColor: const Color(0x22000000),
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: Colors.white.withValues(alpha: 0.10),
-        splashColor: Colors.white.withValues(alpha: 0.12),
-        highlightColor: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        child: const SizedBox(
-          width: 146,
-          height: 66,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.add, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'Nouveau livre',
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    height: 1.1,
-                  ),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ecrire',
+                      style: TextStyle(
+                        color: PlumoraColors.textPrimary,
+                        fontSize: 38,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "Gerez vos manuscrits et votre activite d'auteur",
+                      style: TextStyle(
+                        color: PlumoraColors.textSecondary,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              FilledButton.icon(
+                onPressed: () => context.go(AppRoutes.createBook),
+                icon: const Icon(Icons.add),
+                label: const Text('Nouveau livre'),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AuthorTabs extends StatelessWidget {
-  const _AuthorTabs({required this.activeTab, required this.onChanged});
-
-  final _AuthorTab activeTab;
-  final ValueChanged<_AuthorTab> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _TabButton(
-            label: 'Mes manuscrits',
-            selected: activeTab == _AuthorTab.manuscripts,
-            onTap: () => onChanged(_AuthorTab.manuscripts),
+          const SizedBox(height: 24),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final tab in _tabs) ...[
+                  _SegmentTab(
+                    label: tab.$2,
+                    selected: _activeTab == tab.$1,
+                    onTap: () => setState(() => _activeTab = tab.$1),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(width: 8),
-          _TabButton(
-            label: 'Retours bêta',
-            selected: activeTab == _AuthorTab.feedback,
-            onTap: () => onChanged(_AuthorTab.feedback),
-          ),
-          const SizedBox(width: 8),
-          _TabButton(
-            label: 'Publication',
-            selected: activeTab == _AuthorTab.publication,
-            onTap: () => onChanged(_AuthorTab.publication),
+          const SizedBox(height: 26),
+          booksAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(48),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, _) => _ErrorPanel(
+              message: AppError.messageFor(error),
+              onRetry: () => ref.invalidate(myBooksProvider),
+            ),
+            data: (books) {
+              if (_activeTab == 'manuscripts') {
+                return _ManuscriptsTab(books: books);
+              }
+              if (_activeTab == 'feedback') {
+                return _FeedbackTab(books: books);
+              }
+              return _PublicationTab(books: books);
+            },
           ),
         ],
       ),
@@ -222,8 +113,8 @@ class _AuthorTabs extends StatelessWidget {
   }
 }
 
-class _TabButton extends StatefulWidget {
-  const _TabButton({
+class _SegmentTab extends StatelessWidget {
+  const _SegmentTab({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -234,84 +125,30 @@ class _TabButton extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_TabButton> createState() => _TabButtonState();
-}
-
-class _TabButtonState extends State<_TabButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final selected = widget.selected;
-    final textColor = selected
-        ? Colors.white
-        : _hovered
-        ? PlumoraColors.textPrimary
-        : PlumoraColors.textSecondary;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: InkWell(
-        onTap: widget.onTap,
-        hoverColor: Colors.transparent,
-        splashColor: PlumoraColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          height: 52,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.topCenter,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? PlumoraColors.primary
-                      : _hovered
-                      ? PlumoraColors.muted
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: selected
-                      ? const [
-                          BoxShadow(
-                            color: Color(0x26000000),
-                            blurRadius: 10,
-                            offset: Offset(0, 4),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Center(
-                  child: Text(
-                    widget.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 13),
+        decoration: BoxDecoration(
+          color: selected ? PlumoraColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: PlumoraColors.primary.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
                   ),
-                ),
-              ),
-              if (selected)
-                Positioned(
-                  bottom: 4,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: PlumoraColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : PlumoraColors.textSecondary,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),
@@ -320,652 +157,260 @@ class _TabButtonState extends State<_TabButton> {
 }
 
 class _ManuscriptsTab extends StatelessWidget {
-  const _ManuscriptsTab({required this.books, required this.onRefresh});
+  const _ManuscriptsTab({required this.books});
 
   final List<BookModel> books;
-  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
     if (books.isEmpty) {
-      return _EmptyPanel(
-        title: 'Aucun manuscrit',
-        subtitle: 'Crée ton premier livre pour commencer à écrire.',
-        actionLabel: 'Nouveau livre',
-        onAction: () => context.go(AppRoutes.createBook),
+      return FigmaCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const FigmaEmptyState(
+              title: 'Aucun manuscrit',
+              message: 'Cree ton premier livre pour commencer a ecrire.',
+              icon: Icons.edit_outlined,
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => context.go(AppRoutes.createBook),
+                icon: const Icon(Icons.add),
+                label: const Text('Creer un livre'),
+              ),
+            ),
+          ],
+        ),
       );
     }
-
-    final total = books.length;
-    final writing = books
-        .where((book) => book.status == BookStatus.draft)
-        .length;
-    final published = books
-        .where((book) => book.status == BookStatus.published)
-        .length;
 
     return Column(
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 860 ? 2 : 1;
-            const spacing = 20.0;
-            final width = columns == 1
-                ? constraints.maxWidth
-                : (constraints.maxWidth - spacing) / 2;
+            final columns = constraints.maxWidth >= 980
+                ? 3
+                : constraints.maxWidth >= 680
+                ? 2
+                : 1;
+            final spacing = 18.0;
+            final width =
+                (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
             return Wrap(
               spacing: spacing,
-              runSpacing: 20,
+              runSpacing: spacing,
               children: [
                 for (final book in books)
                   SizedBox(
                     width: width,
-                    child: _AuthorBookCard(book: book, onRefresh: onRefresh),
+                    child: _ManuscriptCard(book: book),
                   ),
               ],
             );
           },
         ),
         const SizedBox(height: 20),
-        _StatsCard(label: 'Total de manuscrits', value: total.toString()),
-        const SizedBox(height: 20),
-        _StatsCard(label: "En cours d'écriture", value: writing.toString()),
-        const SizedBox(height: 20),
-        _StatsCard(label: 'Livres publiés', value: published.toString()),
+        _AuthorStats(books: books),
       ],
     );
   }
 }
 
-class _AuthorBookCard extends ConsumerStatefulWidget {
-  const _AuthorBookCard({required this.book, required this.onRefresh});
+class _AuthorStats extends StatelessWidget {
+  const _AuthorStats({required this.books});
 
-  final BookModel book;
-  final VoidCallback onRefresh;
-
-  @override
-  ConsumerState<_AuthorBookCard> createState() => _AuthorBookCardState();
-}
-
-class _AuthorBookCardState extends ConsumerState<_AuthorBookCard> {
-  bool _isArchiving = false;
-  String? _error;
+  final List<BookModel> books;
 
   @override
   Widget build(BuildContext context) {
-    final book = widget.book;
-    final content = _BookStatusContent(book: book);
-    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+    final writing = books
+        .where(
+          (book) =>
+              book.status == BookStatus.draft ||
+              book.status == BookStatus.inCorrection,
+        )
+        .length;
+    final published = books
+        .where((book) => book.status == BookStatus.published)
+        .length;
+    final totalWords = books.fold<int>(0, (sum, book) => sum + book.wordCount);
 
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: PlumoraColors.cards,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: PlumoraColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 8,
-            offset: Offset(0, 4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 720;
+        final children = [
+          FigmaStatCard(label: 'Manuscrits', value: books.length.toString()),
+          FigmaStatCard(
+            label: "En cours d'ecriture",
+            value: writing.toString(),
+            valueColor: PlumoraColors.secondary,
           ),
-        ],
-      ),
+          FigmaStatCard(
+            label: 'Mots',
+            value: _compactNumber(totalWords),
+            valueColor: PlumoraColors.accent,
+          ),
+          FigmaStatCard(
+            label: 'Publies',
+            value: published.toString(),
+            valueColor: PlumoraColors.success,
+          ),
+        ];
+        if (compact) {
+          return Column(
+            children: [
+              for (final child in children) ...[
+                child,
+                const SizedBox(height: 12),
+              ],
+            ],
+          );
+        }
+        return Row(
+          children: [
+            for (var index = 0; index < children.length; index++) ...[
+              Expanded(child: children[index]),
+              if (index != children.length - 1) const SizedBox(width: 12),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ManuscriptCard extends StatelessWidget {
+  const _ManuscriptCard({required this.book});
+
+  final BookModel book;
+
+  @override
+  Widget build(BuildContext context) {
+    return FigmaCard(
+      clip: true,
       child: Stack(
         children: [
           Positioned(
-            top: -46,
-            right: -43,
+            top: -62,
+            right: -62,
             child: Container(
-              width: 88,
-              height: 88,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEFE6DA),
+              width: 132,
+              height: 132,
+              decoration: BoxDecoration(
+                color: PlumoraColors.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    PlumoraBookCover(
-                      colors: _bookCoverColors(book),
-                      imageUrl: book.coverUrl,
-                      imageBytes: cachedCover,
-                      width: 44,
-                      height: 60,
-                      radius: 9,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        book.title.isEmpty ? 'Livre sans titre' : book.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: Colors.black,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _CardIconAction(
-                      icon: Icons.edit_outlined,
-                      color: PlumoraColors.primary,
-                      tooltip: 'Modifier',
-                      onTap: () => context.go(AppRoutes.editBookPath(book.id)),
-                    ),
-                    const SizedBox(width: 4),
-                    _CardIconAction(
-                      icon: Icons.groups_outlined,
-                      color: PlumoraColors.info,
-                      tooltip: 'Bêta-test',
-                      onTap: book.isArchived
-                          ? null
-                          : () => context.go(
-                              AppRoutes.authorBetaCampaignsPath(book.id),
-                            ),
-                    ),
-                    const SizedBox(width: 4),
-                    _CardIconAction(
-                      icon: Icons.delete_outline,
-                      color: PlumoraColors.destructive,
-                      tooltip: 'Supprimer',
-                      onTap: book.isArchived || _isArchiving
-                          ? null
-                          : () => _confirmArchive(book),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 15),
-                content,
-                if (_error != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    _error!,
-                    style: const TextStyle(
-                      color: PlumoraColors.destructive,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 15),
-                _BookPrimaryAction(book: book),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _confirmArchive(BookModel book) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.48),
-      builder: (context) => _DeleteManuscriptDialog(bookTitle: book.title),
-    );
-
-    if (confirmed == true) {
-      await _archive(book.id);
-    }
-  }
-
-  Future<void> _archive(String bookId) async {
-    setState(() {
-      _isArchiving = true;
-      _error = null;
-    });
-
-    try {
-      await ref.read(bookRepositoryProvider).archiveBook(bookId);
-      ref.invalidate(myBooksProvider);
-      widget.onRefresh();
-    } catch (error) {
-      setState(() => _error = AppError.messageFor(error));
-    } finally {
-      if (mounted) {
-        setState(() => _isArchiving = false);
-      }
-    }
-  }
-}
-
-class _CardIconAction extends StatelessWidget {
-  const _CardIconAction({
-    required this.icon,
-    required this.color,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String tooltip;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: color.withValues(alpha: 0.10),
-        splashColor: color.withValues(alpha: 0.12),
-        highlightColor: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          width: 28,
-          height: 28,
-          child: Icon(
-            icon,
-            color: onTap == null ? color.withValues(alpha: 0.4) : color,
-            size: 17,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DeleteManuscriptDialog extends StatelessWidget {
-  const _DeleteManuscriptDialog({required this.bookTitle});
-
-  final String bookTitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-      backgroundColor: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 355),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-          decoration: BoxDecoration(
-            color: PlumoraColors.cards,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x26000000),
-                blurRadius: 18,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFBE6E4),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline,
-                      color: PlumoraColors.destructive,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 13),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Supprimer ce manuscrit ?',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          bookTitle.trim().isEmpty
-                              ? 'Le manuscrit sera archivé côté Plumora.'
-                              : '"$bookTitle" sera archivé côté Plumora.',
-                          style: const TextStyle(
-                            color: PlumoraColors.textSecondary,
-                            fontSize: 12,
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      book.title.isEmpty ? 'Livre sans titre' : book.title,
+                      style: const TextStyle(
+                        color: PlumoraColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
+                  _StatusBadge(status: book.status),
                 ],
               ),
+              const SizedBox(height: 10),
+              Text(
+                book.description.trim().isEmpty
+                    ? 'Aucun resume renseigne.'
+                    : book.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: PlumoraColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FigmaBadge(label: '${book.chapterCount} chapitres'),
+                  FigmaBadge(label: '${book.wordCount} mots'),
+                  if (book.feedbackCount > 0)
+                    FigmaBadge(
+                      label: '${book.feedbackCount} retours',
+                      icon: Icons.chat_bubble_outline,
+                      backgroundColor: PlumoraColors.secondary.withValues(
+                        alpha: 0.12,
+                      ),
+                      foregroundColor: PlumoraColors.secondary,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              if (book.status == BookStatus.draft ||
+                  book.status == BookStatus.inCorrection) ...[
+                Row(
+                  children: [
+                    const Text(
+                      'Progression',
+                      style: TextStyle(
+                        color: PlumoraColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${(book.progress.clamp(0, 1) * 100).round()}%',
+                      style: const TextStyle(
+                        color: PlumoraColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                FigmaProgressBar(
+                  value: book.progress,
+                  height: 9,
+                  colors: const [
+                    PlumoraColors.primary,
+                    PlumoraColors.primaryLight,
+                  ],
+                ),
+              ],
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 38),
+                    child: FilledButton(
+                      onPressed: () =>
+                          context.go(AppRoutes.chapterEditorPath(book.id)),
+                      child: Text(
+                        book.status == BookStatus.published
+                            ? 'Voir les chapitres'
+                            : 'Continuer',
                       ),
-                      child: const Text('Annuler'),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 38),
-                      ),
-                      icon: const Icon(Icons.delete_outline, size: 15),
-                      label: const Text('Supprimer'),
-                    ),
+                  OutlinedButton(
+                    onPressed: () =>
+                        context.go(AppRoutes.authorBookDetailPath(book.id)),
+                    child: const Icon(Icons.open_in_new),
                   ),
                 ],
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BookStatusContent extends StatelessWidget {
-  const _BookStatusContent({required this.book});
-
-  final BookModel book;
-
-  @override
-  Widget build(BuildContext context) {
-    switch (book.status) {
-      case BookStatus.draft:
-        final progress = _normalizedProgress(book.progress, fallback: 35);
-        return Column(
-          children: [
-            _InfoStrip(
-              icon: Icons.schedule,
-              text: _modifiedLabel(book),
-              backgroundColor: const Color(0xFFF8F5EF),
-              foregroundColor: PlumoraColors.textSecondary,
-            ),
-            const SizedBox(height: 11),
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 13),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFAE9),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Progression',
-                          style: TextStyle(
-                            color: PlumoraColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${progress.round()}%',
-                        style: const TextStyle(
-                          color: PlumoraColors.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 9),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      minHeight: 8,
-                      value: progress / 100,
-                      backgroundColor: Colors.white,
-                      color: const Color(0xFFBE5A00),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      case BookStatus.inBetaReading:
-        return _InfoStrip(
-          icon: Icons.chat_bubble_outline,
-          text:
-              '${book.feedbackCount == 0 ? 12 : book.feedbackCount} retours reçus',
-          backgroundColor: const Color(0xFFEAF3FF),
-          foregroundColor: const Color(0xFF0059FF),
-        );
-      case BookStatus.readyToPublish:
-        return const _InfoStrip(
-          icon: Icons.check_circle_outline,
-          text: 'Prêt pour la publication',
-          backgroundColor: Color(0xFFEAF9EF),
-          foregroundColor: Color(0xFF009D3F),
-        );
-      case BookStatus.inCorrection:
-        return const _InfoStrip(
-          icon: Icons.build_outlined,
-          text: 'Corrections en cours',
-          backgroundColor: Color(0xFFFFF2E6),
-          foregroundColor: Color(0xFFA4683E),
-        );
-      case BookStatus.published:
-        return const _InfoStrip(
-          icon: Icons.check_circle_outline,
-          text: 'Livre publié',
-          backgroundColor: Color(0xFFEAF9EF),
-          foregroundColor: Color(0xFF009D3F),
-        );
-      case BookStatus.archived:
-        return const _InfoStrip(
-          icon: Icons.archive_outlined,
-          text: 'Livre archivé',
-          backgroundColor: PlumoraColors.muted,
-          foregroundColor: PlumoraColors.textSecondary,
-        );
-      case BookStatus.unknown:
-        return const _InfoStrip(
-          icon: Icons.info_outline,
-          text: 'Statut inconnu',
-          backgroundColor: Color(0xFFF7E0DC),
-          foregroundColor: PlumoraColors.destructive,
-        );
-    }
-  }
-
-  static double _normalizedProgress(
-    double progress, {
-    required double fallback,
-  }) {
-    if (progress <= 0) {
-      return fallback;
-    }
-    if (progress <= 1) {
-      return progress * 100;
-    }
-    return progress.clamp(0, 100);
-  }
-
-  static String _modifiedLabel(BookModel book) {
-    final updatedAt = book.updatedAt;
-    if (updatedAt == null) {
-      return "Modifié aujourd'hui";
-    }
-
-    final now = DateTime.now();
-    final local = updatedAt.toLocal();
-    final today = DateTime(now.year, now.month, now.day);
-    final date = DateTime(local.year, local.month, local.day);
-    if (date == today) {
-      return "Modifié aujourd'hui";
-    }
-    if (today.difference(date).inDays == 1) {
-      return 'Modifié hier';
-    }
-
-    return 'Modifié le ${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}';
-  }
-}
-
-List<Color> _bookCoverColors(BookModel book) {
-  final palettes = [
-    [const Color(0xFF7C3AED), const Color(0xFFDB2777)],
-    [const Color(0xFF2563EB), const Color(0xFF06B6D4)],
-    [const Color(0xFFDC2626), const Color(0xFFEA580C)],
-    [const Color(0xFF8FA889), const Color(0xFF5F7A5A)],
-  ];
-  final key = book.id.isEmpty ? book.title : book.id;
-  final index =
-      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
-  return palettes[index];
-}
-
-class _InfoStrip extends StatelessWidget {
-  const _InfoStrip({
-    required this.icon,
-    required this.text,
-    required this.backgroundColor,
-    required this.foregroundColor,
-  });
-
-  final IconData icon;
-  final String text;
-  final Color backgroundColor;
-  final Color foregroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: foregroundColor, size: 17),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: foregroundColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BookPrimaryAction extends StatelessWidget {
-  const _BookPrimaryAction({required this.book});
-
-  final BookModel book;
-
-  @override
-  Widget build(BuildContext context) {
-    switch (book.status) {
-      case BookStatus.readyToPublish:
-        return FilledButton(
-          onPressed: () => context.go(AppRoutes.publishBookPath(book.id)),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(43)),
-          child: const Text('Soumettre à publication'),
-        );
-      case BookStatus.inBetaReading:
-        return OutlinedButton(
-          onPressed: () =>
-              context.go(AppRoutes.authorBetaCommentsPath(book.id)),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(43),
-          ),
-          child: const Text('Voir les retours'),
-        );
-      case BookStatus.published:
-        return OutlinedButton(
-          onPressed: () => context.go(AppRoutes.authorBookDetailPath(book.id)),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(43),
-          ),
-          child: const Text('Voir le détail'),
-        );
-      default:
-        return FilledButton(
-          onPressed: () => context.go(AppRoutes.chapterEditorPath(book.id)),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(43)),
-          child: const Text('Continuer'),
-        );
-    }
-  }
-}
-
-class _StatsCard extends StatelessWidget {
-  const _StatsCard({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 114),
-      padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
-      decoration: BoxDecoration(
-        color: PlumoraColors.cards,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: PlumoraColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x10000000),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              color: PlumoraColors.primary,
-              fontSize: 25,
-              fontWeight: FontWeight.w900,
-              height: 1.1,
-            ),
           ),
         ],
       ),
@@ -974,158 +419,189 @@ class _StatsCard extends StatelessWidget {
 }
 
 class _FeedbackTab extends StatelessWidget {
-  const _FeedbackTab();
+  const _FeedbackTab({required this.books});
+
+  final List<BookModel> books;
 
   @override
   Widget build(BuildContext context) {
-    return const AuthorBetaCommentsScreen(embedded: true);
-  }
-}
-
-class _PublicationTab extends ConsumerWidget {
-  const _PublicationTab({required this.books, required this.onRefresh});
-
-  final List<BookModel> books;
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final publishable = books
-        .where(
-          (book) =>
-              book.status == BookStatus.readyToPublish ||
-              book.status == BookStatus.published,
-        )
+    final withFeedback = books
+        .where((book) => book.feedbackCount > 0)
         .toList(growable: false);
 
-    if (publishable.isEmpty) {
-      return const _PassivePanel(
-        title: 'Aucun livre prêt',
-        subtitle: 'Les manuscrits prêts à publier seront listés ici.',
-        icon: Icons.cloud_upload_outlined,
-      );
-    }
-
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final book in publishable) ...[
-          _AuthorBookCard(book: book, onRefresh: onRefresh),
-          const SizedBox(height: 20),
-        ],
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Retours beta',
+                style: TextStyle(
+                  color: PlumoraColors.textPrimary,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            OutlinedButton(
+              onPressed: () => context.go(AppRoutes.betaFeedback),
+              child: const Text('Voir tout'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (withFeedback.isEmpty)
+          const FigmaEmptyState(
+            title: 'Aucun retour beta',
+            message: 'Les retours relies a tes livres apparaitront ici.',
+            icon: Icons.chat_bubble_outline,
+          )
+        else
+          for (final book in withFeedback) ...[
+            FigmaCard(
+              onTap: () =>
+                  context.go(AppRoutes.authorBetaCommentsPath(book.id)),
+              borderColor: PlumoraColors.primary,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const FigmaGradientIcon(icon: Icons.chat_bubble_outline),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FigmaBadge(
+                          label: '${book.feedbackCount} retours',
+                          backgroundColor: PlumoraColors.primary.withValues(
+                            alpha: 0.12,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          book.title.isEmpty ? 'Livre sans titre' : book.title,
+                          style: const TextStyle(
+                            color: PlumoraColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          book.status.shortFrenchLabel,
+                          style: const TextStyle(
+                            color: PlumoraColors.textSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () =>
+                        context.go(AppRoutes.authorBetaCommentsPath(book.id)),
+                    child: const Text('Ouvrir'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
       ],
     );
   }
 }
 
-class _EmptyPanel extends StatelessWidget {
-  const _EmptyPanel({
-    required this.title,
-    required this.subtitle,
-    required this.actionLabel,
-    required this.onAction,
-  });
+class _PublicationTab extends StatelessWidget {
+  const _PublicationTab({required this.books});
 
-  final String title;
-  final String subtitle;
-  final String actionLabel;
-  final VoidCallback onAction;
+  final List<BookModel> books;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const PlumoraIconTile(
-            backgroundColor: PlumoraColors.secondary,
-            child: Icon(
-              Icons.auto_stories_outlined,
-              color: PlumoraColors.primary,
-            ),
+    final candidates = books
+        .where((book) => book.canPublish && !book.isArchived)
+        .toList(growable: false);
+
+    return Column(
+      children: [
+        FigmaCard(
+          borderColor: PlumoraColors.primary,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const FigmaGradientIcon(icon: Icons.upload_outlined, size: 56),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pret a publier ?',
+                      style: TextStyle(
+                        color: PlumoraColors.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Les livres publies passent directement dans le catalogue selon le contrat MVP.',
+                      style: TextStyle(
+                        color: PlumoraColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    if (candidates.isEmpty)
+                      const Text(
+                        'Aucun livre candidat pour le moment.',
+                        style: TextStyle(color: PlumoraColors.textSecondary),
+                      )
+                    else
+                      for (final book in candidates) ...[
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            book.title.isEmpty
+                                ? 'Livre sans titre'
+                                : book.title,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: Text(
+                            '${book.chapterCount} chapitres - ${book.wordCount} mots',
+                          ),
+                          trailing: FilledButton.icon(
+                            onPressed: () =>
+                                context.go(AppRoutes.publishBookPath(book.id)),
+                            icon: const Icon(Icons.upload_outlined),
+                            label: const Text('Publier'),
+                          ),
+                        ),
+                        const Divider(color: PlumoraColors.border),
+                      ],
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
-              height: 1.45,
-            ),
-          ),
-          const SizedBox(height: 18),
-          FilledButton(onPressed: onAction, child: Text(actionLabel)),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _PassivePanel extends StatelessWidget {
-  const _PassivePanel({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
 
-  final String title;
-  final String subtitle;
-  final IconData icon;
+  final BookStatus status;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          PlumoraIconTile(
-            backgroundColor: PlumoraColors.secondary,
-            child: Icon(icon, color: PlumoraColors.primary),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LoadingPanel extends StatelessWidget {
-  const _LoadingPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(48),
-        child: CircularProgressIndicator(),
-      ),
+    return FigmaBadge(
+      label: status.shortFrenchLabel,
+      backgroundColor: status.backgroundColor,
+      foregroundColor: status.foregroundColor,
     );
   }
 }
@@ -1138,30 +614,33 @@ class _ErrorPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
+    return FigmaCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PlumoraIconTile(
-            backgroundColor: Color(0xFFF7E0DC),
-            child: Icon(Icons.error_outline, color: PlumoraColors.destructive),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Impossible de charger',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          const Text(
+            'Manuscrits indisponibles',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(
             message,
             style: const TextStyle(color: PlumoraColors.textSecondary),
           ),
-          const SizedBox(height: 18),
-          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
+          const SizedBox(height: 14),
+          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],
       ),
     );
   }
+}
+
+String _compactNumber(int value) {
+  if (value >= 1000000) {
+    return '${(value / 1000000).toStringAsFixed(1)}M';
+  }
+  if (value >= 1000) {
+    return '${(value / 1000).toStringAsFixed(1)}K';
+  }
+  return value.toString();
 }

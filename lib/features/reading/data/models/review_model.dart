@@ -23,6 +23,10 @@ class ReviewModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  static const String anonymousUserName = 'Lecteur Plumora';
+
+  bool get hasDisplayableUserName => !_isAnonymousUserName(userName);
+
   ReviewModel copyWith({
     String? id,
     String? bookId,
@@ -53,22 +57,71 @@ class ReviewModel {
         _readMapOrNull(json['book']) ??
         _readMapOrNull(json['catalogBook']) ??
         _readMapOrNull(json['reviewedBook']);
-    final userJson =
-        _readMapOrNull(json['user']) ?? _readMapOrNull(json['reader']);
+    final userJson = _readFirstMapOrNull(json, [
+      'user',
+      'reader',
+      'reviewer',
+      'reviewerUser',
+      'reviewer_user',
+      'createdBy',
+      'created_by',
+      'createdByUser',
+      'created_by_user',
+    ]);
 
     return ReviewModel(
-      id: _readString(json, ['id', 'reviewId', 'review_id', 'uuid']),
+      id: _readString(json, [
+        'id',
+        'reviewId',
+        'review_id',
+        'idReview',
+        'id_review',
+        'uuid',
+      ]),
       bookId: _or(
-        _readString(json, ['bookId', 'book_id']),
+        _readString(json, [
+          'bookId',
+          'book_id',
+          'idBook',
+          'id_book',
+          'externalBookId',
+          'external_book_id',
+          'externalId',
+          'external_id',
+          'gutendexId',
+          'gutendex_id',
+        ]),
         bookJson == null
             ? ''
-            : _readString(bookJson, ['id', 'bookId', 'book_id']),
+            : _readString(bookJson, [
+                'id',
+                'bookId',
+                'book_id',
+                'idBook',
+                'id_book',
+              ]),
       ),
       userId: _or(
-        _readString(json, ['userId', 'user_id', 'readerId']),
+        _readString(json, [
+          'userId',
+          'user_id',
+          'idUser',
+          'id_user',
+          'readerId',
+          'reader_id',
+          'reviewerId',
+          'reviewer_id',
+        ]),
         userJson == null
             ? ''
-            : _readString(userJson, ['id', 'userId', 'user_id']),
+            : _readString(userJson, [
+                'id',
+                'uuid',
+                'userId',
+                'user_id',
+                'idUser',
+                'id_user',
+              ]),
       ),
       userName: _readUserName(json, userJson),
       rating: _readInt(json, ['rating', 'score', 'stars']).clamp(0, 5),
@@ -115,6 +168,20 @@ Map<String, dynamic>? _readMapOrNull(Object? value) {
   return null;
 }
 
+Map<String, dynamic>? _readFirstMapOrNull(
+  Map<String, dynamic> json,
+  List<String> keys,
+) {
+  for (final key in keys) {
+    final value = _readMapOrNull(json[key]);
+    if (value != null) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 String _readString(Map<String, dynamic> json, List<String> keys) {
   for (final key in keys) {
     final value = json[key];
@@ -130,42 +197,102 @@ String _readUserName(
   Map<String, dynamic> json,
   Map<String, dynamic>? userJson,
 ) {
-  final direct = _readString(json, [
+  final directCombined = _combinedName(
+    json,
+    firstNameKeys: const [
+      'firstName',
+      'firstname',
+      'first_name',
+      'userFirstName',
+      'user_first_name',
+      'readerFirstName',
+      'reader_first_name',
+      'reviewerFirstName',
+      'reviewer_first_name',
+    ],
+    lastNameKeys: const [
+      'lastName',
+      'lastname',
+      'last_name',
+      'userLastName',
+      'user_last_name',
+      'readerLastName',
+      'reader_last_name',
+      'reviewerLastName',
+      'reviewer_last_name',
+    ],
+  );
+  if (directCombined.isNotEmpty) {
+    return directCombined;
+  }
+
+  final direct = _readDisplayName(json, [
+    'displayName',
+    'display_name',
+    'fullName',
+    'full_name',
+    'name',
     'userName',
     'user_name',
     'readerName',
+    'reader_name',
+    'reviewerName',
+    'reviewer_name',
     'authorName',
+    'author_name',
+    'username',
   ]);
   if (direct.isNotEmpty) {
     return direct;
   }
 
   if (userJson != null) {
-    final fullName = _readString(userJson, ['displayName', 'fullName', 'name']);
-    if (fullName.isNotEmpty) {
-      return fullName;
-    }
-
-    final firstName = _readString(userJson, [
-      'firstName',
-      'firstname',
-      'first_name',
-    ]);
-    final lastName = _readString(userJson, [
-      'lastName',
-      'lastname',
-      'last_name',
-    ]);
-    final combined = [
-      firstName,
-      lastName,
-    ].where((part) => part.trim().isNotEmpty).join(' ');
+    final combined = _combinedName(
+      userJson,
+      firstNameKeys: const ['firstName', 'firstname', 'first_name'],
+      lastNameKeys: const ['lastName', 'lastname', 'last_name'],
+    );
     if (combined.isNotEmpty) {
       return combined;
     }
+
+    final nested = _readDisplayName(userJson, [
+      'displayName',
+      'display_name',
+      'fullName',
+      'full_name',
+      'name',
+      'username',
+    ]);
+    if (nested.isNotEmpty) {
+      return nested;
+    }
   }
 
-  return 'Lecteur Plumora';
+  return ReviewModel.anonymousUserName;
+}
+
+String _readDisplayName(Map<String, dynamic> json, List<String> keys) {
+  final value = _readString(json, keys).trim();
+  return _isAnonymousUserName(value) ? '' : value;
+}
+
+String _combinedName(
+  Map<String, dynamic> json, {
+  required List<String> firstNameKeys,
+  required List<String> lastNameKeys,
+}) {
+  final firstName = _readString(json, firstNameKeys);
+  final lastName = _readString(json, lastNameKeys);
+  return [
+    firstName,
+    lastName,
+  ].map((part) => part.trim()).where((part) => part.isNotEmpty).join(' ');
+}
+
+bool _isAnonymousUserName(String value) {
+  final normalized = value.trim().toLowerCase();
+  return normalized.isEmpty || normalized == 'lecteur plumora';
 }
 
 int _readInt(Map<String, dynamic> json, List<String> keys) {

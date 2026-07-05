@@ -32,6 +32,33 @@ class ReviewApiService {
         .toList();
   }
 
+  Future<ReviewModel> createExternalBookReview(
+    String gutendexId,
+    ReviewUpsertRequest request,
+  ) async {
+    final id = _requiredExternalId(gutendexId);
+    final response = await _dio.post(
+      '/external-books/${Uri.encodeComponent(id)}/reviews',
+      data: request.toJson(),
+    );
+    final review = ReviewModel.fromJson(_readPayloadMap(response.data));
+    return review.bookId.isEmpty ? review.copyWith(bookId: id) : review;
+  }
+
+  Future<List<ReviewModel>> reviewsForExternalBook(String gutendexId) async {
+    final id = _requiredExternalId(gutendexId);
+    final response = await _dio.get(
+      '/external-books/${Uri.encodeComponent(id)}/reviews',
+    );
+    return _readPayloadList(response.data)
+        .map(ReviewModel.fromJson)
+        .map((review) {
+          return review.bookId.isEmpty ? review.copyWith(bookId: id) : review;
+        })
+        .where((review) => review.id.isNotEmpty)
+        .toList();
+  }
+
   Future<List<ReviewModel>> myReviews() async {
     final response = await _dio.get('/reviews/my');
     return _readPayloadList(response.data)
@@ -74,7 +101,15 @@ class ReviewApiService {
     }
 
     if (payload is Map) {
-      for (final key in ['content', 'items', 'reviews', 'data']) {
+      for (final key in [
+        'content',
+        'items',
+        'reviews',
+        'bookReviews',
+        'comments',
+        'commentaires',
+        'data',
+      ]) {
         final nested = payload[key];
         if (nested is List) {
           return nested;
@@ -87,7 +122,14 @@ class ReviewApiService {
 
   Object? _unwrap(Object? data) {
     if (data is Map) {
-      for (final key in ['data', 'result', 'payload', 'review']) {
+      for (final key in [
+        'data',
+        'result',
+        'payload',
+        'review',
+        'bookReview',
+        'externalReview',
+      ]) {
         final value = data[key];
         if (value != null) {
           return _unwrap(value);
@@ -96,5 +138,13 @@ class ReviewApiService {
     }
 
     return data;
+  }
+
+  String _requiredExternalId(String gutendexId) {
+    final id = gutendexId.trim();
+    if (id.isEmpty) {
+      throw const AppException('Identifiant Gutendex manquant.');
+    }
+    return id;
   }
 }

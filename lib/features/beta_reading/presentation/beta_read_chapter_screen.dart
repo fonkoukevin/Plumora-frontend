@@ -5,408 +5,426 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
+import '../data/models/beta_comment_model.dart';
 import '../data/models/beta_shared_chapter_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
 import 'create_beta_comment_bottom_sheet.dart';
 
-class BetaReadChapterScreen extends ConsumerStatefulWidget {
+class BetaReadChapterScreen extends ConsumerWidget {
   const BetaReadChapterScreen({
     required this.campaignId,
     required this.chapterId,
-    this.bookId,
     this.invitationId,
+    this.bookId,
     super.key,
   });
 
   final String campaignId;
   final String chapterId;
-  final String? bookId;
   final String? invitationId;
+  final String? bookId;
 
   @override
-  ConsumerState<BetaReadChapterScreen> createState() =>
-      _BetaReadChapterScreenState();
-}
-
-class _BetaReadChapterScreenState extends ConsumerState<BetaReadChapterScreen> {
-  double _fontSize = 18;
-  bool _darkMode = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final chaptersAsync = ref.watch(
-      betaSharedChaptersProvider(widget.campaignId),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chaptersAsync = ref.watch(betaSharedChaptersProvider(campaignId));
+    final commentsAsync = ref.watch(
+      betaCommentsForCampaignProvider(campaignId),
     );
 
-    final background = _darkMode
-        ? const Color(0xFF1F1A15)
-        : PlumoraColors.background;
-    final cardColor = _darkMode ? const Color(0xFF2B241B) : PlumoraColors.cards;
-    final textColor = _darkMode
-        ? const Color(0xFFF8F4EE)
-        : PlumoraColors.textPrimary;
-    final mutedColor = _darkMode
-        ? const Color(0xFFCDBFA8)
-        : PlumoraColors.textSecondary;
-
-    return Scaffold(
-      backgroundColor: background,
-      body: SafeArea(
-        child: chaptersAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => _ReaderError(
-            message: AppError.messageFor(error),
+    return chaptersAsync.when(
+      loading: () => const Scaffold(
+        backgroundColor: PlumoraColors.background,
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => _ErrorScaffold(
+        title: 'Chapitre indisponible',
+        message: AppError.messageFor(error),
+        onRetry: () => ref.invalidate(betaSharedChaptersProvider(campaignId)),
+      ),
+      data: (chapters) {
+        final sorted = [...chapters]
+          ..sort((a, b) {
+            final orderCompare = a.order.compareTo(b.order);
+            return orderCompare == 0
+                ? a.title.compareTo(b.title)
+                : orderCompare;
+          });
+        final index = sorted.indexWhere((chapter) => chapter.id == chapterId);
+        if (index < 0) {
+          return _ErrorScaffold(
+            title: 'Chapitre introuvable',
+            message: "Ce chapitre n'est pas partage dans cette campagne.",
             onRetry: () =>
-                ref.invalidate(betaSharedChaptersProvider(widget.campaignId)),
-          ),
-          data: (chapters) {
-            final chapter = chapters.cast<BetaSharedChapterModel?>().firstWhere(
-              (item) => item?.id == widget.chapterId,
-              orElse: () => chapters.isEmpty ? null : chapters.first,
-            );
+                ref.invalidate(betaSharedChaptersProvider(campaignId)),
+          );
+        }
 
-            if (chapter == null) {
-              return _ReaderError(
-                message: 'Ce chapitre bêta est introuvable.',
-                onRetry: () => ref.invalidate(
-                  betaSharedChaptersProvider(widget.campaignId),
+        final chapter = sorted[index];
+        final effectiveBookId =
+            (chapter.bookId.isEmpty ? bookId : chapter.bookId) ?? '';
+
+        return Scaffold(
+          backgroundColor: PlumoraColors.background,
+          appBar: AppBar(
+            backgroundColor: PlumoraColors.cards,
+            leading: IconButton(
+              onPressed: () => context.go(
+                AppRoutes.betaChaptersPath(
+                  campaignId,
+                  invitationId: invitationId,
+                  bookId: effectiveBookId,
                 ),
-              );
-            }
-
-            final index = chapters.indexWhere((item) => item.id == chapter.id);
-            final previous = index > 0 ? chapters[index - 1] : null;
-            final next = index >= 0 && index < chapters.length - 1
-                ? chapters[index + 1]
-                : null;
-
-            return Column(
+              ),
+              icon: const Icon(Icons.arrow_back),
+            ),
+            title: Column(
               children: [
-                _ReaderHeader(
-                  chapter: chapter,
-                  index: index,
-                  count: chapters.length,
-                  textColor: textColor,
-                  mutedColor: mutedColor,
-                  cardColor: cardColor,
-                  darkMode: _darkMode,
-                  onBack: () => context.go(
-                    AppRoutes.betaChaptersPath(
-                      widget.campaignId,
-                      invitationId: widget.invitationId,
-                      bookId: widget.bookId,
-                    ),
-                  ),
-                  onComment: () => _openCommentSheet(chapter),
-                  onToggleDarkMode: () =>
-                      setState(() => _darkMode = !_darkMode),
+                const Text(
+                  'Beta-lecture',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
                 ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(22, 28, 22, 30),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 820),
-                        child: SelectableText(
-                          _chapterContent(chapter),
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: _fontSize,
-                            height: 1.75,
+                Text(
+                  chapter.title.isEmpty
+                      ? 'Chapitre ${index + 1}'
+                      : chapter.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            centerTitle: true,
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: FilledButton.icon(
+                  onPressed: () =>
+                      _openCommentSheet(context, ref, chapter, effectiveBookId),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                  label: const Text('Commenter'),
+                ),
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 28,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _ChapterText(chapter: chapter),
+                          const SizedBox(height: 26),
+                          _CommentsBlock(
+                            commentsAsync: commentsAsync,
+                            chapterId: chapter.id,
+                            onRetry: () => ref.invalidate(
+                              betaCommentsForCampaignProvider(campaignId),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                _ReaderFooter(
-                  previous: previous,
-                  next: next,
-                  fontSize: _fontSize,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  mutedColor: mutedColor,
-                  onFontChanged: (value) => setState(() => _fontSize = value),
-                  onPrevious: previous == null
-                      ? null
-                      : () => _goToChapter(previous),
-                  onNext: next == null ? null : () => _goToChapter(next),
-                  onComment: () => _openCommentSheet(chapter),
+              ),
+              Container(
+                color: PlumoraColors.cards,
+                padding: const EdgeInsets.all(16),
+                child: SafeArea(
+                  top: false,
+                  child: Row(
+                    children: [
+                      Text(
+                        'Chapitre ${index + 1} sur ${sorted.length}',
+                        style: const TextStyle(
+                          color: PlumoraColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      OutlinedButton(
+                        onPressed: index == 0
+                            ? null
+                            : () => context.go(
+                                AppRoutes.betaReadChapterPath(
+                                  campaignId,
+                                  sorted[index - 1].id,
+                                  invitationId: invitationId,
+                                  bookId: effectiveBookId,
+                                ),
+                              ),
+                        child: const Text('Precedent'),
+                      ),
+                      const SizedBox(width: 10),
+                      FilledButton(
+                        onPressed: index == sorted.length - 1
+                            ? null
+                            : () => context.go(
+                                AppRoutes.betaReadChapterPath(
+                                  campaignId,
+                                  sorted[index + 1].id,
+                                  invitationId: invitationId,
+                                  bookId: effectiveBookId,
+                                ),
+                              ),
+                        child: const Text('Suivant'),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  void _goToChapter(BetaSharedChapterModel chapter) {
-    context.go(
-      AppRoutes.betaReadChapterPath(
-        widget.campaignId,
-        chapter.id,
-        bookId: widget.bookId,
-        invitationId: widget.invitationId,
-      ),
-    );
-  }
-
-  Future<void> _openCommentSheet(BetaSharedChapterModel chapter) async {
-    final result = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: PlumoraColors.cards,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (context) {
-        return CreateBetaCommentBottomSheet(
-          bookId: widget.bookId ?? chapter.bookId,
-          campaignId: widget.campaignId,
-          chapterId: chapter.id,
-          defaultSelectedText: _defaultSelectedText(chapter.content),
+              ),
+            ],
+          ),
         );
       },
     );
+  }
 
-    if (result == true && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Retour bêta envoyé.')));
+  Future<void> _openCommentSheet(
+    BuildContext context,
+    WidgetRef ref,
+    BetaSharedChapterModel chapter,
+    String effectiveBookId,
+  ) async {
+    final text = chapter.content.trim();
+    final selectedText = text.length <= 180
+        ? text
+        : '${text.substring(0, 180)}...';
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => CreateBetaCommentBottomSheet(
+        bookId: effectiveBookId,
+        campaignId: campaignId,
+        chapterId: chapter.id,
+        defaultSelectedText: selectedText,
+      ),
+    );
+    if (created == true) {
+      ref.invalidate(betaCommentsForCampaignProvider(campaignId));
+      ref.invalidate(betaSharedChaptersProvider(campaignId));
     }
   }
 }
 
-class _ReaderHeader extends StatelessWidget {
-  const _ReaderHeader({
-    required this.chapter,
-    required this.index,
-    required this.count,
-    required this.textColor,
-    required this.mutedColor,
-    required this.cardColor,
-    required this.darkMode,
-    required this.onBack,
-    required this.onComment,
-    required this.onToggleDarkMode,
-  });
+class _ChapterText extends StatelessWidget {
+  const _ChapterText({required this.chapter});
 
   final BetaSharedChapterModel chapter;
-  final int index;
-  final int count;
-  final Color textColor;
-  final Color mutedColor;
-  final Color cardColor;
-  final bool darkMode;
-  final VoidCallback onBack;
-  final VoidCallback onComment;
-  final VoidCallback onToggleDarkMode;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: cardColor,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 980),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: onBack,
-                icon: Icon(Icons.arrow_back, color: mutedColor),
-                tooltip: 'Retour',
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      chapter.title.isEmpty ? 'Chapitre bêta' : chapter.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: textColor,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Chapitre ${index + 1} sur $count',
-                      style: TextStyle(color: mutedColor, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: onToggleDarkMode,
-                icon: Icon(
-                  darkMode
-                      ? Icons.light_mode_outlined
-                      : Icons.dark_mode_outlined,
-                  color: mutedColor,
-                ),
-                tooltip: 'Mode sombre',
-              ),
-              FilledButton.icon(
-                onPressed: onComment,
-                icon: const Icon(Icons.chat_bubble_outline, size: 17),
-                label: const Text('Commenter'),
-              ),
-            ],
+    final paragraphs = chapter.content
+        .split(RegExp(r'\n\s*\n'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          chapter.title.isEmpty ? 'Chapitre' : chapter.title,
+          style: const TextStyle(
+            color: PlumoraColors.textPrimary,
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
           ),
         ),
-      ),
+        const SizedBox(height: 24),
+        if (paragraphs.isEmpty)
+          const Text(
+            'Ce chapitre ne contient pas encore de texte.',
+            style: TextStyle(
+              color: PlumoraColors.textSecondary,
+              fontSize: 18,
+              height: 1.7,
+            ),
+          )
+        else
+          for (final paragraph in paragraphs)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 22),
+              child: Text(
+                paragraph,
+                style: const TextStyle(
+                  color: PlumoraColors.textPrimary,
+                  fontSize: 18,
+                  height: 1.7,
+                ),
+              ),
+            ),
+      ],
     );
   }
 }
 
-class _ReaderFooter extends StatelessWidget {
-  const _ReaderFooter({
-    required this.previous,
-    required this.next,
-    required this.fontSize,
-    required this.cardColor,
-    required this.textColor,
-    required this.mutedColor,
-    required this.onFontChanged,
-    required this.onPrevious,
-    required this.onNext,
-    required this.onComment,
+class _CommentsBlock extends StatelessWidget {
+  const _CommentsBlock({
+    required this.commentsAsync,
+    required this.chapterId,
+    required this.onRetry,
   });
 
-  final BetaSharedChapterModel? previous;
-  final BetaSharedChapterModel? next;
-  final double fontSize;
-  final Color cardColor;
-  final Color textColor;
-  final Color mutedColor;
-  final ValueChanged<double> onFontChanged;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
-  final VoidCallback onComment;
+  final AsyncValue<List<BetaCommentModel>> commentsAsync;
+  final String chapterId;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: cardColor,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 980),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            alignment: WrapAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.format_size, color: mutedColor, size: 18),
-                  SizedBox(
-                    width: 150,
-                    child: Slider(
-                      value: fontSize,
-                      min: 15,
-                      max: 24,
-                      divisions: 9,
-                      label: fontSize.round().toString(),
-                      onChanged: onFontChanged,
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  OutlinedButton(
-                    onPressed: onPrevious,
-                    child: const Text('Chapitre précédent'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: onNext,
-                    child: const Text('Chapitre suivant'),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    onPressed: onComment,
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    tooltip: 'Commenter',
-                  ),
-                ],
-              ),
-            ],
+    return FigmaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Mes retours sur ce chapitre',
+            style: TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+          commentsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppError.messageFor(error),
+                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                ),
+                const SizedBox(height: 10),
+                TextButton(onPressed: onRetry, child: const Text('Reessayer')),
+              ],
+            ),
+            data: (comments) {
+              final chapterComments = comments
+                  .where((comment) => comment.chapterId == chapterId)
+                  .toList();
+              if (chapterComments.isEmpty) {
+                return const Text(
+                  'Aucun retour ajoute pour ce chapitre.',
+                  style: TextStyle(color: PlumoraColors.textSecondary),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final comment in chapterComments) ...[
+                    _CommentTile(comment: comment),
+                    const Divider(color: PlumoraColors.border),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ReaderError extends StatelessWidget {
-  const _ReaderError({required this.message, required this.onRetry});
+class _CommentTile extends StatelessWidget {
+  const _CommentTile({required this.comment});
 
+  final BetaCommentModel comment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FigmaBadge(label: comment.type.label),
+              FigmaBadge(label: comment.status.apiValue),
+            ],
+          ),
+          if ((comment.selectedText ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              comment.selectedText!,
+              style: const TextStyle(
+                color: PlumoraColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(comment.content),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorScaffold extends StatelessWidget {
+  const _ErrorScaffold({
+    required this.title,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String title;
   final String message;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 460),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: PlumoraColors.cards,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: PlumoraColors.border),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Lecture indisponible',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                style: const TextStyle(color: PlumoraColors.textSecondary),
-              ),
-              const SizedBox(height: 18),
-              FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
-            ],
+    return Scaffold(
+      backgroundColor: PlumoraColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: FigmaCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: onRetry,
+                  child: const Text('Reessayer'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-}
-
-String _chapterContent(BetaSharedChapterModel chapter) {
-  final content = chapter.content.trim();
-  if (content.isEmpty) {
-    return 'Le contenu de ce chapitre n’est pas encore disponible.';
-  }
-
-  return content;
-}
-
-String _defaultSelectedText(String content) {
-  final normalized = content.trim().replaceAll(RegExp(r'\s+'), ' ');
-  if (normalized.isEmpty) {
-    return '';
-  }
-  if (normalized.length <= 140) {
-    return normalized;
-  }
-
-  return '${normalized.substring(0, 140)}...';
 }

@@ -2,61 +2,64 @@
 
 :root {
   --font-size: 16px;
-  /* Fond principal - Ivoire / papier clair */
-  --background: #F8F4EE;
-  /* Texte principal - brun foncé */
-  --foreground: #2B241B;
-  /* Cartes et surfaces - Blanc doux */
+  --font-family: 'Nunito', system-ui, sans-serif;
+  --font-family-display: 'Playfair Display', Georgia, serif;
+
+  /* Fond principal — blanc cassé */
+  --background: #F8F7F3;
+  /* Texte principal — noir doux */
+  --foreground: #1F1F1F;
+  /* Cartes — blanc pur */
   --card: #FFFFFF;
-  --card-foreground: #2B241B;
+  --card-foreground: #1F1F1F;
   --popover: #FFFFFF;
-  --popover-foreground: #2B241B;
-  /* Couleur principale - Brun doré / camel */
-  --primary: #A88A54;
-  --primary-foreground: #ffffff;
-  /* Couleur secondaire - Crème */
-  --secondary: #EADFCF;
-  --secondary-foreground: #2B241B;
-  /* Muted - fond neutre */
-  --muted: #F3EBDD;
-  /* Texte secondaire - brun moyen */
-  --muted-foreground: #7A6D5A;
-  /* Accent - Vert sauge Mukeme */
-  --accent: #8FA889;
-  --accent-foreground: #ffffff;
-  /* Destructive - Rouge terre */
-  --destructive: #C96B5D;
-  --destructive-foreground: #ffffff;
-  /* Bordures - Bordure douce */
-  --border: #E8DFD1;
+  --popover-foreground: #1F1F1F;
+  /* Couleur de marque — violet encre */
+  --primary: #4B2E83;
+  --primary-foreground: #FFFFFF;
+  /* Couleur secondaire — bleu nuit */
+  --secondary: #16213E;
+  --secondary-foreground: #FFFFFF;
+  /* Muted */
+  --muted: #F0EDE6;
+  /* Textes secondaires — gris foncé */
+  --muted-foreground: #6B6B6B;
+  /* Accent — doré doux */
+  --accent: #C9A227;
+  --accent-foreground: #FFFFFF;
+  /* Destructive */
+  --destructive: #D94F4F;
+  --destructive-foreground: #FFFFFF;
+  /* Bordures — gris clair */
+  --border: #E5E2DA;
   --input: transparent;
   --input-background: #FFFFFF;
-  --switch-background: #D6C3A0;
-  --font-weight-medium: 500;
+  --switch-background: #E5E2DA;
+  --font-weight-medium: 600;
   --font-weight-normal: 400;
-  /* Ring - Brun doré */
-  --ring: #A88A54;
+  /* Ring */
+  --ring: #4B2E83;
   /* Couleurs supplémentaires */
-  --primary-dark: #8E7345;
-  --primary-light: #D6C3A0;
-  --success: #6E9B74;
-  --warning: #D9A441;
-  --info: #7E93A8;
-  --mukeme: #8FA889;
-  --chart-1: #A88A54;
-  --chart-2: #8FA889;
-  --chart-3: #7E93A8;
-  --chart-4: #6E9B74;
-  --chart-5: #D9A441;
-  --radius: 0.75rem;
-  --sidebar: #F8F4EE;
-  --sidebar-foreground: #2B241B;
-  --sidebar-primary: #A88A54;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #EADFCF;
-  --sidebar-accent-foreground: #2B241B;
-  --sidebar-border: #E8DFD1;
-  --sidebar-ring: #A88A54;
+  --primary-dark: #3A2268;
+  --primary-light: #6B44B8;
+  --success: #2E8B57;
+  --warning: #C9A227;
+  --info: #16213E;
+  --mukeme: #6B44B8;
+  --chart-1: #4B2E83;
+  --chart-2: #C9A227;
+  --chart-3: #16213E;
+  --chart-4: #2E8B57;
+  --chart-5: #D94F4F;
+  --radius: 0.875rem;
+  --sidebar: #F8F7F3;
+  --sidebar-foreground: #1F1F1F;
+  --sidebar-primary: #4B2E83;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F0EDE6;
+  --sidebar-accent-foreground: #1F1F1F;
+  --sidebar-border: #E5E2DA;
+  --sidebar-ring: #4B2E83;
 }
 
 .dark {
@@ -144,6 +147,7 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-family);
   }
 
   /**

@@ -9,11 +9,14 @@ class FavoriteModel {
 
   factory FavoriteModel.fromJson(Object? value) {
     final json = _readMap(value);
-    final bookJson =
+    final nestedBookJson =
         _readMapOrNull(json['book']) ??
         _readMapOrNull(json['catalogBook']) ??
-        _readMapOrNull(json['favoriteBook']) ??
-        json;
+        _readMapOrNull(json['favoriteBook']);
+    final flatBookId = _readString(json, ['bookId', 'book_id']);
+    final bookJson =
+        nestedBookJson ??
+        {...json, if (flatBookId.isNotEmpty) 'id': flatBookId};
 
     return FavoriteModel(
       id: _readString(json, ['id', 'favoriteId', 'favorite_id', 'uuid']),

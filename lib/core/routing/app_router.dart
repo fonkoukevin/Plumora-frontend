@@ -5,15 +5,17 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/role_selection_screen.dart';
 import '../../features/ai/presentation/mukeme_recommendation_screen.dart';
 import '../../features/ai/presentation/mukeme_writing_screen.dart';
+import '../../features/beta_reading/presentation/author_beta_comments_screen.dart';
 import '../../features/beta_reading/presentation/beta_campaign_detail_author_screen.dart';
 import '../../features/beta_reading/presentation/beta_campaigns_author_screen.dart';
-import '../../features/beta_reading/presentation/beta_feedback_screen.dart';
 import '../../features/beta_reading/presentation/beta_invitations_screen.dart';
 import '../../features/beta_reading/presentation/beta_read_chapter_screen.dart';
 import '../../features/beta_reading/presentation/beta_reading_chapters_screen.dart';
 import '../../features/catalog/presentation/book_detail_screen.dart';
 import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/discover_screen.dart';
+import '../../features/catalog/presentation/external_book_detail_screen.dart';
+import '../../features/catalog/presentation/public_domain_catalog_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/presentation/landing_screen.dart';
 import '../../features/notification/presentation/notifications_screen.dart';
@@ -68,6 +70,25 @@ final GoRouter appRouter = GoRouter(
           path: AppRoutes.discover,
           name: 'discover',
           builder: (context, state) => const DiscoverScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.publicDomainCatalog,
+          name: 'public-domain-catalog',
+          builder: (context, state) => PublicDomainCatalogScreen(
+            initialSearch: state.uri.queryParameters['search'] ?? '',
+            initialLanguage: state.uri.queryParameters['language'],
+            initialTopic: state.uri.queryParameters['topic'] ?? '',
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.publicDomainBookDetail,
+          name: 'public-domain-book-detail',
+          builder: (context, state) {
+            final gutendexId = Uri.decodeComponent(
+              state.pathParameters['gutendexId'] ?? '',
+            );
+            return ExternalBookDetailScreen(gutendexId: gutendexId);
+          },
         ),
         GoRoute(
           path: AppRoutes.catalogSearch,
@@ -176,7 +197,7 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppRoutes.betaFeedback,
           name: 'beta-feedback',
-          builder: (context, state) => const BetaFeedbackScreen(),
+          builder: (context, state) => const AuthorBetaCommentsScreen(),
         ),
         GoRoute(
           path: AppRoutes.authorBetaComments,
@@ -185,7 +206,7 @@ final GoRouter appRouter = GoRouter(
             final bookId = Uri.decodeComponent(
               state.pathParameters['bookId'] ?? '',
             );
-            return BetaFeedbackScreen(bookId: bookId);
+            return AuthorBetaCommentsScreen(bookId: bookId);
           },
         ),
         GoRoute(
@@ -264,7 +285,10 @@ final GoRouter appRouter = GoRouter(
         final bookId = Uri.decodeComponent(
           state.pathParameters['bookId'] ?? '',
         );
-        return ReadingScreen(bookId: bookId);
+        return ReadingScreen(
+          bookId: bookId,
+          initialChapterId: state.uri.queryParameters['chapterId'],
+        );
       },
     ),
     GoRoute(
@@ -295,6 +319,9 @@ abstract final class AppRoutes {
   static const String roleSelection = '/roles';
   static const String home = '/home';
   static const String discover = '/discover';
+  static const String publicDomainCatalog = '/discover/public-domain';
+  static const String publicDomainBookDetail =
+      '/discover/public-domain/:gutendexId';
   static const String catalogSearch = '/discover/search';
   static const String catalogBookDetail = '/catalog/books/:bookId';
   static const String reading = '/books/:bookId/read';
@@ -341,6 +368,49 @@ abstract final class AppRoutes {
     return '$catalogSearch?q=${Uri.encodeQueryComponent(normalized)}';
   }
 
+  static String publicDomainCatalogPath({
+    String? search,
+    String? language,
+    String? topic,
+  }) {
+    final query = <String, String>{};
+    final normalizedSearch = search?.trim();
+    final normalizedLanguage = language?.trim().toLowerCase();
+    final normalizedTopic = topic?.trim();
+
+    if (normalizedSearch != null && normalizedSearch.isNotEmpty) {
+      query['search'] = normalizedSearch;
+    }
+    if (normalizedLanguage == 'fr' || normalizedLanguage == 'en') {
+      query['language'] = normalizedLanguage!;
+    }
+    if (normalizedTopic != null && normalizedTopic.isNotEmpty) {
+      query['topic'] = normalizedTopic;
+    }
+
+    if (query.isEmpty) {
+      return publicDomainCatalog;
+    }
+
+    final params = query.entries
+        .map(
+          (entry) =>
+              '${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(entry.value)}',
+        )
+        .join('&');
+
+    return '$publicDomainCatalog?$params';
+  }
+
+  static String publicDomainBookDetailPath(String gutendexId) {
+    final encoded = Uri.encodeComponent(gutendexId.trim());
+    if (encoded.isEmpty) {
+      return publicDomainCatalog;
+    }
+
+    return '$publicDomainCatalog/$encoded';
+  }
+
   static String catalogBookDetailPath(String bookId) {
     final encoded = Uri.encodeComponent(bookId.trim());
     if (encoded.isEmpty) {
@@ -350,13 +420,18 @@ abstract final class AppRoutes {
     return '/catalog/books/$encoded';
   }
 
-  static String readingPath(String bookId) {
+  static String readingPath(String bookId, {String? chapterId}) {
     final encoded = Uri.encodeComponent(bookId.trim());
     if (encoded.isEmpty) {
       return library;
     }
 
-    return '/books/$encoded/read';
+    final normalizedChapterId = chapterId?.trim();
+    if (normalizedChapterId == null || normalizedChapterId.isEmpty) {
+      return '/books/$encoded/read';
+    }
+
+    return '/books/$encoded/read?chapterId=${Uri.encodeQueryComponent(normalizedChapterId)}';
   }
 
   static String editBookPath(String bookId) {

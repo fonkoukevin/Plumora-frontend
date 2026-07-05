@@ -113,41 +113,20 @@ class _MobileShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.appOutside,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < 520;
-            final panelWidth = isCompact ? constraints.maxWidth : 430.0;
-            final panelRadius = isCompact ? 0.0 : 28.0;
-
-            return Center(
-              child: SizedBox(
-                width: panelWidth,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(panelRadius),
-                    child: Material(
-                      color: PlumoraColors.background,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(child: child),
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: _MobileBottomBar(location: location),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+      backgroundColor: PlumoraColors.background,
+      body: Stack(
+        children: [
+          Positioned.fill(child: child),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: _MobileBottomBar(location: location),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -161,10 +140,10 @@ class _MobileBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 70,
-      decoration: const BoxDecoration(
-        color: PlumoraColors.cards,
-        border: Border(top: BorderSide(color: PlumoraColors.border)),
+      height: 66,
+      decoration: BoxDecoration(
+        color: PlumoraColors.background.withValues(alpha: 0.96),
+        border: const Border(top: BorderSide(color: PlumoraColors.border)),
       ),
       child: Row(
         children: [
@@ -196,7 +175,7 @@ class _BottomNavItem extends StatelessWidget {
     return InkWell(
       onTap: () => context.go(destination.path),
       child: Padding(
-        padding: const EdgeInsets.only(top: 9, bottom: 7),
+        padding: const EdgeInsets.only(top: 8, bottom: 6),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -216,7 +195,7 @@ class _BottomNavItem extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontSize: 12,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                 ),
               ),
             ),
@@ -242,7 +221,7 @@ class _DesktopShell extends StatelessWidget {
           Container(
             width: 264,
             decoration: const BoxDecoration(
-              color: PlumoraColors.cards,
+              color: PlumoraColors.background,
               border: Border(right: BorderSide(color: PlumoraColors.border)),
             ),
             child: SafeArea(
@@ -282,9 +261,10 @@ class _SidebarLogo extends StatelessWidget {
         Text(
           'Plumora',
           style: TextStyle(
-            color: Colors.black,
+            color: PlumoraColors.textPrimary,
+            fontFamily: 'Playfair Display',
             fontSize: 24,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ],
@@ -311,7 +291,9 @@ class _SidebarItem extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF1E7D7) : Colors.transparent,
+            color: selected
+                ? PlumoraColors.primary.withValues(alpha: 0.10)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(

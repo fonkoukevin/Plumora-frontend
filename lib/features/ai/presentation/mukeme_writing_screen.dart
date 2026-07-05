@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
-import '../../../core/widgets/plumora_ui.dart';
+import '../../../core/widgets/figma_plumora.dart';
+import '../../book/data/models/chapter_model.dart';
+import '../../book/data/repositories/chapter_repository.dart';
 import '../data/models/ai_models.dart';
 import '../data/repositories/ai_repository.dart';
 
@@ -22,10 +24,10 @@ class MukemeWritingScreen extends ConsumerStatefulWidget {
 class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
   final _selectedTextController = TextEditingController();
   final _contextController = TextEditingController();
-  AiWritingActionType _selectedAction = AiWritingActionType.improveStyle;
+  AiWritingActionType? _selectedAction;
   AiWritingSuggestionModel? _suggestion;
-  bool _isLoading = false;
-  bool _isMutatingSuggestion = false;
+  String? _hydratedChapterId;
+  bool _loading = false;
   String? _error;
 
   @override
@@ -37,80 +39,130 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontal = constraints.maxWidth >= 760 ? 32.0 : 16.0;
-        final bottomPadding = constraints.maxWidth >= 900 ? 32.0 : 92.0;
+    final AsyncValue<ChapterModel?> chapterAsync = widget.chapterId == null
+        ? const AsyncValue<ChapterModel?>.data(null)
+        : ref
+              .watch(chapterProvider(widget.chapterId!))
+              .whenData((chapter) => chapter);
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            28,
-            horizontal,
-            bottomPadding,
+    return chapterAsync.when(
+      loading: () => const Scaffold(
+        backgroundColor: PlumoraColors.background,
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => _ScaffoldError(
+        message: AppError.messageFor(error),
+        onRetry: () => ref.invalidate(chapterProvider(widget.chapterId!)),
+      ),
+      data: (chapter) {
+        if (chapter != null) {
+          _hydrateChapter(chapter);
+        }
+
+        return Scaffold(
+          backgroundColor: PlumoraColors.background,
+          appBar: AppBar(
+            backgroundColor: PlumoraColors.cards,
+            leading: IconButton(
+              onPressed: () {
+                if (chapter?.bookId.trim().isNotEmpty == true) {
+                  context.go(AppRoutes.chapterEditorPath(chapter!.bookId));
+                } else {
+                  context.go(AppRoutes.editor);
+                }
+              },
+              icon: const Icon(Icons.arrow_back),
+            ),
+            title: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FigmaGradientIcon(
+                  icon: Icons.auto_awesome,
+                  size: 40,
+                  iconSize: 21,
+                ),
+                SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mukeme',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      "Assistant d'ecriture",
+                      style: TextStyle(
+                        color: PlumoraColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            centerTitle: true,
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1120),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextButton.icon(
-                    onPressed: _isLoading
-                        ? null
-                        : () {
-                            if (context.canPop()) {
-                              context.pop();
-                            } else {
-                              context.go(AppRoutes.editor);
-                            }
-                          },
-                    icon: const Icon(Icons.arrow_back, size: 16),
-                    label: const Text("Retour à l'éditeur"),
+          body: FigmaScreen(
+            maxWidth: 1120,
+            padding: const EdgeInsets.fromLTRB(16, 28, 16, 40),
+            child: Column(
+              children: [
+                const Text(
+                  'Ameliore ton texte avec Mukeme',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
                   ),
-                  const SizedBox(height: 18),
-                  _Header(chapterId: widget.chapterId),
-                  const SizedBox(height: 26),
-                  LayoutBuilder(
-                    builder: (context, innerConstraints) {
-                      final isWide = innerConstraints.maxWidth >= 820;
-                      final left = _RequestPanel(
-                        selectedTextController: _selectedTextController,
-                        contextController: _contextController,
-                        selectedAction: _selectedAction,
-                        isLoading: _isLoading,
-                        error: _error,
-                        onActionChanged: (action) {
-                          setState(() => _selectedAction = action);
-                        },
-                        onSubmit: _requestSuggestion,
-                      );
-                      final right = _SuggestionPanel(
-                        suggestion: _suggestion,
-                        isBusy: _isMutatingSuggestion,
-                        onAccept: _acceptSuggestion,
-                        onModify: _modifySuggestion,
-                        onIgnore: _ignoreSuggestion,
-                      );
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  chapter == null
+                      ? 'Colle un passage, choisis une action et envoie la demande au backend IA.'
+                      : 'Chapitre charge : ${chapter.title.isEmpty ? "sans titre" : chapter.title}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                ),
+                const SizedBox(height: 28),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 860;
+                    final left = _ActionColumn(
+                      selectedTextController: _selectedTextController,
+                      contextController: _contextController,
+                      selectedAction: _selectedAction,
+                      loading: _loading,
+                      onAction: _requestSuggestion,
+                    );
+                    final right = _SuggestionColumn(
+                      suggestion: _suggestion,
+                      loading: _loading,
+                      error: _error,
+                      onAccept: _suggestion == null ? null : _acceptSuggestion,
+                      onModify: _suggestion == null ? null : _modifySuggestion,
+                      onIgnore: _suggestion == null ? null : _ignoreSuggestion,
+                    );
 
-                      if (isWide) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: left),
-                            const SizedBox(width: 20),
-                            Expanded(child: right),
-                          ],
-                        );
-                      }
-
+                    if (!wide) {
                       return Column(
                         children: [left, const SizedBox(height: 18), right],
                       );
-                    },
-                  ),
-                ],
-              ),
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: left),
+                        const SizedBox(width: 24),
+                        Expanded(child: right),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         );
@@ -118,15 +170,28 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
     );
   }
 
-  Future<void> _requestSuggestion() async {
+  void _hydrateChapter(ChapterModel chapter) {
+    if (_hydratedChapterId == chapter.id) {
+      return;
+    }
+    _hydratedChapterId = chapter.id;
+    final content = chapter.content.trim();
+    _selectedTextController.text = content.length <= 260
+        ? content
+        : '${content.substring(0, 260)}...';
+    _contextController.text = chapter.content;
+  }
+
+  Future<void> _requestSuggestion(AiWritingActionType action) async {
     final selectedText = _selectedTextController.text.trim();
     if (selectedText.isEmpty) {
-      setState(() => _error = 'Ajoute un extrait à améliorer.');
+      setState(() => _error = 'Ajoute un passage a ameliorer.');
       return;
     }
 
     setState(() {
-      _isLoading = true;
+      _selectedAction = action;
+      _loading = true;
       _error = null;
     });
 
@@ -136,7 +201,7 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
           .requestWritingSuggestion(
             AiWritingSuggestionRequest(
               selectedText: selectedText,
-              actionType: _selectedAction,
+              actionType: action,
               chapterId: widget.chapterId,
               contextText: _contextController.text,
             ),
@@ -146,31 +211,15 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
       setState(() => _error = AppError.messageFor(error));
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _loading = false);
       }
     }
   }
 
-  Future<void> _acceptSuggestion() {
-    return _mutateSuggestion((suggestion) {
-      if (suggestion.id.isEmpty) {
-        return Future.value(
-          suggestion.copyWith(status: AiSuggestionStatus.accepted),
-        );
-      }
-      return ref.read(aiRepositoryProvider).acceptSuggestion(suggestion.id);
-    });
-  }
-
-  Future<void> _ignoreSuggestion() {
-    return _mutateSuggestion((suggestion) {
-      if (suggestion.id.isEmpty) {
-        return Future.value(
-          suggestion.copyWith(status: AiSuggestionStatus.ignored),
-        );
-      }
-      return ref.read(aiRepositoryProvider).ignoreSuggestion(suggestion.id);
-    });
+  Future<void> _acceptSuggestion() async {
+    await _mutateSuggestion(
+      (id) => ref.read(aiRepositoryProvider).acceptSuggestion(id),
+    );
   }
 
   Future<void> _modifySuggestion() async {
@@ -178,9 +227,8 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
     if (suggestion == null) {
       return;
     }
-
     final controller = TextEditingController(text: suggestion.suggestionText);
-    final modifiedText = await showDialog<String>(
+    final modified = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Modifier la suggestion'),
@@ -188,9 +236,7 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
           controller: controller,
           minLines: 4,
           maxLines: 8,
-          decoration: const InputDecoration(
-            hintText: 'Ajuste la proposition de Mukeme...',
-          ),
+          decoration: const InputDecoration(labelText: 'Texte modifie'),
         ),
         actions: [
           TextButton(
@@ -205,336 +251,388 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
       ),
     );
     controller.dispose();
-
-    if (modifiedText == null || modifiedText.trim().isEmpty) {
+    if (modified == null || modified.trim().isEmpty) {
       return;
     }
 
-    await _mutateSuggestion((suggestion) {
-      if (suggestion.id.isEmpty) {
-        return Future.value(
-          suggestion.copyWith(
-            suggestionText: modifiedText,
-            status: AiSuggestionStatus.modified,
-          ),
-        );
-      }
-      return ref
-          .read(aiRepositoryProvider)
-          .modifySuggestion(suggestion.id, modifiedText);
-    });
+    await _mutateSuggestion(
+      (id) => ref.read(aiRepositoryProvider).modifySuggestion(id, modified),
+    );
+  }
+
+  Future<void> _ignoreSuggestion() async {
+    await _mutateSuggestion(
+      (id) => ref.read(aiRepositoryProvider).ignoreSuggestion(id),
+      clearAfter: true,
+    );
   }
 
   Future<void> _mutateSuggestion(
-    Future<AiWritingSuggestionModel> Function(AiWritingSuggestionModel)
-    mutation,
-  ) async {
-    final current = _suggestion;
-    if (current == null) {
+    Future<AiWritingSuggestionModel> Function(String suggestionId) action, {
+    bool clearAfter = false,
+  }) async {
+    final suggestion = _suggestion;
+    if (suggestion == null) {
       return;
     }
 
     setState(() {
-      _isMutatingSuggestion = true;
+      _loading = true;
       _error = null;
     });
 
     try {
-      final updated = await mutation(current);
-      setState(() => _suggestion = updated);
+      final updated = await action(suggestion.id);
+      setState(() => _suggestion = clearAfter ? null : updated);
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
     } finally {
       if (mounted) {
-        setState(() => _isMutatingSuggestion = false);
+        setState(() => _loading = false);
       }
     }
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.chapterId});
-
-  final String? chapterId;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      borderColor: const Color(0xFFDCCDEC),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const PlumoraIconTile(
-            backgroundColor: Color(0xFFEADCF7),
-            child: Icon(Icons.auto_awesome, color: PlumoraColors.primary),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Améliore ton texte avec Mukeme',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: PlumoraColors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  chapterId == null || chapterId!.trim().isEmpty
-                      ? 'Sélectionne une action et laisse Mukeme proposer une amélioration.'
-                      : 'Suggestion liée au chapitre en cours.',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RequestPanel extends StatelessWidget {
-  const _RequestPanel({
+class _ActionColumn extends StatelessWidget {
+  const _ActionColumn({
     required this.selectedTextController,
     required this.contextController,
     required this.selectedAction,
-    required this.isLoading,
-    required this.onActionChanged,
-    required this.onSubmit,
-    this.error,
+    required this.loading,
+    required this.onAction,
   });
 
   final TextEditingController selectedTextController;
   final TextEditingController contextController;
-  final AiWritingActionType selectedAction;
-  final bool isLoading;
-  final ValueChanged<AiWritingActionType> onActionChanged;
-  final VoidCallback onSubmit;
-  final String? error;
+  final AiWritingActionType? selectedAction;
+  final bool loading;
+  final ValueChanged<AiWritingActionType> onAction;
 
   @override
   Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Texte sélectionné',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: selectedTextController,
-            minLines: 5,
-            maxLines: 8,
-            textAlignVertical: TextAlignVertical.top,
-            decoration: const InputDecoration(
-              hintText:
-                  'Colle ici la phrase ou le paragraphe que Mukeme doit retravailler.',
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Contexte optionnel',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: contextController,
-            minLines: 3,
-            maxLines: 5,
-            decoration: const InputDecoration(
-              hintText: 'Ex: ambiance, personnage, intention de la scène...',
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Text('Action', style: TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+    return Column(
+      children: [
+        FigmaCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final action in AiWritingActionType.values)
-                ChoiceChip(
-                  avatar: Icon(_actionIcon(action), size: 17),
-                  label: Text(action.label),
-                  selected: selectedAction == action,
-                  onSelected: isLoading ? null : (_) => onActionChanged(action),
+              const FigmaBadge(label: 'Texte selectionne'),
+              const SizedBox(height: 14),
+              TextField(
+                controller: selectedTextController,
+                minLines: 5,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  hintText: 'Colle ici le passage a ameliorer.',
                 ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: contextController,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Contexte optionnel',
+                  hintText: 'Ajoute le contexte du chapitre si besoin.',
+                ),
+              ),
             ],
           ),
-          if (error != null) ...[
-            const SizedBox(height: 16),
-            _InlineError(message: error!),
-          ],
-          const SizedBox(height: 22),
-          FilledButton.icon(
-            onPressed: isLoading ? null : onSubmit,
-            icon: isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.auto_awesome, size: 18),
-            label: Text(
-              isLoading ? 'Mukeme réfléchit...' : 'Demander à Mukeme',
-            ),
+        ),
+        const SizedBox(height: 18),
+        FigmaCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Actions disponibles',
+                style: TextStyle(
+                  color: PlumoraColors.textPrimary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final action in AiWritingActionType.values)
+                    _ActionButton(
+                      label: action.label,
+                      icon: _actionIcon(action),
+                      selected: selectedAction == action,
+                      loading: loading && selectedAction == action,
+                      onTap: () => onAction(action),
+                    ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 18),
+        FigmaCard(
+          color: const Color(0xFFEFF6FF),
+          borderColor: const Color(0xFFBFDBFE),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Icon(Icons.auto_awesome, color: PlumoraColors.primary),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Mukeme est une aide a l'ecriture : chaque suggestion peut etre acceptee, modifiee ou ignoree.",
+                  style: TextStyle(
+                    color: PlumoraColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _SuggestionPanel extends StatelessWidget {
-  const _SuggestionPanel({
+class _SuggestionColumn extends StatelessWidget {
+  const _SuggestionColumn({
     required this.suggestion,
-    required this.isBusy,
+    required this.loading,
     required this.onAccept,
     required this.onModify,
     required this.onIgnore,
+    this.error,
   });
 
   final AiWritingSuggestionModel? suggestion;
-  final bool isBusy;
-  final VoidCallback onAccept;
-  final VoidCallback onModify;
-  final VoidCallback onIgnore;
+  final bool loading;
+  final String? error;
+  final VoidCallback? onAccept;
+  final VoidCallback? onModify;
+  final VoidCallback? onIgnore;
 
   @override
   Widget build(BuildContext context) {
-    final currentSuggestion = suggestion;
-    if (currentSuggestion == null) {
-      return const PlumoraCard(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 54),
-          child: Column(
-            children: [
-              PlumoraIconTile(
-                backgroundColor: PlumoraColors.muted,
-                size: 72,
-                child: Icon(
-                  Icons.auto_awesome,
-                  color: PlumoraColors.textSecondary,
-                  size: 34,
+    if (suggestion == null && !loading && error == null) {
+      return const FigmaCard(
+        child: SizedBox(
+          height: 360,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FigmaGradientIcon(
+                  icon: Icons.auto_awesome,
+                  size: 78,
+                  iconSize: 38,
+                  colors: [PlumoraColors.muted, PlumoraColors.border],
                 ),
-              ),
-              SizedBox(height: 18),
-              Text(
-                'Choisis une action',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'La suggestion de Mukeme apparaîtra ici.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: PlumoraColors.textSecondary),
-              ),
-            ],
+                SizedBox(height: 16),
+                Text(
+                  'Choisis une action',
+                  style: TextStyle(
+                    color: PlumoraColors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'La suggestion du backend IA apparaitra ici.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: PlumoraColors.textSecondary),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
-    return PlumoraCard(
+    return FigmaCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.auto_awesome, color: PlumoraColors.primary),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Suggestion de Mukeme',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              Icon(Icons.auto_awesome, color: PlumoraColors.primary),
+              SizedBox(width: 8),
+              Text(
+                'Suggestion de Mukeme',
+                style: TextStyle(
+                  color: PlumoraColors.textPrimary,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              PlumoraBadge(label: _statusLabel(currentSuggestion.status)),
             ],
           ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4E8FF),
-              borderRadius: BorderRadius.circular(14),
-              border: const Border(
-                left: BorderSide(color: PlumoraColors.primary, width: 4),
+          const SizedBox(height: 14),
+          if (loading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(42),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (error != null)
+            Text(
+              error!,
+              style: const TextStyle(
+                color: PlumoraColors.destructive,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else if (suggestion != null) ...[
+            FigmaCard(
+              color: PlumoraColors.primary.withValues(alpha: 0.06),
+              borderColor: PlumoraColors.primary,
+              shadow: false,
+              child: Text(
+                suggestion!.suggestionText,
+                style: const TextStyle(
+                  height: 1.45,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-            child: Text(
-              currentSuggestion.suggestionText.isEmpty
-                  ? 'Mukeme n’a pas renvoyé de texte.'
-                  : currentSuggestion.suggestionText,
-              style: const TextStyle(height: 1.55),
-            ),
-          ),
-          if (currentSuggestion.explanation.isNotEmpty) ...[
+            if (suggestion!.explanation.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                suggestion!.explanation,
+                style: const TextStyle(
+                  color: PlumoraColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
-            Text(
-              currentSuggestion.explanation,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
-                height: 1.45,
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onAccept,
+                    icon: const Icon(Icons.check),
+                    label: const Text('Accepter'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onModify,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Modifier'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: onIgnore,
+                icon: const Icon(Icons.close),
+                label: const Text('Ignorer'),
               ),
             ),
           ],
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              FilledButton.icon(
-                onPressed: isBusy ? null : onAccept,
-                icon: const Icon(Icons.check, size: 17),
-                label: Text(isBusy ? '...' : 'Accepter'),
-              ),
-              OutlinedButton.icon(
-                onPressed: isBusy ? null : onModify,
-                icon: const Icon(Icons.edit_outlined, size: 17),
-                label: const Text('Modifier'),
-              ),
-              TextButton.icon(
-                onPressed: isBusy ? null : onIgnore,
-                icon: const Icon(Icons.close, size: 17),
-                label: const Text('Ignorer'),
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
 }
 
-class _InlineError extends StatelessWidget {
-  const _InlineError({required this.message});
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.loading,
+    required this.onTap,
+  });
 
-  final String message;
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final bool loading;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7E0DC),
-        borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      onTap: loading ? null : onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 230,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected
+              ? PlumoraColors.primary.withValues(alpha: 0.06)
+              : Colors.transparent,
+          border: Border.all(
+            color: selected ? PlumoraColors.primary : PlumoraColors.border,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(icon, color: PlumoraColors.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Text(
-        message,
-        style: const TextStyle(
-          color: PlumoraColors.destructive,
-          fontWeight: FontWeight.w700,
+    );
+  }
+}
+
+class _ScaffoldError extends StatelessWidget {
+  const _ScaffoldError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: PlumoraColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: FigmaCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Mukeme indisponible',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: onRetry,
+                  child: const Text('Reessayer'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -544,19 +642,9 @@ class _InlineError extends StatelessWidget {
 IconData _actionIcon(AiWritingActionType action) {
   return switch (action) {
     AiWritingActionType.reformulate => Icons.refresh,
-    AiWritingActionType.improveStyle => Icons.auto_fix_high_outlined,
+    AiWritingActionType.improveStyle => Icons.auto_fix_high,
     AiWritingActionType.fixRepetitions => Icons.repeat,
     AiWritingActionType.makeMoreEmotional => Icons.favorite_border,
-    AiWritingActionType.makeDialogueNatural => Icons.forum_outlined,
-  };
-}
-
-String _statusLabel(AiSuggestionStatus status) {
-  return switch (status) {
-    AiSuggestionStatus.pending => 'En attente',
-    AiSuggestionStatus.accepted => 'Acceptée',
-    AiSuggestionStatus.modified => 'Modifiée',
-    AiSuggestionStatus.ignored => 'Ignorée',
-    AiSuggestionStatus.unknown => 'Suggestion',
+    AiWritingActionType.makeDialogueNatural => Icons.chat_bubble_outline,
   };
 }

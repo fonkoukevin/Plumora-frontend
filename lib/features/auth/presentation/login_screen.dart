@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../data/models/login_request.dart';
 import 'controllers/auth_controller.dart';
 import 'widgets/auth_screen_shell.dart';
@@ -57,38 +58,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final error = authState.hasError
         ? AppError.messageFor(authState.error!)
         : null;
-    final textTheme = Theme.of(context).textTheme;
 
     return AuthScreenShell(
-      topPadding: 124,
-      horizontalPadding: 44,
+      topPadding: 72,
+      horizontalPadding: 16,
       bottomPadding: 32,
       child: Column(
         children: [
-          const BrandIconBox(),
-          const SizedBox(height: 22),
-          Text(
+          const _PlumoraLetterMark(),
+          const SizedBox(height: 24),
+          const Text(
             'Bienvenue sur Plumora',
             textAlign: TextAlign.center,
-            style: textTheme.headlineSmall?.copyWith(
-              color: Colors.black,
-              fontSize: 24,
+            style: TextStyle(
+              color: PlumoraColors.textPrimary,
+              fontSize: 30,
               fontWeight: FontWeight.w900,
-              height: 1.05,
+              height: 1.1,
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            'Connectez-vous pour continuer votre aventure littéraire',
+          const Text(
+            'Connectez-vous pour continuer votre aventure litteraire',
             textAlign: TextAlign.center,
-            style: textTheme.bodyMedium?.copyWith(
+            style: TextStyle(
               color: PlumoraColors.textSecondary,
-              fontSize: 13,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 28),
-          AuthFormCard(
-            padding: const EdgeInsets.fromLTRB(25, 28, 25, 23),
+          const SizedBox(height: 30),
+          FigmaCard(
+            padding: const EdgeInsets.all(30),
+            shadow: true,
             child: Form(
               key: _formKey,
               child: Column(
@@ -112,14 +114,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       if (!email.contains('@')) {
                         return 'Adresse email invalide';
                       }
-
                       return null;
                     },
                   ),
-                  const SizedBox(height: 17),
+                  const SizedBox(height: 18),
                   PlumoraTextField(
                     controller: _passwordController,
                     label: 'Mot de passe',
+                    hint: '********',
                     obscureText: true,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => isLoading ? null : _submit(),
@@ -127,16 +129,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       if ((value ?? '').isEmpty) {
                         return 'Mot de passe requis';
                       }
-
                       return null;
                     },
                   ),
-                  const SizedBox(height: 11),
+                  const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: isLoading ? null : () {},
-                      child: const Text('Mot de passe oublié ?'),
+                      child: const Text('Mot de passe oublie ?'),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -147,28 +148,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       isLoading: isLoading,
                     ),
                   ),
-                  const SizedBox(height: 19),
+                  const SizedBox(height: 22),
                   const AuthDivider(),
                   const SizedBox(height: 18),
-                  OutlinedButton(
-                    onPressed: isLoading ? null : () {},
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const GoogleLogo(),
-                        const SizedBox(width: 11),
-                        Text(
-                          'Continuer avec Google',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: Colors.black,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
+                  _SocialButton(
+                    icon: const GoogleLogo(),
+                    label: 'Continuer avec Google',
+                    onPressed: isLoading
+                        ? null
+                        : () => context.go(AppRoutes.roleSelection),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+                  _SocialButton(
+                    icon: const Icon(Icons.code, color: Color(0xFF24292E)),
+                    label: 'Continuer avec GitHub',
+                    onPressed: isLoading
+                        ? null
+                        : () => context.go(AppRoutes.roleSelection),
+                  ),
+                  const SizedBox(height: 22),
                   TextButton(
                     onPressed: isLoading
                         ? null
@@ -178,6 +176,72 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlumoraLetterMark extends StatelessWidget {
+  const _PlumoraLetterMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: PlumoraColors.primary,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x26000000),
+            blurRadius: 14,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: Text(
+          'P',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  const _SocialButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final Widget icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: PlumoraColors.textPrimary,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(width: 18, height: 18, child: Center(child: icon)),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
         ],
       ),

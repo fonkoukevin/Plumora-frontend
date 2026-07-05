@@ -7,6 +7,8 @@ class CatalogBookModel {
     this.authorId,
     this.genre,
     this.coverUrl,
+    this.externalSource,
+    this.externalId,
     this.rating = 0,
     this.ratingCount = 0,
     this.readCount = 0,
@@ -22,6 +24,8 @@ class CatalogBookModel {
   final String? authorId;
   final String? genre;
   final String? coverUrl;
+  final String? externalSource;
+  final String? externalId;
   final double rating;
   final int ratingCount;
   final int readCount;
@@ -29,11 +33,15 @@ class CatalogBookModel {
   final int estimatedReadingMinutes;
   final DateTime? publishedAt;
 
+  bool get isExternalImport => externalSource?.trim().isNotEmpty ?? false;
+
+  bool get isPlumoraOriginal => !isExternalImport;
+
   factory CatalogBookModel.fromJson(Object? value) {
     final json = _readMap(value);
     return CatalogBookModel(
       id: _readString(json, ['id', 'bookId', 'book_id', 'uuid']),
-      title: _readString(json, ['title', 'name']),
+      title: _readString(json, ['title', 'name', 'bookTitle', 'book_title']),
       description: _readString(json, ['description', 'summary', 'synopsis']),
       authorName: _readAuthorName(json),
       authorId: _readNullableString(json, ['authorId', 'author_id']),
@@ -46,6 +54,11 @@ class CatalogBookModel {
         'imageUrl',
         'image_url',
       ]),
+      externalSource: _readNullableString(json, [
+        'externalSource',
+        'external_source',
+      ]),
+      externalId: _readNullableString(json, ['externalId', 'external_id']),
       rating: _readDouble(json, [
         'rating',
         'averageRating',
@@ -87,6 +100,8 @@ class CatalogBookModel {
       authorId: detail.authorId,
       genre: detail.genre,
       coverUrl: detail.coverUrl,
+      externalSource: detail.externalSource,
+      externalId: detail.externalId,
       rating: detail.rating,
       ratingCount: detail.ratingCount,
       readCount: detail.readCount,
@@ -107,6 +122,8 @@ class CatalogBookDetailModel {
     this.authorBio,
     this.genre,
     this.coverUrl,
+    this.externalSource,
+    this.externalId,
     this.rating = 0,
     this.ratingCount = 0,
     this.readCount = 0,
@@ -124,6 +141,8 @@ class CatalogBookDetailModel {
   final String? authorBio;
   final String? genre;
   final String? coverUrl;
+  final String? externalSource;
+  final String? externalId;
   final double rating;
   final int ratingCount;
   final int readCount;
@@ -134,6 +153,10 @@ class CatalogBookDetailModel {
 
   CatalogBookModel get summary => CatalogBookModel.fromDetail(this);
 
+  bool get isExternalImport => externalSource?.trim().isNotEmpty ?? false;
+
+  bool get isPlumoraOriginal => !isExternalImport;
+
   factory CatalogBookDetailModel.fromJson(Object? value) {
     final json = _readMap(value);
     final nestedBook =
@@ -143,7 +166,12 @@ class CatalogBookDetailModel {
 
     return CatalogBookDetailModel(
       id: _readString(bookJson, ['id', 'bookId', 'book_id', 'uuid']),
-      title: _readString(bookJson, ['title', 'name']),
+      title: _readString(bookJson, [
+        'title',
+        'name',
+        'bookTitle',
+        'book_title',
+      ]),
       description: _readString(bookJson, [
         'description',
         'summary',
@@ -161,6 +189,11 @@ class CatalogBookDetailModel {
         'imageUrl',
         'image_url',
       ]),
+      externalSource: _readNullableString(bookJson, [
+        'externalSource',
+        'external_source',
+      ]),
+      externalId: _readNullableString(bookJson, ['externalId', 'external_id']),
       rating: _readDouble(bookJson, [
         'rating',
         'averageRating',
@@ -212,7 +245,12 @@ class CatalogChapterModel {
     final json = _readMap(value);
     return CatalogChapterModel(
       id: _readString(json, ['id', 'chapterId', 'chapter_id', 'uuid']),
-      title: _readString(json, ['title', 'name']),
+      title: _readString(json, [
+        'title',
+        'name',
+        'chapterTitle',
+        'chapter_title',
+      ]),
       content: _readString(json, ['content', 'body', 'text']),
       order: _readInt(json, [
         'order',
@@ -274,16 +312,65 @@ String _readAuthorName(Map<String, dynamic> json) {
   final direct = _readNullableString(json, [
     'authorName',
     'author_name',
-    'author',
+    'authorDisplayName',
+    'author_display_name',
+    'bookAuthorName',
+    'book_author_name',
+    'writer',
     'writerName',
+    'writerDisplayName',
+    'writer_display_name',
+    'displayName',
+    'display_name',
   ]);
   if (direct != null) {
     return direct;
   }
 
+  final authorValue = json['author'];
+  if (authorValue is String && authorValue.trim().isNotEmpty) {
+    return authorValue.trim();
+  }
+
+  final topLevelName = _readNullableString(json, [
+    'authorFullName',
+    'author_full_name',
+    'writerFullName',
+    'writer_full_name',
+  ]);
+  if (topLevelName != null) {
+    return topLevelName;
+  }
+
+  final topLevelFirstName = _readNullableString(json, [
+    'authorFirstName',
+    'author_first_name',
+    'writerFirstName',
+    'writer_first_name',
+  ]);
+  final topLevelLastName = _readNullableString(json, [
+    'authorLastName',
+    'author_last_name',
+    'writerLastName',
+    'writer_last_name',
+  ]);
+  final topLevelCombined = [
+    topLevelFirstName,
+    topLevelLastName,
+  ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
+  if (topLevelCombined.isNotEmpty) {
+    return topLevelCombined;
+  }
+
   final author = _readMapOrNull(json['author']);
   if (author != null) {
-    final fullName = _readNullableString(author, ['fullName', 'name']);
+    final fullName = _readNullableString(author, [
+      'displayName',
+      'fullName',
+      'full_name',
+      'name',
+      'username',
+    ]);
     if (fullName != null) {
       return fullName;
     }
@@ -299,7 +386,24 @@ String _readAuthorName(Map<String, dynamic> json) {
     }
   }
 
-  return 'Auteur Plumora';
+  final externalAuthors = _readStringList(
+    json['externalAuthors'] ?? json['external_authors'],
+  );
+  if (externalAuthors.isNotEmpty) {
+    return externalAuthors.join(', ');
+  }
+
+  final username = _readNullableString(json, [
+    'authorUsername',
+    'author_username',
+    'writerUsername',
+    'writer_username',
+  ]);
+  if (username != null) {
+    return username;
+  }
+
+  return 'Plumora';
 }
 
 Map<String, dynamic> _readMap(Object? value) {
@@ -339,6 +443,21 @@ String? _readNullableString(Map<String, dynamic> json, List<String> keys) {
   }
 
   return null;
+}
+
+List<String> _readStringList(Object? value) {
+  if (value is List) {
+    return value
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  if (value is String && value.trim().isNotEmpty) {
+    return [value.trim()];
+  }
+
+  return const [];
 }
 
 int _readInt(Map<String, dynamic> json, List<String> keys, {int fallback = 0}) {
