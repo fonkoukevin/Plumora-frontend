@@ -43,6 +43,7 @@ dependencies:
   flutter_secure_storage: ^10.2.0
   url_launcher: ^6.3.2
   google_sign_in_all_platforms: ^2.0.3
+  google_fonts: ^6.3.2
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/plumora_colors.dart';
 import 'plumora_logo_mark.dart';
@@ -189,9 +190,8 @@ class FigmaBrandMark extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             'Plumora',
-            style: TextStyle(
+            style: GoogleFonts.playfairDisplay(
               color: PlumoraColors.textPrimary,
-              fontFamily: 'Playfair Display',
               fontSize: textSize,
               fontWeight: FontWeight.w800,
               height: 1,

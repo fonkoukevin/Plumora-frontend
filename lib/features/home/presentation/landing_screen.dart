@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
@@ -318,9 +319,8 @@ class _HeroTitle extends StatelessWidget {
         ],
       ),
       textAlign: TextAlign.center,
-      style: TextStyle(
+      style: GoogleFonts.playfairDisplay(
         color: PlumoraColors.textPrimary,
-        fontFamily: 'Playfair Display',
         fontSize: size,
         fontWeight: FontWeight.w700,
         height: 1.25,

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
@@ -297,9 +298,8 @@ class _BookHero extends ConsumerWidget {
                   book.title.isEmpty ? 'Livre sans titre' : book.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: GoogleFonts.playfairDisplay(
                     color: PlumoraColors.textPrimary,
-                    fontFamily: 'Playfair Display',
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                     height: 1.05,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'plumora_colors.dart';
 
@@ -54,11 +55,9 @@ abstract final class PlumoraTheme {
       scaffoldBackgroundColor: isDark
           ? PlumoraColors.darkBackground
           : PlumoraColors.background,
-      textTheme: Typography.material2021().black.apply(
-        bodyColor: colorScheme.onSurface,
-        displayColor: colorScheme.onSurface,
-        fontFamily: 'Nunito',
-      ),
+      textTheme: GoogleFonts.nunitoTextTheme(
+        Typography.material2021().black,
+      ).apply(bodyColor: colorScheme.onSurface, displayColor: colorScheme.onSurface),
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: colorScheme.surface,

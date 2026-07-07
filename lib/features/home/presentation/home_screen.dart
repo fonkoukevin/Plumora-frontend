@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
@@ -406,9 +407,8 @@ class _ContinueReadingCard extends ConsumerWidget {
                               : reading.bookTitle,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: GoogleFonts.playfairDisplay(
                             color: Colors.white,
-                            fontFamily: 'Playfair Display',
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
                           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
@@ -75,21 +76,20 @@ class _PublicDomainCatalogScreenState
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Domaine public',
-                      style: TextStyle(
+                      style: GoogleFonts.playfairDisplay(
                         color: PlumoraColors.textPrimary,
-                        fontFamily: 'Playfair Display',
                         fontSize: 32,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 6),
-                    Text(
+                    const SizedBox(height: 6),
+                    const Text(
                       'Classiques et livres libres disponibles dans Plumora.',
                       style: TextStyle(color: PlumoraColors.textSecondary),
                     ),
