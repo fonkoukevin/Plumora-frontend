@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/plumora_colors.dart';
 import '../widgets/plumora_logo_mark.dart';
@@ -94,10 +95,6 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (_usesImmersiveWritingNavigation(location)) {
-      return child;
-    }
-
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 900) {
@@ -296,15 +293,14 @@ class _SidebarLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        PlumoraLogoMark(size: 30, color: PlumoraColors.primary),
-        SizedBox(width: 10),
+        const PlumoraLogoMark(size: 30, color: PlumoraColors.primary),
+        const SizedBox(width: 10),
         Text(
           'Plumora',
-          style: TextStyle(
+          style: GoogleFonts.playfairDisplay(
             color: PlumoraColors.textPrimary,
-            fontFamily: 'Playfair Display',
             fontSize: 24,
             fontWeight: FontWeight.w800,
           ),
@@ -385,12 +381,4 @@ class ShellDestination {
 bool _isSelected(String location, String path) {
   return location == path ||
       (path != AppRoutes.home && location.startsWith(path));
-}
-
-bool _usesImmersiveWritingNavigation(String location) {
-  if (location == AppRoutes.editor) {
-    return true;
-  }
-
-  return location.startsWith('/books/') && location.endsWith('/editor');
 }

@@ -154,11 +154,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const MyBooksScreen(),
           ),
           GoRoute(
-            path: AppRoutes.editor,
-            name: 'editor',
-            builder: (context, state) => const ChapterEditorScreen(),
-          ),
-          GoRoute(
             path: AppRoutes.createBook,
             name: 'create-book',
             builder: (context, state) => const CreateBookScreen(),
@@ -191,16 +186,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 state.pathParameters['bookId'] ?? '',
               );
               return PublishBookScreen(bookId: bookId);
-            },
-          ),
-          GoRoute(
-            path: AppRoutes.chapterEditor,
-            name: 'chapter-editor',
-            builder: (context, state) {
-              final bookId = Uri.decodeComponent(
-                state.pathParameters['bookId'] ?? '',
-              );
-              return ChapterEditorScreen(bookId: bookId);
             },
           ),
           GoRoute(
@@ -309,6 +294,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const NotificationsScreen(),
           ),
         ],
+      ),
+      // The chapter editor is a full-screen, immersive experience with no
+      // bottom nav / sidebar (matching the Figma EditorPage/MobileEditorPage
+      // mockups) — it lives outside the ShellRoute entirely, like `reading`
+      // and `beta-read-chapter` below, instead of being nested inside the
+      // shell and having MainShell conditionally hide its own chrome. That
+      // conditional-hide approach caused a brief "No Material widget found"
+      // flash when navigating in/out, because the widget tree structure
+      // changed too abruptly at the same ShellRoute position.
+      GoRoute(
+        path: AppRoutes.editor,
+        name: 'editor',
+        builder: (context, state) => const ChapterEditorScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.chapterEditor,
+        name: 'chapter-editor',
+        builder: (context, state) {
+          final bookId = Uri.decodeComponent(
+            state.pathParameters['bookId'] ?? '',
+          );
+          return ChapterEditorScreen(bookId: bookId);
+        },
       ),
       GoRoute(
         path: AppRoutes.reading,
