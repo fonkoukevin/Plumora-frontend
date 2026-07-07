@@ -51,6 +51,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     context.go(AppRoutes.roleSelection);
   }
 
+  Future<void> _submitGoogle() async {
+    await ref.read(authControllerProvider.notifier).loginWithGoogle();
+
+    final session = ref.read(authControllerProvider).valueOrNull;
+    if (!mounted || session?.isAuthenticated != true) {
+      return;
+    }
+
+    context.go(AppRoutes.roleSelection);
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -154,9 +165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   _SocialButton(
                     icon: const GoogleLogo(),
                     label: 'Continuer avec Google',
-                    onPressed: isLoading
-                        ? null
-                        : () => context.go(AppRoutes.roleSelection),
+                    onPressed: isLoading ? null : _submitGoogle,
                   ),
                   const SizedBox(height: 12),
                   _SocialButton(

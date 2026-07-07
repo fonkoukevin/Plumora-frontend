@@ -22,6 +22,14 @@ class AuthApiService {
     return AuthResponse.fromJson(_readMap(response.data));
   }
 
+  Future<AuthResponse> loginWithGoogle(String idToken) async {
+    final response = await _dio.post(
+      '/auth/google',
+      data: {'idToken': idToken},
+    );
+    return AuthResponse.fromJson(_readMap(response.data));
+  }
+
   Future<UserModel> authMe() async {
     final response = await _dio.get('/auth/me');
     return UserModel.fromJson(_readMap(response.data));

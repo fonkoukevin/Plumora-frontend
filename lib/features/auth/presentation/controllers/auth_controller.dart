@@ -25,6 +25,17 @@ class AuthController extends AsyncNotifier<AuthSession> {
     }
   }
 
+  Future<void> loginWithGoogle() async {
+    invalidateUserScopedCaches(ref);
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() {
+      return ref.read(authRepositoryProvider).loginWithGoogle();
+    });
+    if (state.hasValue) {
+      invalidateUserScopedCaches(ref);
+    }
+  }
+
   Future<void> register(RegisterRequest request) async {
     invalidateUserScopedCaches(ref);
     state = const AsyncLoading();

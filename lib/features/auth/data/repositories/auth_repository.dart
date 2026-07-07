@@ -9,6 +9,7 @@ import '../models/register_request.dart';
 import '../models/role_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_api_service.dart';
+import '../services/google_auth_service.dart';
 
 final authApiServiceProvider = Provider<AuthApiService>((ref) {
   return AuthApiService(ref.watch(dioProvider));
@@ -18,6 +19,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
     apiService: ref.watch(authApiServiceProvider),
     tokenStorage: ref.watch(secureTokenStorageProvider),
+    googleAuthService: ref.watch(googleAuthServiceProvider),
   );
 });
 
@@ -25,12 +27,18 @@ class AuthRepository {
   const AuthRepository({
     required AuthApiService apiService,
     required SecureTokenStorage tokenStorage,
-  }) : this._(apiService, tokenStorage);
+    required GoogleAuthService googleAuthService,
+  }) : this._(apiService, tokenStorage, googleAuthService);
 
-  const AuthRepository._(this._apiService, this._tokenStorage);
+  const AuthRepository._(
+    this._apiService,
+    this._tokenStorage,
+    this._googleAuthService,
+  );
 
   final AuthApiService _apiService;
   final SecureTokenStorage _tokenStorage;
+  final GoogleAuthService _googleAuthService;
 
   Future<AuthSession> restoreSession() async {
     final token = await _tokenStorage.readAccessToken();
@@ -66,6 +74,17 @@ class AuthRepository {
   Future<AuthSession> login(LoginRequest request) async {
     await _tokenStorage.clearAccessToken();
     final response = await _apiService.login(request);
+    await _tokenStorage.saveAccessToken(response.accessToken);
+
+    final user = await _loadCurrentUser(response.user);
+    final roles = await _loadRolesSafely();
+    return AuthSession(user: user, roles: roles);
+  }
+
+  Future<AuthSession> loginWithGoogle() async {
+    await _tokenStorage.clearAccessToken();
+    final idToken = await _googleAuthService.signInAndGetIdToken();
+    final response = await _apiService.loginWithGoogle(idToken);
     await _tokenStorage.saveAccessToken(response.accessToken);
 
     final user = await _loadCurrentUser(response.user);

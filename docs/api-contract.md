@@ -7,9 +7,30 @@ Base URL:
 
 POST `/auth/register`
 POST `/auth/login`
+POST `/auth/google`
 GET `/auth/me`
 GET `/users/me`
 PUT `/users/me/roles`
+
+POST `/auth/google` request body: `{ "idToken": "<Google ID token>" }`.
+Response: same shape as `/auth/login` (`accessToken` + `user`).
+
+The frontend obtains the Google ID token itself (native account picker on
+Android/iOS, Google Identity Services on web, system-browser OAuth on
+Windows/Linux/macOS) and never talks to the Plumora backend during that step.
+The backend must, on receiving `idToken`:
+- verify its signature against Google's public keys
+  (`https://www.googleapis.com/oauth2/v3/certs`);
+- check `iss` is `accounts.google.com` or `https://accounts.google.com`;
+- check `exp` has not passed;
+- check `aud` matches one of the app's configured Google OAuth client IDs
+  (the frontend's "web" client id is reused as the audience for both the web
+  and native-mobile flows; the "desktop" client id used for the
+  Windows/Linux/macOS browser flow is a separate OAuth client and is not a
+  valid token audience — only the web client id should be accepted);
+- find the Plumora user by the token's verified `email`, or create one if
+  none exists (the email is already verified by Google). See the `users`
+  table note in docs/data-model.md — this account has no password.
 
 ## Books
 
