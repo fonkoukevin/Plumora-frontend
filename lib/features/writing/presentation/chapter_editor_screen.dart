@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
@@ -149,8 +150,28 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
             (chapter) => chapter?.id == _selectedChapterId,
             orElse: () => null,
           );
-    final selected = existing ?? (chapters.isEmpty ? null : chapters.first);
-    if (selected == null) {
+
+    if (existing != null) {
+      if (_hydratedChapterId == existing.id) {
+        return;
+      }
+      _hydratedChapterId = existing.id;
+      _hasUnsavedChanges = false;
+      _titleController.text = existing.title;
+      _contentController.text = existing.content;
+      return;
+    }
+
+    // We have a selected chapter (e.g. one just created/saved) but it isn't
+    // in this `chapters` list yet — most likely a provider invalidation
+    // triggered by the save is still refetching. Keep the current state
+    // instead of wiping it and creating a phantom new chapter; this will
+    // resolve itself once the refreshed list arrives.
+    if (_selectedChapterId != null) {
+      return;
+    }
+
+    if (chapters.isEmpty) {
       if (_hydratedChapterId != '__new__') {
         _selectedChapterId = null;
         _hydratedChapterId = '__new__';
@@ -162,6 +183,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
       return;
     }
 
+    final selected = _mostRecentlyEditedChapter(chapters);
     if (_hydratedChapterId == selected.id) {
       return;
     }
@@ -208,10 +230,10 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
   }
 
   void _markDirty() {
-    if (_hasUnsavedChanges) {
-      return;
-    }
-
+    // Always rebuild (not just on the first keystroke) so live UI derived
+    // from the controllers — word count, character count, read time — keeps
+    // updating as the user types, even once `_hasUnsavedChanges` is already
+    // true.
     setState(() => _hasUnsavedChanges = true);
   }
 
@@ -887,9 +909,8 @@ class _FigmaEditorPane extends StatelessWidget {
                       if (readMode)
                         Text(
                           title,
-                          style: const TextStyle(
+                          style: GoogleFonts.playfairDisplay(
                             color: PlumoraColors.textPrimary,
-                            fontFamily: 'Playfair Display',
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
                           ),
@@ -905,9 +926,8 @@ class _FigmaEditorPane extends StatelessWidget {
                             focusedBorder: InputBorder.none,
                             hintText: 'Titre du chapitre...',
                           ),
-                          style: const TextStyle(
+                          style: GoogleFonts.playfairDisplay(
                             color: PlumoraColors.textPrimary,
-                            fontFamily: 'Playfair Display',
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
                           ),
@@ -1078,7 +1098,11 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
                   tooltip: 'Séparateur',
                 ),
                 const Spacer(),
-                _FigmaSavedStatusPill(isSaving: isSaving, saved: saved),
+                _FigmaSavedStatusPill(
+                  isSaving: isSaving,
+                  saved: saved,
+                  onSave: onSave,
+                ),
               ],
             ),
           ),
@@ -1120,9 +1144,8 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
                           contentPadding: EdgeInsets.zero,
                           hintText: 'Titre du chapitre...',
                         ),
-                        style: const TextStyle(
+                        style: GoogleFonts.playfairDisplay(
                           color: PlumoraColors.textPrimary,
-                          fontFamily: 'Playfair Display',
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
                           height: 1.15,
@@ -1160,21 +1183,23 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
                           fontFamily: 'Georgia',
                         ),
                       ),
-                      const SizedBox(height: 34),
-                      const Divider(color: PlumoraColors.border),
-                      const SizedBox(height: 18),
-                      _FigmaMobileChapterJumps(
-                        prevChapter: prevChapter,
-                        nextChapter: nextChapter,
-                        onSelect: onSelect,
-                        onNew: onNew,
-                      ),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
               ),
             ),
           ),
+        ),
+        // Deliberately outside the scrollable area: with a very long
+        // chapter (e.g. an imported book), the reader must never have to
+        // scroll to the end just to reach chapter navigation or add a new
+        // chapter.
+        _FigmaMobileChapterJumps(
+          prevChapter: prevChapter,
+          nextChapter: nextChapter,
+          onSelect: onSelect,
+          onNew: onNew,
         ),
         _FigmaMobileFooterStats(
           words: words,
@@ -1186,7 +1211,6 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
           _FigmaMobileMukemePanel(onClose: () => onMukemeChanged(false))
         else
           _FigmaBottomChapterToolbar(
-            onNew: onNew,
             onMukeme: () => onMukemeChanged(true),
             onReadMode: () => onReadModeChanged(!readMode),
             readMode: readMode,
@@ -1213,10 +1237,15 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
 }
 
 class _FigmaSavedStatusPill extends StatelessWidget {
-  const _FigmaSavedStatusPill({required this.isSaving, required this.saved});
+  const _FigmaSavedStatusPill({
+    required this.isSaving,
+    required this.saved,
+    required this.onSave,
+  });
 
   final bool isSaving;
   final bool saved;
+  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -1226,44 +1255,48 @@ class _FigmaSavedStatusPill extends StatelessWidget {
         ? 'Sauvegardé'
         : 'À sauvegarder';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-      decoration: BoxDecoration(
-        color: saved
-            ? _writeGreen.withValues(alpha: 0.12)
-            : _writeAccent.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (isSaving)
-            SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  saved ? _writeGreen : _writeAccent,
+    return InkWell(
+      onTap: (isSaving || saved) ? null : onSave,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: saved
+              ? _writeGreen.withValues(alpha: 0.12)
+              : _writeAccent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSaving)
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    saved ? _writeGreen : _writeAccent,
+                  ),
                 ),
+              )
+            else
+              Icon(
+                saved ? Icons.check : Icons.save_outlined,
+                size: 13,
+                color: saved ? _writeGreen : _writeAccent,
               ),
-            )
-          else
-            Icon(
-              saved ? Icons.check : Icons.save_outlined,
-              size: 13,
-              color: saved ? _writeGreen : _writeAccent,
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                color: saved ? _writeGreen : _writeAccent,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: saved ? _writeGreen : _writeAccent,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1435,13 +1468,11 @@ class _FigmaMobileFooterStats extends StatelessWidget {
 
 class _FigmaBottomChapterToolbar extends StatelessWidget {
   const _FigmaBottomChapterToolbar({
-    required this.onNew,
     required this.onMukeme,
     required this.onReadMode,
     required this.readMode,
   });
 
-  final VoidCallback onNew;
   final VoidCallback onMukeme;
   final VoidCallback onReadMode;
   final bool readMode;
@@ -1466,26 +1497,8 @@ class _FigmaBottomChapterToolbar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: OutlinedButton.icon(
-              onPressed: onNew,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Nouveau chapitre'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: PlumoraColors.textSecondary,
-                side: const BorderSide(color: PlumoraColors.border),
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
+            child: _FigmaMukemeButton(active: false, onTap: onMukeme),
           ),
-          const SizedBox(width: 14),
-          _FigmaMukemeButton(active: false, onTap: onMukeme),
         ],
       ),
     );
@@ -2497,9 +2510,8 @@ class _FigmaReadingContent extends StatelessWidget {
         if (showTitle) ...[
           Text(
             title,
-            style: const TextStyle(
+            style: GoogleFonts.playfairDisplay(
               color: PlumoraColors.textPrimary,
-              fontFamily: 'Playfair Display',
               fontSize: 23,
               fontWeight: FontWeight.w900,
             ),
@@ -3367,6 +3379,19 @@ ChapterModel? _figmaActiveChapter(
   }
 
   return chapters[index];
+}
+
+/// The chapter to open by default when arriving without a specific
+/// selection (e.g. tapping "Écrire" from the story list): the one most
+/// recently worked on, not simply the first by chapter order.
+ChapterModel _mostRecentlyEditedChapter(List<ChapterModel> chapters) {
+  return chapters.reduce((a, b) {
+    final aTime = a.updatedAt ?? a.createdAt;
+    final bTime = b.updatedAt ?? b.createdAt;
+    if (aTime == null) return b;
+    if (bTime == null) return a;
+    return aTime.isAfter(bTime) ? a : b;
+  });
 }
 
 int _figmaWordCount(String value) {
