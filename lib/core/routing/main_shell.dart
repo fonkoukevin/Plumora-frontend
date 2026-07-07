@@ -27,14 +27,14 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.discover,
     ),
     ShellDestination(
-      label: 'Ecrire',
+      label: 'Écrire',
       icon: Icons.draw_outlined,
       selectedIcon: Icons.draw,
       path: AppRoutes.write,
       useLogoMark: true,
     ),
     ShellDestination(
-      label: 'Bibliotheque',
+      label: 'Bibliothèque',
       icon: Icons.library_books_outlined,
       selectedIcon: Icons.library_books,
       path: AppRoutes.library,
@@ -61,13 +61,13 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.manuscripts,
     ),
     ShellDestination(
-      label: 'Editeur',
+      label: 'Éditeur',
       icon: Icons.edit_note_outlined,
       selectedIcon: Icons.edit_note,
       path: AppRoutes.editor,
     ),
     ShellDestination(
-      label: 'Beta-retours',
+      label: 'Bêta-retours',
       icon: Icons.forum_outlined,
       selectedIcon: Icons.forum,
       path: AppRoutes.betaFeedback,
@@ -79,7 +79,7 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.discover,
     ),
     ShellDestination(
-      label: 'Bibliotheque',
+      label: 'Bibliothèque',
       icon: Icons.library_books_outlined,
       selectedIcon: Icons.library_books,
       path: AppRoutes.library,
@@ -94,6 +94,10 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (_usesImmersiveWritingNavigation(location)) {
+      return child;
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 900) {
@@ -381,4 +385,12 @@ class ShellDestination {
 bool _isSelected(String location, String path) {
   return location == path ||
       (path != AppRoutes.home && location.startsWith(path));
+}
+
+bool _usesImmersiveWritingNavigation(String location) {
+  if (location == AppRoutes.editor) {
+    return true;
+  }
+
+  return location.startsWith('/books/') && location.endsWith('/editor');
 }

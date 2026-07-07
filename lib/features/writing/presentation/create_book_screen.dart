@@ -146,14 +146,14 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                     ),
                     const SizedBox(height: 18),
                     _Labelled(
-                      label: 'Resume court',
+                      label: 'Résumé court',
                       child: TextField(
                         controller: _summaryController,
                         minLines: 5,
                         maxLines: 8,
                         decoration: const InputDecoration(
                           hintText:
-                              'Decrivez votre livre en quelques lignes...',
+                              'Décrivez votre livre en quelques lignes...',
                         ),
                       ),
                     ),
