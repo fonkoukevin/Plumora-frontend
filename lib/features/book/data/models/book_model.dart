@@ -165,6 +165,9 @@ class BookUpsertRequest {
     this.description = '',
     this.genre,
     this.visibility,
+    this.language,
+    this.tags = const [],
+    this.mature = false,
     this.coverUrl,
     this.coverImage,
   });
@@ -173,18 +176,39 @@ class BookUpsertRequest {
   final String description;
   final String? genre;
   final String? visibility;
+  final String? language;
+  final List<String> tags;
+  final bool mature;
   final String? coverUrl;
   final BookCoverUpload? coverImage;
 
   bool get hasCoverImage => coverImage != null;
 
   Map<String, dynamic> toJson() {
+    final trimmedDescription = description.trim();
     return {
       'title': title.trim(),
-      'description': description.trim(),
+      // The backend's book DTO field is "summary", not "description" — it
+      // silently ignores "description" and saves no summary at all. Both
+      // are sent so the request also works against a backend expecting the
+      // other name.
+      'summary': trimmedDescription,
+      'description': trimmedDescription,
       if (genre != null && genre!.trim().isNotEmpty) 'genre': genre!.trim(),
       if (visibility != null && visibility!.trim().isNotEmpty)
         'visibility': visibility!.trim(),
+      // "language_code" is the documented column; "language" is sent too in
+      // case the backend DTO field is named differently (same defensive
+      // dual-send as summary/description above).
+      if (language != null && language!.trim().isNotEmpty) ...{
+        'languageCode': language!.trim(),
+        'language': language!.trim(),
+      },
+      // tags/mature have no confirmed backend column yet — sent anyway since
+      // unknown fields are silently ignored (see summary/description above),
+      // so this is forward-compatible and costs nothing if unsupported.
+      if (tags.isNotEmpty) 'tags': tags,
+      'mature': mature,
       if (coverUrl != null && coverUrl!.trim().isNotEmpty)
         'coverUrl': coverUrl!.trim(),
     };

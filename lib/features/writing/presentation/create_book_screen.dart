@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,79 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/repositories/book_repository.dart';
+
+const _writeAccent = Color(0xFF7C5CFF);
+const _writeAccentLight = Color(0xFF9B80FF);
+
+const double _formMaxWidth = 680;
+
+const List<List<Color>> _coverPresets = [
+  [Color(0xFF7C3AED), Color(0xFF7E22CE), Color(0xFF3730A3)],
+  [Color(0xFFF43F5E), Color(0xFFDC2626), Color(0xFFC2410C)],
+  [Color(0xFF2563EB), Color(0xFF4338CA), Color(0xFF1E293B)],
+  [Color(0xFF10B981), Color(0xFF0D9488), Color(0xFF0E7490)],
+  [Color(0xFFF59E0B), Color(0xFFEA580C), Color(0xFFB91C1C)],
+  [Color(0xFFDB2777), Color(0xFFBE123C), Color(0xFF991B1B)],
+  [Color(0xFF06B6D4), Color(0xFF2563EB), Color(0xFF4338CA)],
+  [Color(0xFFC026D3), Color(0xFF7E22CE), Color(0xFF1E40AF)],
+];
+
+const List<String> _genres = [
+  'Fantasy',
+  'Romance',
+  'Thriller',
+  'Science-Fiction',
+  'Mystère',
+  'Horreur',
+  'Contemporain',
+  'Aventure',
+  'Historique',
+  'Poésie',
+];
+
+const List<String> _languages = [
+  'Français',
+  'English',
+  'Español',
+  'Português',
+  'Deutsch',
+];
+
+const Map<String, String> _languageCodes = {
+  'Français': 'fr',
+  'English': 'en',
+  'Español': 'es',
+  'Português': 'pt',
+  'Deutsch': 'de',
+};
+
+typedef _VisibilityOption = ({
+  String id,
+  IconData icon,
+  String label,
+  String description,
+});
+
+const List<_VisibilityOption> _visibilityOptions = [
+  (
+    id: 'PRIVATE',
+    icon: Icons.lock_outline,
+    label: 'Privé',
+    description: 'Visible uniquement par vous',
+  ),
+  (
+    id: 'BETA_ONLY',
+    icon: Icons.groups_outlined,
+    label: 'Bêta-test',
+    description: 'Accessible aux bêta-lecteurs',
+  ),
+  (
+    id: 'PUBLIC',
+    icon: Icons.public,
+    label: 'Public',
+    description: 'Visible par toute la communauté',
+  ),
+];
 
 class CreateBookScreen extends ConsumerStatefulWidget {
   const CreateBookScreen({this.bookId, super.key});
@@ -21,8 +96,12 @@ class CreateBookScreen extends ConsumerStatefulWidget {
 class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
   final _titleController = TextEditingController();
   final _summaryController = TextEditingController();
+  final _tagsController = TextEditingController();
+  int _selectedCoverIndex = 0;
   String _genre = '';
+  String _language = 'Français';
   String _visibility = 'PRIVATE';
+  bool _mature = false;
   String? _hydratedBookId;
   bool _isSubmitting = false;
   String? _error;
@@ -30,10 +109,14 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
   bool get _editing =>
       widget.bookId != null && widget.bookId!.trim().isNotEmpty;
 
+  bool get _canSubmit =>
+      _titleController.text.trim().isNotEmpty && _genre.trim().isNotEmpty;
+
   @override
   void dispose() {
     _titleController.dispose();
     _summaryController.dispose();
+    _tagsController.dispose();
     super.dispose();
   }
 
@@ -45,7 +128,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
 
     return bookAsync.when(
       loading: () => const FigmaScreen(
-        maxWidth: 780,
+        maxWidth: _formMaxWidth,
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(48),
@@ -54,7 +137,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
         ),
       ),
       error: (error, _) => FigmaScreen(
-        maxWidth: 780,
+        maxWidth: _formMaxWidth,
         padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
         child: _ErrorPanel(
           message: AppError.messageFor(error),
@@ -66,190 +149,148 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
           _hydrateFrom(book);
         }
 
-        return FigmaScreen(
-          maxWidth: 780,
-          padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+        final canSubmit = _canSubmit && !_isSubmitting;
+
+        return ColoredBox(
+          color: PlumoraColors.background,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FigmaBackButton(
-                label: 'Retour',
-                onTap: () => context.go(AppRoutes.write),
+              _Header(
+                editing: _editing,
+                canSubmit: canSubmit,
+                submitting: _isSubmitting,
+                onBack: () => context.go(AppRoutes.write),
+                onSubmit: _submit,
               ),
-              const SizedBox(height: 18),
-              Text(
-                _editing ? 'Modifier le livre' : 'Creer un nouveau livre',
-                style: const TextStyle(
-                  color: PlumoraColors.textPrimary,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Les informations enregistrees ici alimentent directement le backend Plumora.',
-                style: TextStyle(
-                  color: PlumoraColors.textSecondary,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 26),
-              FigmaCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _Labelled(
-                      label: 'Titre du livre',
-                      child: TextField(
-                        controller: _titleController,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          hintText: 'Ex: La Nuit Rouge',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    _Labelled(
-                      label: 'Genre',
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _genre.isEmpty ? null : _genre,
-                        hint: const Text('Selectionner un genre'),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Fantasy',
-                            child: Text('Fantasy'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Romance',
-                            child: Text('Romance'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Thriller',
-                            child: Text('Thriller'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Science-Fiction',
-                            child: Text('Science-Fiction'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Mystere',
-                            child: Text('Mystere'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Horreur',
-                            child: Text('Horreur'),
-                          ),
-                        ],
-                        onChanged: (value) =>
-                            setState(() => _genre = value ?? ''),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    _Labelled(
-                      label: 'Résumé court',
-                      child: TextField(
-                        controller: _summaryController,
-                        minLines: 5,
-                        maxLines: 8,
-                        decoration: const InputDecoration(
-                          hintText:
-                              'Décrivez votre livre en quelques lignes...',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    const Text(
-                      'Visibilite',
-                      style: TextStyle(
-                        color: PlumoraColors.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _VisibilityOption(
-                      selected: _visibility == 'PRIVATE',
-                      title: 'Prive',
-                      subtitle: 'Visible uniquement par vous',
-                      onTap: () => setState(() => _visibility = 'PRIVATE'),
-                    ),
-                    _VisibilityOption(
-                      selected: _visibility == 'BETA_ONLY',
-                      title: 'Beta-test uniquement',
-                      subtitle: 'Accessible aux beta-testeurs selectionnes',
-                      onTap: () => setState(() => _visibility = 'BETA_ONLY'),
-                    ),
-                    _VisibilityOption(
-                      selected: _visibility == 'PUBLIC',
-                      title: 'Publication interne',
-                      subtitle: 'Visible par tous les utilisateurs de Plumora',
-                      onTap: () => setState(() => _visibility = 'PUBLIC'),
-                    ),
-                    const SizedBox(height: 20),
-                    FigmaCard(
-                      color: PlumoraColors.muted.withValues(alpha: 0.45),
-                      shadow: false,
-                      child: Row(
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 22, 16, 100),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: _formMaxWidth),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
-                            Icons.image_outlined,
-                            color: PlumoraColors.primary,
+                          const _SectionLabel('Couverture'),
+                          const SizedBox(height: 14),
+                          _CoverSection(
+                            title: _titleController.text,
+                            selectedIndex: _selectedCoverIndex,
+                            onSelect: (index) =>
+                                setState(() => _selectedCoverIndex = index),
+                            onImportTap: () =>
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Import de couverture bientôt disponible.',
+                                    ),
+                                  ),
+                                ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              book?.coverUrl?.trim().isNotEmpty == true
-                                  ? 'Couverture existante conservee.'
-                                  : 'La couverture pourra etre ajoutee depuis une mise a jour dediee.',
+                          const SizedBox(height: 30),
+                          const _SectionLabel('Informations'),
+                          const SizedBox(height: 16),
+                          const _FieldLabel('Titre', required: true),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _titleController,
+                            maxLength: 100,
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(
+                              hintText: 'Ex: La Nuit Rouge',
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const _FieldLabel('Genre', required: true),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final genre in _genres)
+                                _GenreChip(
+                                  label: genre,
+                                  selected: _genre == genre,
+                                  onTap: () => setState(() => _genre = genre),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          const _FieldLabel('Langue'),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            initialValue: _language,
+                            items: [
+                              for (final language in _languages)
+                                DropdownMenuItem(
+                                  value: language,
+                                  child: Text(language),
+                                ),
+                            ],
+                            onChanged: (value) =>
+                                setState(() => _language = value ?? _language),
+                          ),
+                          const SizedBox(height: 16),
+                          const _FieldLabel('Résumé'),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _summaryController,
+                            minLines: 4,
+                            maxLines: 4,
+                            maxLength: 500,
+                            decoration: const InputDecoration(
+                              hintText:
+                                  'Décrivez votre histoire pour attirer les lecteurs...',
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const _FieldLabel('Tags'),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _tagsController,
+                            decoration: const InputDecoration(
+                              hintText:
+                                  'magie, amour, aventure... (séparés par des virgules)',
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          const _SectionLabel('Visibilité'),
+                          const SizedBox(height: 12),
+                          for (final option in _visibilityOptions)
+                            _VisibilityTile(
+                              data: option,
+                              selected: _visibility == option.id,
+                              onTap: () =>
+                                  setState(() => _visibility = option.id),
+                            ),
+                          const SizedBox(height: 6),
+                          _MatureToggle(
+                            value: _mature,
+                            onChanged: (value) =>
+                                setState(() => _mature = value),
+                          ),
+                          if (_error != null) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              _error!,
                               style: const TextStyle(
-                                color: PlumoraColors.textSecondary,
+                                color: PlumoraColors.destructive,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                          ],
+                          const SizedBox(height: 28),
+                          _CreateCta(
+                            canSubmit: canSubmit,
+                            submitting: _isSubmitting,
+                            editing: _editing,
+                            onTap: _submit,
                           ),
                         ],
                       ),
                     ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: const TextStyle(
-                          color: PlumoraColors.destructive,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _isSubmitting
-                                ? null
-                                : () => context.go(AppRoutes.write),
-                            child: const Text('Annuler'),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed:
-                                _isSubmitting ||
-                                    _titleController.text.trim().isEmpty
-                                ? null
-                                : _submit,
-                            child: Text(
-                              _isSubmitting
-                                  ? 'Enregistrement...'
-                                  : _editing
-                                  ? 'Enregistrer'
-                                  : 'Creer le livre',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -266,11 +307,17 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
     _hydratedBookId = book.id;
     _titleController.text = book.title;
     _summaryController.text = book.description;
+    _tagsController.text = book.tags.join(', ');
     _genre = book.genre ?? '';
     _visibility = _normalizeVisibility(book.visibility);
+    _language = _labelForLanguageCode(book.language);
   }
 
   Future<void> _submit() async {
+    if (!_canSubmit || _isSubmitting) {
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
       _error = null;
@@ -282,6 +329,13 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
         description: _summaryController.text,
         genre: _genre,
         visibility: _visibility,
+        language: _languageCodes[_language] ?? 'fr',
+        tags: _tagsController.text
+            .split(',')
+            .map((tag) => tag.trim())
+            .where((tag) => tag.isNotEmpty)
+            .toList(),
+        mature: _mature,
       );
       final repository = ref.read(bookRepositoryProvider);
       final saved = _editing
@@ -294,9 +348,15 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
         ref.invalidate(authorBookProvider(widget.bookId!));
       }
 
-      if (mounted) {
-        context.go(AppRoutes.authorBookDetailPath(saved.id));
+      if (!mounted) {
+        return;
       }
+
+      context.go(
+        _editing
+            ? AppRoutes.authorBookDetailPath(saved.id)
+            : AppRoutes.chapterEditorPath(saved.id),
+      );
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
     } finally {
@@ -307,105 +367,483 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
   }
 }
 
-class _Labelled extends StatelessWidget {
-  const _Labelled({required this.label, required this.child});
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.editing,
+    required this.canSubmit,
+    required this.submitting,
+    required this.onBack,
+    required this.onSubmit,
+  });
 
-  final String label;
-  final Widget child;
+  final bool editing;
+  final bool canSubmit;
+  final bool submitting;
+  final VoidCallback onBack;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: PlumoraColors.background.withValues(alpha: 0.95),
+            border: const Border(
+              bottom: BorderSide(color: PlumoraColors.border),
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: onBack,
+                    icon: const Icon(Icons.arrow_back, size: 16),
+                    label: const Text('Mes histoires'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _writeAccent,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    editing ? "Modifier l'histoire" : 'Nouvelle histoire',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: PlumoraColors.textPrimary,
+                    ),
+                  ),
+                  _HeaderSubmitButton(
+                    editing: editing,
+                    canSubmit: canSubmit,
+                    submitting: submitting,
+                    onTap: onSubmit,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        child,
+      ),
+    );
+  }
+}
+
+class _HeaderSubmitButton extends StatelessWidget {
+  const _HeaderSubmitButton({
+    required this.editing,
+    required this.canSubmit,
+    required this.submitting,
+    required this.onTap,
+  });
+
+  final bool editing;
+  final bool canSubmit;
+  final bool submitting;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = submitting ? '...' : (editing ? 'Enregistrer' : 'Créer');
+
+    return InkWell(
+      onTap: canSubmit ? onTap : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        decoration: BoxDecoration(
+          gradient: canSubmit
+              ? const LinearGradient(
+                  colors: [_writeAccent, _writeAccentLight],
+                )
+              : null,
+          color: canSubmit ? null : PlumoraColors.muted,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: canSubmit
+              ? [
+                  BoxShadow(
+                    color: _writeAccent.withValues(alpha: 0.28),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: canSubmit ? Colors.white : PlumoraColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: const TextStyle(
+        color: PlumoraColors.textPrimary,
+        fontSize: 12.5,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.1,
+      ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.label, {this.required = false});
+
+  final String label;
+  final bool required;
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      text: TextSpan(
+        text: label.toUpperCase(),
+        style: const TextStyle(
+          color: PlumoraColors.textSecondary,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+        ),
+        children: required
+            ? const [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(color: PlumoraColors.destructive),
+                ),
+              ]
+            : null,
+      ),
+    );
+  }
+}
+
+class _CoverSection extends StatelessWidget {
+  const _CoverSection({
+    required this.title,
+    required this.selectedIndex,
+    required this.onSelect,
+    required this.onImportTap,
+  });
+
+  final String title;
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+  final VoidCallback onImportTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmedTitle = title.trim();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 112,
+          child: Column(
+            children: [
+              Container(
+                width: 112,
+                height: 160,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  gradient: LinearGradient(
+                    colors: _coverPresets[selectedIndex],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      blurRadius: 18,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withValues(alpha: 0.5),
+                              Colors.transparent,
+                            ],
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (trimmedTitle.isNotEmpty)
+                      Positioned(
+                        left: 8,
+                        right: 8,
+                        bottom: 8,
+                        child: Text(
+                          trimmedTitle,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onImportTap,
+                  icon: const Icon(Icons.camera_alt_outlined, size: 15),
+                  label: const Text('Importer'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: PlumoraColors.textSecondary,
+                    side: const BorderSide(color: PlumoraColors.border),
+                    minimumSize: const Size(0, 38),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Choisir une couleur',
+                style: TextStyle(
+                  color: PlumoraColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 10),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _coverPresets.length,
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 2 / 3,
+                    ),
+                itemBuilder: (context, index) {
+                  return _CoverSwatch(
+                    colors: _coverPresets[index],
+                    selected: index == selectedIndex,
+                    onTap: () => onSelect(index),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
-class _VisibilityOption extends StatelessWidget {
-  const _VisibilityOption({
+class _CoverSwatch extends StatelessWidget {
+  const _CoverSwatch({
+    required this.colors,
     required this.selected,
-    required this.title,
-    required this.subtitle,
     required this.onTap,
   });
 
+  final List<Color> colors;
   final bool selected;
-  final String title;
-  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: selected
+              ? Border.all(color: _writeAccent, width: 2.5)
+              : null,
+        ),
+        child: selected
+            ? Container(
+                color: Colors.black.withValues(alpha: 0.18),
+                child: Center(
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      size: 13,
+                      color: _writeAccent,
+                    ),
+                  ),
+                ),
+              )
+            : null,
+      ),
+    );
+  }
+}
+
+class _GenreChip extends StatelessWidget {
+  const _GenreChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [_writeAccent, _writeAccentLight],
+                )
+              : null,
+          color: selected ? null : PlumoraColors.cards,
+          border: Border.all(
+            color: selected ? Colors.transparent : PlumoraColors.border,
+          ),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : PlumoraColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VisibilityTile extends StatelessWidget {
+  const _VisibilityTile({
+    required this.data,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _VisibilityOption data;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: selected
-                ? PlumoraColors.primary.withValues(alpha: 0.06)
-                : Colors.transparent,
+                ? _writeAccent.withValues(alpha: 0.06)
+                : PlumoraColors.cards,
             border: Border.all(
-              color: selected ? PlumoraColors.primary : PlumoraColors.border,
-              width: selected ? 2 : 1,
+              color: selected
+                  ? _writeAccent.withValues(alpha: 0.5)
+                  : PlumoraColors.border,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
             children: [
               Container(
-                width: 18,
-                height: 18,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected
-                        ? PlumoraColors.primary
-                        : PlumoraColors.border,
-                    width: 2,
-                  ),
+                  color: selected
+                      ? _writeAccent.withValues(alpha: 0.15)
+                      : PlumoraColors.muted,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: selected
-                    ? Center(
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: PlumoraColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      )
-                    : null,
+                child: Icon(
+                  data.icon,
+                  size: 20,
+                  color: selected ? _writeAccent : PlumoraColors.textSecondary,
+                ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      data.label,
                       style: const TextStyle(
                         color: PlumoraColors.textPrimary,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      subtitle,
+                      data.description,
                       style: const TextStyle(
                         color: PlumoraColors.textSecondary,
                         fontSize: 12,
@@ -414,10 +852,161 @@ class _VisibilityOption extends StatelessWidget {
                   ],
                 ),
               ),
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? _writeAccent : PlumoraColors.border,
+                    width: 2,
+                  ),
+                  color: selected ? _writeAccent : Colors.transparent,
+                ),
+                child: selected
+                    ? Center(
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MatureToggle extends StatelessWidget {
+  const _MatureToggle({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: PlumoraColors.cards,
+          border: Border.all(color: PlumoraColors.border),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Contenu mature',
+                    style: TextStyle(
+                      color: PlumoraColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Violence, thèmes adultes — réservé aux +18',
+                    style: TextStyle(
+                      color: PlumoraColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: value,
+              onChanged: onChanged,
+              activeThumbColor: Colors.white,
+              activeTrackColor: _writeAccent,
+              inactiveThumbColor: Colors.white,
+              inactiveTrackColor: PlumoraColors.muted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateCta extends StatelessWidget {
+  const _CreateCta({
+    required this.canSubmit,
+    required this.submitting,
+    required this.editing,
+    required this.onTap,
+  });
+
+  final bool canSubmit;
+  final bool submitting;
+  final bool editing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          onTap: canSubmit ? onTap : null,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 17),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: canSubmit
+                  ? const LinearGradient(
+                      colors: [_writeAccent, _writeAccentLight],
+                    )
+                  : null,
+              color: canSubmit ? null : PlumoraColors.muted,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: canSubmit
+                  ? [
+                      BoxShadow(
+                        color: _writeAccent.withValues(alpha: 0.35),
+                        blurRadius: 22,
+                        offset: const Offset(0, 12),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              submitting
+                  ? 'Enregistrement...'
+                  : (editing
+                        ? 'Enregistrer les modifications'
+                        : 'Créer et commencer à écrire'),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: canSubmit ? Colors.white : PlumoraColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+        if (!canSubmit && !submitting) ...[
+          const SizedBox(height: 8),
+          const Text(
+            'Remplissez le titre et le genre pour continuer',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 12),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -458,4 +1047,19 @@ String _normalizeVisibility(String? visibility) {
     'BETA' || 'BETA_ONLY' || 'BETA_READING' => 'BETA_ONLY',
     _ => 'PRIVATE',
   };
+}
+
+String _labelForLanguageCode(String? code) {
+  final normalized = code?.trim().toLowerCase();
+  if (normalized == null || normalized.isEmpty) {
+    return 'Français';
+  }
+
+  for (final entry in _languageCodes.entries) {
+    if (entry.value == normalized || entry.key.toLowerCase() == normalized) {
+      return entry.key;
+    }
+  }
+
+  return 'Français';
 }

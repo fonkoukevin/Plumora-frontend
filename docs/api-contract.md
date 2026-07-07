@@ -42,8 +42,11 @@ PATCH `/books/{bookId}/publish`
 PATCH `/books/{bookId}/archive`
 
 Book create/update payloads may be sent as JSON or as `multipart/form-data`.
+The book's summary field is named `summary` in both the request body and the
+response (not `description` — the backend silently ignores a `description`
+field and saves no summary at all if that's the only name sent).
 When a user imports a cover image, the frontend sends:
-- text fields: `title`, `description`, `genre`, `visibility`
+- text fields: `title`, `summary`, `genre`, `visibility`
 - file field: `coverImage`
 
 Accepted cover file aliases on the API side are `coverImage`, `cover_image`,
