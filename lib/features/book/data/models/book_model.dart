@@ -30,12 +30,16 @@ class BookModel {
     required this.status,
     this.genre,
     this.visibility,
+    this.language,
     this.authorId,
     this.coverUrl,
+    this.tags = const [],
     this.chapterCount = 0,
     this.wordCount = 0,
     this.progress = 0,
     this.feedbackCount = 0,
+    this.viewCount = 0,
+    this.averageRating,
     this.createdAt,
     this.updatedAt,
     this.publishedAt,
@@ -47,12 +51,16 @@ class BookModel {
   final BookStatus status;
   final String? genre;
   final String? visibility;
+  final String? language;
   final String? authorId;
   final String? coverUrl;
+  final List<String> tags;
   final int chapterCount;
   final int wordCount;
   final double progress;
   final int feedbackCount;
+  final int viewCount;
+  final double? averageRating;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? publishedAt;
@@ -74,6 +82,12 @@ class BookModel {
       status: BookStatus.fromApi(json['status']),
       genre: _readNullableString(json, ['genre', 'category']),
       visibility: _readNullableString(json, ['visibility']),
+      language: _readNullableString(json, [
+        'language',
+        'languageCode',
+        'language_code',
+        'lang',
+      ]),
       authorId: _readNullableString(json, ['authorId', 'author_id']),
       coverUrl: _readNullableString(json, [
         'coverUrl',
@@ -83,6 +97,7 @@ class BookModel {
         'imageUrl',
         'image_url',
       ]),
+      tags: _readStringList(json, ['tags', 'keywords']),
       chapterCount: _readInt(json, [
         'chapterCount',
         'chaptersCount',
@@ -101,6 +116,17 @@ class BookModel {
         'feedback_count',
         'commentsCount',
       ]),
+      viewCount: _readInt(json, [
+        'viewCount',
+        'readingCount',
+        'reading_count',
+        'views',
+      ]),
+      averageRating: _readNullableDouble(json, [
+        'averageRating',
+        'average_rating',
+        'rating',
+      ]),
       createdAt: _readDate(json, ['createdAt', 'created_at']),
       updatedAt: _readDate(json, ['updatedAt', 'updated_at']),
       publishedAt: _readDate(json, ['publishedAt', 'published_at']),
@@ -115,13 +141,17 @@ class BookModel {
       'status': status.apiValue,
       if (genre != null) 'genre': genre,
       if (visibility != null) 'visibility': visibility,
+      if (language != null) 'language': language,
       if (authorId != null) 'authorId': authorId,
       if (coverUrl != null && coverUrl!.trim().isNotEmpty)
         'coverUrl': coverUrl!.trim(),
+      if (tags.isNotEmpty) 'tags': tags,
       'chapterCount': chapterCount,
       'wordCount': wordCount,
       'progress': progress,
       'feedbackCount': feedbackCount,
+      'viewCount': viewCount,
+      if (averageRating != null) 'averageRating': averageRating,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       if (publishedAt != null) 'publishedAt': publishedAt!.toIso8601String(),
@@ -197,6 +227,28 @@ String? _readNullableString(Map<String, dynamic> json, List<String> keys) {
   return null;
 }
 
+List<String> _readStringList(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is List) {
+      return value
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+    }
+
+    if (value is String && value.trim().isNotEmpty) {
+      return value
+          .split(',')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+    }
+  }
+
+  return const [];
+}
+
 int _readInt(Map<String, dynamic> json, List<String> keys) {
   for (final key in keys) {
     final value = json[key];
@@ -213,6 +265,24 @@ int _readInt(Map<String, dynamic> json, List<String> keys) {
   }
 
   return 0;
+}
+
+double? _readNullableDouble(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is double) {
+      return value;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    final parsed = double.tryParse(value?.toString() ?? '');
+    if (parsed != null) {
+      return parsed;
+    }
+  }
+
+  return null;
 }
 
 double _readDouble(Map<String, dynamic> json, List<String> keys) {
