@@ -135,9 +135,18 @@ class BrandIconBox extends StatelessWidget {
 }
 
 class AppWordmark extends StatelessWidget {
-  const AppWordmark({this.compact = false, super.key});
+  const AppWordmark({
+    this.compact = false,
+    this.iconSize,
+    this.textSize,
+    this.gap,
+    super.key,
+  });
 
   final bool compact;
+  final double? iconSize;
+  final double? textSize;
+  final double? gap;
 
   @override
   Widget build(BuildContext context) {
@@ -148,16 +157,16 @@ class AppWordmark extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           PlumoraLogoMark(
-            size: compact ? 26 : 43,
+            size: iconSize ?? (compact ? 26 : 43),
             color: PlumoraColors.primary,
             strokeWidth: compact ? 1.9 : 1.8,
           ),
-          SizedBox(width: compact ? 7 : 9),
+          SizedBox(width: gap ?? (compact ? 7 : 9)),
           Text(
             'Plumora',
             style: TextStyle(
               color: PlumoraColors.primary,
-              fontSize: compact ? 30 : 48,
+              fontSize: textSize ?? (compact ? 30 : 48),
               fontWeight: FontWeight.w800,
               height: 1,
             ),

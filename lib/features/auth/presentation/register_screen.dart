@@ -19,16 +19,14 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _firstnameController = TextEditingController();
-  final _lastnameController = TextEditingController();
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   @override
   void dispose() {
-    _firstnameController.dispose();
-    _lastnameController.dispose();
+    _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -40,12 +38,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
+    final nameParts = _fullNameController.text.trim().split(RegExp(r'\s+'));
+
     await ref
         .read(authControllerProvider.notifier)
         .register(
           RegisterRequest(
-            firstname: _firstnameController.text,
-            lastname: _lastnameController.text,
+            firstname: nameParts.first,
+            lastname: nameParts.skip(1).join(' '),
             email: _emailController.text,
             password: _passwordController.text,
           ),
@@ -73,19 +73,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       bottomPadding: 32,
       child: Column(
         children: [
-          const FigmaBrandMark(size: 32, textSize: 38, gradient: false),
-          const SizedBox(height: 14),
+          const AppWordmark(iconSize: 32, textSize: 36, gap: 8),
+          const SizedBox(height: 16),
           const Text(
-            'Creez votre compte',
+            'Créez votre compte',
             style: TextStyle(
               color: PlumoraColors.textSecondary,
               fontSize: 15,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w400,
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 32),
           FigmaCard(
-            padding: const EdgeInsets.all(30),
+            padding: const EdgeInsets.all(32),
             shadow: true,
             child: Form(
               key: _formKey,
@@ -96,38 +96,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     AuthErrorBanner(message: error),
                     const SizedBox(height: 16),
                   ],
-                  Row(
-                    children: [
-                      Expanded(
-                        child: PlumoraTextField(
-                          controller: _firstnameController,
-                          label: 'Prenom',
-                          hint: 'Kevin',
-                          textInputAction: TextInputAction.next,
-                          validator: (value) {
-                            if ((value ?? '').trim().isEmpty) {
-                              return 'Prenom requis';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: PlumoraTextField(
-                          controller: _lastnameController,
-                          label: 'Nom',
-                          hint: 'Martin',
-                          textInputAction: TextInputAction.next,
-                          validator: (value) {
-                            if ((value ?? '').trim().isEmpty) {
-                              return 'Nom requis';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
+                  PlumoraTextField(
+                    controller: _fullNameController,
+                    label: 'Nom complet',
+                    hint: 'Kevin Martin',
+                    textInputAction: TextInputAction.next,
+                    validator: (value) {
+                      final trimmed = (value ?? '').trim();
+                      if (trimmed.isEmpty) {
+                        return 'Nom complet requis';
+                      }
+                      if (!trimmed.contains(RegExp(r'\s'))) {
+                        return 'Indiquez votre prenom et votre nom';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 18),
                   PlumoraTextField(
@@ -151,7 +134,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   PlumoraTextField(
                     controller: _passwordController,
                     label: 'Mot de passe',
-                    hint: '********',
+                    hint: '••••••••',
                     obscureText: true,
                     textInputAction: TextInputAction.next,
                     validator: (value) {
@@ -166,7 +149,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   PlumoraTextField(
                     controller: _confirmPasswordController,
                     label: 'Confirmer le mot de passe',
-                    hint: '********',
+                    hint: '••••••••',
                     obscureText: true,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => isLoading ? null : _submit(),
@@ -181,16 +164,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   FilledButton(
                     onPressed: isLoading ? null : _submit,
                     child: LoadingButtonChild(
-                      label: 'Creer mon compte',
+                      label: 'Créer mon compte',
                       isLoading: isLoading,
                     ),
                   ),
                   const SizedBox(height: 22),
-                  TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () => context.go(AppRoutes.login),
-                    child: const Text('Deja un compte ? Se connecter'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Déjà un compte ? ',
+                        style: TextStyle(
+                          color: PlumoraColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => context.go(AppRoutes.login),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Se connecter'),
+                      ),
+                    ],
                   ),
                 ],
               ),
