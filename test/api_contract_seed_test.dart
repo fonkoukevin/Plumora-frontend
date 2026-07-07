@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plumora_app/core/routing/app_router.dart';
@@ -33,7 +34,10 @@ import 'package:plumora_app/features/reading/data/services/review_api_service.da
 void main() {
   group('GoRouter MVP routes', () {
     test('registers every implemented front route', () {
-      final paths = _collectRoutePaths(appRouter.configuration.routes);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final router = container.read(appRouterProvider);
+      final paths = _collectRoutePaths(router.configuration.routes);
 
       expect(
         paths,

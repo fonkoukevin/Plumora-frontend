@@ -5,7 +5,7 @@ import 'core/routing/app_router.dart';
 import 'core/theme/plumora_theme.dart';
 
 void main() {
-  runApp(const ProviderScope(child: PlumoraApp()));
+  runApp(const PlumoraApp());
 }
 
 class PlumoraApp extends StatelessWidget {
@@ -13,12 +13,21 @@ class PlumoraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return const ProviderScope(child: _PlumoraMaterialApp());
+  }
+}
+
+class _PlumoraMaterialApp extends ConsumerWidget {
+  const _PlumoraMaterialApp();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'Plumora',
       debugShowCheckedModeBanner: false,
       theme: PlumoraTheme.light,
       darkTheme: PlumoraTheme.dark,
-      routerConfig: appRouter,
+      routerConfig: ref.watch(appRouterProvider),
     );
   }
 }
