@@ -1496,9 +1496,7 @@ class _FigmaBottomChapterToolbar extends StatelessWidget {
             tooltip: readMode ? 'Écrire' : 'Lire',
           ),
           const SizedBox(width: 8),
-          Expanded(
-            child: _FigmaMukemeButton(active: false, onTap: onMukeme),
-          ),
+          Expanded(child: _FigmaMukemeButton(active: false, onTap: onMukeme)),
         ],
       ),
     );

@@ -351,7 +351,7 @@ class PlumoraBookCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalizedImageUrl = _normalizedImageUrl(imageUrl);
+    final normalizedImageUrl = resolvePlumoraImageUrl(imageUrl);
 
     return Container(
       width: width,
@@ -398,34 +398,34 @@ class PlumoraBookCover extends StatelessWidget {
       ),
     );
   }
+}
 
-  String? _normalizedImageUrl(String? value) {
-    final url = value?.trim();
-    if (url == null || url.isEmpty) {
-      return null;
-    }
-
-    final uri = Uri.tryParse(url);
-    final scheme = uri?.scheme.toLowerCase();
-    if (uri == null) {
-      return null;
-    }
-
-    if (uri.hasScheme) {
-      return scheme == 'http' || scheme == 'https' ? url : null;
-    }
-
-    final apiUri = Uri.tryParse(ApiConfig.baseUrl);
-    if (apiUri == null || !apiUri.hasScheme) {
-      return null;
-    }
-
-    final backendOrigin = apiUri.replace(path: '', query: null, fragment: null);
-    final apiBasePath = apiUri.path.endsWith('/')
-        ? apiUri.path
-        : '${apiUri.path}/';
-    final normalizedPath = url.startsWith('/') ? url : '$apiBasePath$url';
-
-    return backendOrigin.resolve(normalizedPath).toString();
+String? resolvePlumoraImageUrl(String? value) {
+  final url = value?.trim();
+  if (url == null || url.isEmpty) {
+    return null;
   }
+
+  final uri = Uri.tryParse(url);
+  final scheme = uri?.scheme.toLowerCase();
+  if (uri == null) {
+    return null;
+  }
+
+  if (uri.hasScheme) {
+    return scheme == 'http' || scheme == 'https' ? url : null;
+  }
+
+  final apiUri = Uri.tryParse(ApiConfig.baseUrl);
+  if (apiUri == null || !apiUri.hasScheme) {
+    return null;
+  }
+
+  final backendOrigin = apiUri.replace(path: '', query: null, fragment: null);
+  final apiBasePath = apiUri.path.endsWith('/')
+      ? apiUri.path
+      : '${apiUri.path}/';
+  final normalizedPath = url.startsWith('/') ? url : '$apiBasePath$url';
+
+  return backendOrigin.resolve(normalizedPath).toString();
 }

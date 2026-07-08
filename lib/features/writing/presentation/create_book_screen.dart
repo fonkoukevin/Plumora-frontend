@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,8 +10,14 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../../core/widgets/plumora_ui.dart' show resolvePlumoraImageUrl;
 import '../../book/data/models/book_model.dart';
 import '../../book/data/repositories/book_repository.dart';
+
+const XTypeGroup _coverImageTypeGroup = XTypeGroup(
+  label: 'images',
+  extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+);
 
 const _writeAccent = Color(0xFF7C5CFF);
 const _writeAccentLight = Color(0xFF9B80FF);
@@ -98,6 +106,9 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
   final _summaryController = TextEditingController();
   final _tagsController = TextEditingController();
   int _selectedCoverIndex = 0;
+  Uint8List? _coverImageBytes;
+  String? _coverImageName;
+  String? _existingCoverUrl;
   String _genre = '';
   String _language = 'Français';
   String _visibility = 'PRIVATE';
@@ -168,7 +179,9 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                   child: Align(
                     alignment: Alignment.topCenter,
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: _formMaxWidth),
+                      constraints: const BoxConstraints(
+                        maxWidth: _formMaxWidth,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -177,16 +190,15 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                           _CoverSection(
                             title: _titleController.text,
                             selectedIndex: _selectedCoverIndex,
-                            onSelect: (index) =>
-                                setState(() => _selectedCoverIndex = index),
-                            onImportTap: () =>
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Import de couverture bientôt disponible.',
-                                    ),
-                                  ),
-                                ),
+                            pickedImageBytes: _coverImageBytes,
+                            existingImageUrl: _existingCoverUrl,
+                            onSelect: (index) => setState(() {
+                              _selectedCoverIndex = index;
+                              _coverImageBytes = null;
+                              _coverImageName = null;
+                              _existingCoverUrl = null;
+                            }),
+                            onImportTap: _pickCoverImage,
                           ),
                           const SizedBox(height: 30),
                           const _SectionLabel('Informations'),
@@ -311,6 +323,37 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
     _genre = book.genre ?? '';
     _visibility = _normalizeVisibility(book.visibility);
     _language = _labelForLanguageCode(book.language);
+    _existingCoverUrl = book.coverUrl;
+  }
+
+  Future<void> _pickCoverImage() async {
+    try {
+      final file = await openFile(acceptedTypeGroups: [_coverImageTypeGroup]);
+      if (file == null) {
+        return;
+      }
+
+      final bytes = await file.readAsBytes();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _coverImageBytes = bytes;
+        _coverImageName = file.name;
+        _existingCoverUrl = null;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Impossible d'ouvrir le sélecteur d'image."),
+        ),
+      );
+    }
   }
 
   Future<void> _submit() async {
@@ -336,6 +379,12 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
             .where((tag) => tag.isNotEmpty)
             .toList(),
         mature: _mature,
+        coverImage: _coverImageBytes == null
+            ? null
+            : BookCoverUpload(
+                fileName: _coverImageName ?? 'cover.jpg',
+                bytes: _coverImageBytes,
+              ),
       );
       final repository = ref.read(bookRepositoryProvider);
       final saved = _editing
@@ -464,9 +513,7 @@ class _HeaderSubmitButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
           gradient: canSubmit
-              ? const LinearGradient(
-                  colors: [_writeAccent, _writeAccentLight],
-                )
+              ? const LinearGradient(colors: [_writeAccent, _writeAccentLight])
               : null,
           color: canSubmit ? null : PlumoraColors.muted,
           borderRadius: BorderRadius.circular(12),
@@ -548,16 +595,22 @@ class _CoverSection extends StatelessWidget {
     required this.selectedIndex,
     required this.onSelect,
     required this.onImportTap,
+    this.pickedImageBytes,
+    this.existingImageUrl,
   });
 
   final String title;
   final int selectedIndex;
+  final Uint8List? pickedImageBytes;
+  final String? existingImageUrl;
   final ValueChanged<int> onSelect;
   final VoidCallback onImportTap;
 
   @override
   Widget build(BuildContext context) {
     final trimmedTitle = title.trim();
+    final resolvedExistingUrl = resolvePlumoraImageUrl(existingImageUrl);
+    final hasImage = pickedImageBytes != null || resolvedExistingUrl != null;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,6 +640,24 @@ class _CoverSection extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
+                    if (pickedImageBytes != null)
+                      Positioned.fill(
+                        child: Image.memory(
+                          pickedImageBytes!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox.shrink(),
+                        ),
+                      )
+                    else if (resolvedExistingUrl != null)
+                      Positioned.fill(
+                        child: Image.network(
+                          resolvedExistingUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox.shrink(),
+                        ),
+                      ),
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -626,8 +697,11 @@ class _CoverSection extends StatelessWidget {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: onImportTap,
-                  icon: const Icon(Icons.camera_alt_outlined, size: 15),
-                  label: const Text('Importer'),
+                  icon: Icon(
+                    hasImage ? Icons.edit_outlined : Icons.camera_alt_outlined,
+                    size: 15,
+                  ),
+                  label: Text(hasImage ? 'Changer' : 'Importer'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: PlumoraColors.textSecondary,
                     side: const BorderSide(color: PlumoraColors.border),
@@ -660,13 +734,12 @@ class _CoverSection extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _coverPresets.length,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 2 / 3,
-                    ),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 2 / 3,
+                ),
                 itemBuilder: (context, index) {
                   return _CoverSwatch(
                     colors: _coverPresets[index],
@@ -708,9 +781,7 @@ class _CoverSwatch extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          border: selected
-              ? Border.all(color: _writeAccent, width: 2.5)
-              : null,
+          border: selected ? Border.all(color: _writeAccent, width: 2.5) : null,
         ),
         child: selected
             ? Container(
@@ -757,9 +828,7 @@ class _GenreChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           gradient: selected
-              ? const LinearGradient(
-                  colors: [_writeAccent, _writeAccentLight],
-                )
+              ? const LinearGradient(colors: [_writeAccent, _writeAccentLight])
               : null,
           color: selected ? null : PlumoraColors.cards,
           border: Border.all(

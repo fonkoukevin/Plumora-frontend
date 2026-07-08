@@ -55,9 +55,11 @@ abstract final class PlumoraTheme {
       scaffoldBackgroundColor: isDark
           ? PlumoraColors.darkBackground
           : PlumoraColors.background,
-      textTheme: GoogleFonts.nunitoTextTheme(
-        Typography.material2021().black,
-      ).apply(bodyColor: colorScheme.onSurface, displayColor: colorScheme.onSurface),
+      textTheme: GoogleFonts.nunitoTextTheme(Typography.material2021().black)
+          .apply(
+            bodyColor: colorScheme.onSurface,
+            displayColor: colorScheme.onSurface,
+          ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: colorScheme.surface,
