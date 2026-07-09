@@ -6,6 +6,8 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../beta_reading/data/models/beta_comment_model.dart';
+import '../../beta_reading/data/repositories/beta_reading_repository.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_repository.dart';
@@ -29,6 +31,9 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
   Widget build(BuildContext context) {
     final bookAsync = ref.watch(authorBookProvider(widget.bookId));
     final chaptersAsync = ref.watch(bookChaptersProvider(widget.bookId));
+    final betaCommentsAsync = ref.watch(
+      betaCommentsForBookProvider(widget.bookId),
+    );
 
     return FigmaScreen(
       maxWidth: 840,
@@ -82,6 +87,7 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
               data: (chapters) => _PublishContent(
                 book: book,
                 chapters: chapters,
+                betaCommentsAsync: betaCommentsAsync,
                 isPublishing: _isPublishing,
                 error: _error,
                 onPublish: _publish,
@@ -124,6 +130,7 @@ class _PublishContent extends StatelessWidget {
   const _PublishContent({
     required this.book,
     required this.chapters,
+    required this.betaCommentsAsync,
     required this.isPublishing,
     required this.onPublish,
     this.error,
@@ -131,12 +138,22 @@ class _PublishContent extends StatelessWidget {
 
   final BookModel book;
   final List<ChapterModel> chapters;
+  final AsyncValue<List<BetaCommentModel>> betaCommentsAsync;
   final bool isPublishing;
   final VoidCallback onPublish;
   final String? error;
 
   @override
   Widget build(BuildContext context) {
+    final betaFeedbackResolved = betaCommentsAsync.maybeWhen(
+      data: (comments) => comments.every(
+        (comment) =>
+            comment.status == BetaCommentStatus.resolved ||
+            comment.status == BetaCommentStatus.ignored,
+      ),
+      orElse: () => false,
+    );
+
     final checklist = [
       _CheckItem('Titre renseigne', book.title.trim().isNotEmpty),
       _CheckItem('Resume renseigne', book.description.trim().isNotEmpty),
@@ -150,6 +167,7 @@ class _PublishContent extends StatelessWidget {
         chapters.isNotEmpty &&
             chapters.every((chapter) => chapter.content.trim().isNotEmpty),
       ),
+      _CheckItem('Retours beta traites', betaFeedbackResolved),
       _CheckItem('Livre non archive', !book.isArchived),
     ];
     final completed = checklist.where((item) => item.done).length;

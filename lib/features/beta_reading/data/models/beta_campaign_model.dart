@@ -1,14 +1,21 @@
 import 'beta_model_helpers.dart';
 
 enum BetaCampaignStatus {
-  open('OPEN'),
+  active('ACTIVE'),
   closed('CLOSED'),
-  draft('DRAFT'),
+  cancelled('CANCELLED'),
   unknown('UNKNOWN');
 
   const BetaCampaignStatus(this.apiValue);
 
   final String apiValue;
+
+  String get label => switch (this) {
+    BetaCampaignStatus.active => 'Active',
+    BetaCampaignStatus.closed => 'Fermée',
+    BetaCampaignStatus.cancelled => 'Annulée',
+    BetaCampaignStatus.unknown => 'Inconnue',
+  };
 
   static BetaCampaignStatus fromApi(Object? value) {
     final normalized = value?.toString().trim().toUpperCase();
@@ -25,7 +32,10 @@ class BetaCampaignModel {
     required this.bookId,
     required this.bookTitle,
     required this.status,
+    this.title,
     this.coverUrl,
+    this.authorId,
+    this.authorUsername,
     this.instructions,
     this.deadline,
     this.createdAt,
@@ -35,8 +45,11 @@ class BetaCampaignModel {
   final String id;
   final String bookId;
   final String bookTitle;
+  final String? title;
   final BetaCampaignStatus status;
   final String? coverUrl;
+  final String? authorId;
+  final String? authorUsername;
   final String? instructions;
   final DateTime? deadline;
   final DateTime? createdAt;
@@ -52,11 +65,18 @@ class BetaCampaignModel {
           readBetaNullableString(json, ['bookId', 'book_id']) ??
           readBetaString(book, ['id', 'bookId', 'book_id', 'uuid']),
       bookTitle:
-          readBetaNullableString(json, ['bookTitle', 'book_title', 'title']) ??
-          readBetaString(book, ['title', 'name']),
+          readBetaNullableString(json, ['bookTitle', 'book_title']) ??
+          readBetaNullableString(book, ['title', 'name']) ??
+          readBetaString(json, ['title']),
+      title: readBetaNullableString(json, [
+        'title',
+        'campaignTitle',
+        'campaign_title',
+      ]),
       status: BetaCampaignStatus.fromApi(json['status']),
       coverUrl:
           readBetaNullableString(json, [
+            'bookCoverUrl',
             'coverUrl',
             'cover_url',
             'coverImageUrl',
@@ -72,6 +92,12 @@ class BetaCampaignModel {
             'imageUrl',
             'image_url',
           ]),
+      authorId: readBetaNullableString(json, ['authorId', 'author_id']),
+      authorUsername: readBetaNullableString(json, [
+        'authorUsername',
+        'authorName',
+        'author_name',
+      ]),
       instructions: readBetaNullableString(json, [
         'instructions',
         'guidelines',
@@ -108,19 +134,11 @@ class BetaCampaignCreateRequest {
 }
 
 class BetaInvitationCreateRequest {
-  const BetaInvitationCreateRequest({this.betaReaderId, this.email});
+  const BetaInvitationCreateRequest({required this.betaReaderId});
 
-  final String? betaReaderId;
-  final String? email;
+  final String betaReaderId;
 
   Map<String, dynamic> toJson() {
-    final normalizedId = betaReaderId?.trim();
-    final normalizedEmail = email?.trim();
-    return {
-      if (normalizedId != null && normalizedId.isNotEmpty)
-        'betaReaderId': normalizedId,
-      if (normalizedEmail != null && normalizedEmail.isNotEmpty)
-        'email': normalizedEmail,
-    };
+    return {'betaReaderId': betaReaderId.trim()};
   }
 }

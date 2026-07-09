@@ -360,7 +360,13 @@ class _BetaTab extends StatelessWidget {
       error: (error, _) =>
           _ErrorPanel(message: AppError.messageFor(error), onRetry: onRetry),
       data: (invitations) {
+        final pendingCount = invitations
+            .where((invitation) => invitation.isPending)
+            .length;
         final filtered = invitations.where((invitation) {
+          if (!invitation.isAccepted) {
+            return false;
+          }
           if (query.isEmpty) {
             return true;
           }
@@ -370,19 +376,18 @@ class _BetaTab extends StatelessWidget {
 
         return Column(
           children: [
-            _LibraryBanner(
+            const _LibraryBanner(
               title: 'Espace Beta-lecture',
-              subtitle:
-                  '${invitations.length} invitation(s) liee(s) a ton compte',
+              subtitle: 'Aidez les auteurs avec vos retours',
               icon: Icons.chat_bubble_outline,
-              colors: const [PlumoraColors.secondary, PlumoraColors.primary],
+              colors: [PlumoraColors.secondary, PlumoraColors.primary],
+              backgroundGradientColors: [Color(0xFF5BA8FF), Color(0xFFC084FC)],
             ),
             const SizedBox(height: 18),
             if (filtered.isEmpty)
               const FigmaEmptyState(
                 title: 'Aucune beta-lecture',
-                message:
-                    'Tes invitations acceptees ou en attente apparaitront ici.',
+                message: 'Tes invitations acceptees apparaitront ici.',
                 icon: Icons.edit_note_outlined,
               )
             else
@@ -395,7 +400,11 @@ class _BetaTab extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () => context.go(AppRoutes.betaInvitations),
                 icon: const Icon(Icons.open_in_new, size: 16),
-                label: const Text('Gerer les invitations'),
+                label: Text(
+                  pendingCount > 0
+                      ? 'Gerer les invitations ($pendingCount en attente)'
+                      : 'Gerer les invitations',
+                ),
               ),
             ),
           ],
@@ -620,9 +629,7 @@ class _BetaTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final progress = invitation.chaptersAvailable == 0
-        ? 0.0
-        : invitation.chaptersRead / invitation.chaptersAvailable;
+    final author = invitation.authorName.trim();
     final cachedCover = ref.watch(bookCoverBytesProvider(invitation.bookId));
 
     return FigmaCard(
@@ -651,70 +658,24 @@ class _BetaTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        invitation.bookTitle.isEmpty
-                            ? 'Manuscrit sans titre'
-                            : invitation.bookTitle,
-                        style: const TextStyle(
-                          color: PlumoraColors.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    FigmaBadge(label: _statusLabel(invitation.status)),
-                  ],
-                ),
-                const SizedBox(height: 3),
                 Text(
-                  'par ${invitation.authorName}',
+                  invitation.bookTitle.isEmpty
+                      ? 'Manuscrit sans titre'
+                      : invitation.bookTitle,
                   style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
-                    fontSize: 12,
+                    color: PlumoraColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 9),
-                if (invitation.deadline != null)
-                  FigmaBadge(
-                    label: 'Deadline : ${_shortDate(invitation.deadline!)}',
-                    icon: Icons.schedule,
-                    backgroundColor: PlumoraColors.orange.withValues(
-                      alpha: 0.12,
+                if (author.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'par $author',
+                    style: const TextStyle(
+                      color: PlumoraColors.textSecondary,
+                      fontSize: 12,
                     ),
-                    foregroundColor: PlumoraColors.orange,
-                  ),
-                if (invitation.chaptersAvailable > 0) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Text(
-                        '${invitation.chaptersRead}/${invitation.chaptersAvailable} chapitres',
-                        style: const TextStyle(
-                          color: PlumoraColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${(progress * 100).round()}%',
-                        style: const TextStyle(
-                          color: PlumoraColors.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  FigmaProgressBar(
-                    value: progress,
-                    colors: const [
-                      PlumoraColors.secondary,
-                      PlumoraColors.primary,
-                    ],
                   ),
                 ],
               ],
@@ -733,17 +694,29 @@ class _LibraryBanner extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.colors,
+    this.backgroundGradientColors,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
   final List<Color> colors;
+  final List<Color>? backgroundGradientColors;
 
   @override
   Widget build(BuildContext context) {
+    final backgroundColors = backgroundGradientColors;
     return FigmaCard(
       color: colors.first.withValues(alpha: 0.06),
+      gradient: backgroundColors == null
+          ? null
+          : LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: backgroundColors
+                  .map((color) => color.withValues(alpha: 0.06))
+                  .toList(),
+            ),
       child: Row(
         children: [
           FigmaGradientIcon(icon: icon, colors: colors, size: 44),
@@ -895,15 +868,6 @@ class _ErrorPanel extends StatelessWidget {
       ),
     );
   }
-}
-
-String _statusLabel(BetaInvitationStatus status) {
-  return switch (status) {
-    BetaInvitationStatus.pending => 'En attente',
-    BetaInvitationStatus.accepted => 'Acceptee',
-    BetaInvitationStatus.refused => 'Refusee',
-    BetaInvitationStatus.unknown => 'Inconnue',
-  };
 }
 
 String _shortDate(DateTime date) {

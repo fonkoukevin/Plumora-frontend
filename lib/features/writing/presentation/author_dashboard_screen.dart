@@ -7,6 +7,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../../core/widgets/plumora_ui.dart' show resolvePlumoraImageUrl;
 import '../../book/data/models/book_model.dart';
 import '../../book/data/repositories/book_repository.dart';
 
@@ -729,6 +730,8 @@ class _StoryCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedCoverUrl = resolvePlumoraImageUrl(book.coverUrl);
+
     return Container(
       width: 64,
       height: 85,
@@ -755,9 +758,9 @@ class _StoryCover extends StatelessWidget {
               ),
             ),
           ),
-          if ((book.coverUrl ?? '').isNotEmpty)
+          if (resolvedCoverUrl != null)
             Image.network(
-              book.coverUrl!,
+              resolvedCoverUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
                   const SizedBox.shrink(),

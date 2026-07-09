@@ -27,6 +27,12 @@ final betaCampaignsForBookProvider =
       return ref.watch(betaReadingRepositoryProvider).campaignsForBook(bookId);
     });
 
+final betaOpenCampaignsProvider = FutureProvider<List<BetaCampaignModel>>((
+  ref,
+) {
+  return ref.watch(betaReadingRepositoryProvider).openCampaigns();
+});
+
 final betaCampaignProvider = FutureProvider.family<BetaCampaignModel, String>((
   ref,
   campaignId,
@@ -54,6 +60,13 @@ final betaCommentsForCampaignProvider =
       return ref
           .watch(betaReadingRepositoryProvider)
           .commentsForCampaign(campaignId);
+    });
+
+final betaCampaignInvitationsProvider =
+    FutureProvider.family<List<BetaInvitationModel>, String>((ref, campaignId) {
+      return ref
+          .watch(betaReadingRepositoryProvider)
+          .invitationsForCampaign(campaignId);
     });
 
 class BetaReadingRepository {
@@ -100,12 +113,42 @@ class BetaReadingRepository {
     }
   }
 
+  Future<List<BetaCampaignModel>> openCampaigns() async {
+    try {
+      return await _apiService.openCampaigns();
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        return <BetaCampaignModel>[];
+      }
+
+      rethrow;
+    }
+  }
+
   Future<BetaCampaignModel> campaignById(String campaignId) {
     return _apiService.campaignById(campaignId);
   }
 
   Future<BetaCampaignModel> closeCampaign(String campaignId) {
     return _apiService.closeCampaign(campaignId);
+  }
+
+  Future<BetaCampaignModel> cancelCampaign(String campaignId) {
+    return _apiService.cancelCampaign(campaignId);
+  }
+
+  Future<List<BetaInvitationModel>> invitationsForCampaign(
+    String campaignId,
+  ) async {
+    try {
+      return await _apiService.invitationsForCampaign(campaignId);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        return <BetaInvitationModel>[];
+      }
+
+      rethrow;
+    }
   }
 
   Future<BetaInvitationModel> createInvitation(
@@ -159,5 +202,9 @@ class BetaReadingRepository {
     BetaCommentStatus status,
   ) {
     return _apiService.updateCommentStatus(commentId, status);
+  }
+
+  Future<void> deleteComment(String commentId) {
+    return _apiService.deleteComment(commentId);
   }
 }

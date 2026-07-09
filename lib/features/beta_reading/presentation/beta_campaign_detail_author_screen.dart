@@ -8,6 +8,7 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../data/models/beta_campaign_model.dart';
 import '../data/models/beta_comment_model.dart';
+import '../data/models/beta_invitation_model.dart';
 import '../data/models/beta_shared_chapter_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
 
@@ -29,6 +30,7 @@ class BetaCampaignDetailAuthorScreen extends ConsumerStatefulWidget {
 class _BetaCampaignDetailAuthorScreenState
     extends ConsumerState<BetaCampaignDetailAuthorScreen> {
   bool _isClosing = false;
+  bool _isCancelling = false;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,9 @@ class _BetaCampaignDetailAuthorScreenState
     );
     final commentsAsync = ref.watch(
       betaCommentsForCampaignProvider(widget.campaignId),
+    );
+    final invitationsAsync = ref.watch(
+      betaCampaignInvitationsProvider(widget.campaignId),
     );
 
     return LayoutBuilder(
@@ -78,9 +83,20 @@ class _BetaCampaignDetailAuthorScreenState
                     _CampaignHeader(
                       campaign: campaign,
                       isClosing: _isClosing,
-                      onClose: campaign.status == BetaCampaignStatus.closed
-                          ? null
-                          : () => _closeCampaign(campaign),
+                      isCancelling: _isCancelling,
+                      onClose: campaign.status == BetaCampaignStatus.active
+                          ? () => _closeCampaign(campaign)
+                          : null,
+                      onCancel: campaign.status == BetaCampaignStatus.active
+                          ? () => _cancelCampaign(campaign)
+                          : null,
+                    ),
+                    const SizedBox(height: 24),
+                    _AsyncInvitations(
+                      invitationsAsync: invitationsAsync,
+                      onRetry: () => ref.invalidate(
+                        betaCampaignInvitationsProvider(widget.campaignId),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     _AsyncChapters(
@@ -137,18 +153,67 @@ class _BetaCampaignDetailAuthorScreenState
       }
     }
   }
+
+  Future<void> _cancelCampaign(BetaCampaignModel campaign) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler cette campagne ?'),
+        content: const Text(
+          "Les bêta-lecteurs ne pourront plus lire ni commenter cette "
+          "campagne. Cette action n'est pas réversible.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Retour'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Annuler la campagne'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() => _isCancelling = true);
+    try {
+      await ref.read(betaReadingRepositoryProvider).cancelCampaign(campaign.id);
+      ref.invalidate(betaCampaignProvider(campaign.id));
+      if (campaign.bookId.isNotEmpty) {
+        ref.invalidate(betaCampaignsForBookProvider(campaign.bookId));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCancelling = false);
+      }
+    }
+  }
 }
 
 class _CampaignHeader extends StatelessWidget {
   const _CampaignHeader({
     required this.campaign,
     required this.isClosing,
+    required this.isCancelling,
     required this.onClose,
+    required this.onCancel,
   });
 
   final BetaCampaignModel campaign;
   final bool isClosing;
+  final bool isCancelling;
   final VoidCallback? onClose;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +254,7 @@ class _CampaignHeader extends StatelessWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    PlumoraBadge(label: campaign.status.apiValue),
+                    PlumoraBadge(label: campaign.status.label),
                     if (campaign.deadline != null)
                       PlumoraBadge(
                         label: _dateLabel(campaign.deadline!),
@@ -198,10 +263,25 @@ class _CampaignHeader extends StatelessWidget {
                         icon: Icons.schedule,
                       ),
                     OutlinedButton.icon(
-                      onPressed: isClosing ? null : onClose,
+                      onPressed: isClosing || isCancelling ? null : onClose,
                       icon: const Icon(Icons.lock_outline, size: 17),
                       label: Text(isClosing ? 'Fermeture...' : 'Fermer'),
                     ),
+                    if (onCancel != null)
+                      TextButton.icon(
+                        onPressed: isClosing || isCancelling ? null : onCancel,
+                        icon: const Icon(
+                          Icons.cancel_outlined,
+                          size: 17,
+                          color: PlumoraColors.destructive,
+                        ),
+                        label: Text(
+                          isCancelling ? 'Annulation...' : 'Annuler',
+                          style: const TextStyle(
+                            color: PlumoraColors.destructive,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -211,6 +291,85 @@ class _CampaignHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+class _AsyncInvitations extends StatelessWidget {
+  const _AsyncInvitations({
+    required this.invitationsAsync,
+    required this.onRetry,
+  });
+
+  final AsyncValue<List<BetaInvitationModel>> invitationsAsync;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return invitationsAsync.when(
+      loading: () => const _LoadingCard(),
+      error: (error, _) => _StateCard(
+        title: 'Invitations indisponibles',
+        subtitle: AppError.messageFor(error),
+        action: FilledButton(
+          onPressed: onRetry,
+          child: const Text('Réessayer'),
+        ),
+      ),
+      data: (invitations) => PlumoraCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Invités (${invitations.length})',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              "L'invitation ne conditionne pas l'accès : tout bêta-lecteur "
+              'peut déjà lire et commenter cette campagne.',
+              style: TextStyle(
+                color: PlumoraColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (invitations.isEmpty)
+              const Text(
+                "Aucun bêta-lecteur invité personnellement pour l'instant.",
+                style: TextStyle(color: PlumoraColors.textSecondary),
+              )
+            else
+              for (final invitation in invitations) ...[
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.person_outline,
+                    color: PlumoraColors.primary,
+                  ),
+                  title: Text(
+                    invitation.betaReaderName?.trim().isNotEmpty == true
+                        ? invitation.betaReaderName!
+                        : 'Bêta-lecteur',
+                  ),
+                  trailing: PlumoraBadge(
+                    label: _invitationStatusLabel(invitation.status),
+                  ),
+                ),
+                const Divider(height: 18),
+              ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _invitationStatusLabel(BetaInvitationStatus status) {
+  return switch (status) {
+    BetaInvitationStatus.pending => 'En attente',
+    BetaInvitationStatus.accepted => 'Acceptée',
+    BetaInvitationStatus.refused => 'Refusée',
+    BetaInvitationStatus.unknown => 'Inconnue',
+  };
 }
 
 class _AsyncChapters extends StatelessWidget {

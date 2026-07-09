@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../data/models/beta_campaign_model.dart';
 import '../data/models/beta_comment_model.dart';
 import '../data/models/beta_shared_chapter_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
@@ -30,6 +31,11 @@ class BetaReadChapterScreen extends ConsumerWidget {
     final chaptersAsync = ref.watch(betaSharedChaptersProvider(campaignId));
     final commentsAsync = ref.watch(
       betaCommentsForCampaignProvider(campaignId),
+    );
+    final campaignAsync = ref.watch(betaCampaignProvider(campaignId));
+    final canComment = campaignAsync.maybeWhen(
+      data: (campaign) => campaign.status == BetaCampaignStatus.active,
+      orElse: () => true,
     );
 
     return chaptersAsync.when(
@@ -102,8 +108,14 @@ class BetaReadChapterScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: FilledButton.icon(
-                  onPressed: () =>
-                      _openCommentSheet(context, ref, chapter, effectiveBookId),
+                  onPressed: canComment
+                      ? () => _openCommentSheet(
+                          context,
+                          ref,
+                          chapter,
+                          effectiveBookId,
+                        )
+                      : null,
                   icon: const Icon(Icons.chat_bubble_outline, size: 18),
                   label: const Text('Commenter'),
                 ),
@@ -124,11 +136,44 @@ class BetaReadChapterScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _ChapterText(chapter: chapter),
+                          _ChapterText(
+                            chapter: chapter,
+                            annotatedText: commentsAsync.maybeWhen(
+                              data: (comments) => comments
+                                  .where(
+                                    (comment) =>
+                                        comment.chapterId == chapter.id,
+                                  )
+                                  .map((comment) => comment.selectedText)
+                                  .whereType<String>()
+                                  .where((text) => text.trim().isNotEmpty)
+                                  .toSet(),
+                              orElse: () => const <String>{},
+                            ),
+                            onParagraphTap: canComment
+                                ? (paragraph) => _openCommentSheet(
+                                    context,
+                                    ref,
+                                    chapter,
+                                    effectiveBookId,
+                                    defaultSelectedText: paragraph,
+                                  )
+                                : (
+                                    _,
+                                  ) => ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Cette campagne est close, impossible '
+                                        "d'ajouter un commentaire.",
+                                      ),
+                                    ),
+                                  ),
+                          ),
                           const SizedBox(height: 26),
                           _CommentsBlock(
                             commentsAsync: commentsAsync,
                             chapterId: chapter.id,
+                            campaignId: campaignId,
                             onRetry: () => ref.invalidate(
                               betaCommentsForCampaignProvider(campaignId),
                             ),
@@ -195,12 +240,11 @@ class BetaReadChapterScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     BetaSharedChapterModel chapter,
-    String effectiveBookId,
-  ) async {
-    final text = chapter.content.trim();
-    final selectedText = text.length <= 180
-        ? text
-        : '${text.substring(0, 180)}...';
+    String effectiveBookId, {
+    String? defaultSelectedText,
+  }) async {
+    final selectedText = defaultSelectedText ?? _fallbackSelectedText(chapter);
+    final positionStart = chapter.content.indexOf(selectedText);
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -210,6 +254,10 @@ class BetaReadChapterScreen extends ConsumerWidget {
         campaignId: campaignId,
         chapterId: chapter.id,
         defaultSelectedText: selectedText,
+        defaultPositionStart: positionStart < 0 ? null : positionStart,
+        defaultPositionEnd: positionStart < 0
+            ? null
+            : positionStart + selectedText.length,
       ),
     );
     if (created == true) {
@@ -217,12 +265,23 @@ class BetaReadChapterScreen extends ConsumerWidget {
       ref.invalidate(betaSharedChaptersProvider(campaignId));
     }
   }
+
+  static String _fallbackSelectedText(BetaSharedChapterModel chapter) {
+    final text = chapter.content.trim();
+    return text.length <= 180 ? text : '${text.substring(0, 180)}...';
+  }
 }
 
 class _ChapterText extends StatelessWidget {
-  const _ChapterText({required this.chapter});
+  const _ChapterText({
+    required this.chapter,
+    required this.annotatedText,
+    required this.onParagraphTap,
+  });
 
   final BetaSharedChapterModel chapter;
+  final Set<String> annotatedText;
+  final ValueChanged<String> onParagraphTap;
 
   @override
   Widget build(BuildContext context) {
@@ -231,6 +290,8 @@ class _ChapterText extends StatelessWidget {
         .map((part) => part.trim())
         .where((part) => part.isNotEmpty)
         .toList();
+
+    var badgeNumber = 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,15 +318,89 @@ class _ChapterText extends StatelessWidget {
           for (final paragraph in paragraphs)
             Padding(
               padding: const EdgeInsets.only(bottom: 22),
-              child: Text(
-                paragraph,
-                style: const TextStyle(
-                  color: PlumoraColors.textPrimary,
-                  fontSize: 18,
-                  height: 1.7,
-                ),
+              child: _AnnotatableParagraph(
+                text: paragraph,
+                badgeNumber: annotatedText.contains(paragraph)
+                    ? ++badgeNumber
+                    : null,
+                onTap: () => onParagraphTap(paragraph),
               ),
             ),
+      ],
+    );
+  }
+}
+
+class _AnnotatableParagraph extends StatelessWidget {
+  const _AnnotatableParagraph({
+    required this.text,
+    required this.badgeNumber,
+    required this.onTap,
+  });
+
+  final String text;
+  final int? badgeNumber;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final annotated = badgeNumber != null;
+    final paragraph = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: annotated
+            ? const EdgeInsets.fromLTRB(14, 10, 14, 10)
+            : EdgeInsets.zero,
+        decoration: annotated
+            ? BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(8),
+                border: const Border(
+                  left: BorderSide(color: Color(0xFFFACC15), width: 4),
+                ),
+              )
+            : null,
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: PlumoraColors.textPrimary,
+            fontSize: 18,
+            height: 1.7,
+          ),
+        ),
+      ),
+    );
+
+    if (!annotated) {
+      return paragraph;
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        paragraph,
+        Positioned(
+          right: -8,
+          top: -8,
+          child: Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFACC15),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$badgeNumber',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -275,11 +410,13 @@ class _CommentsBlock extends StatelessWidget {
   const _CommentsBlock({
     required this.commentsAsync,
     required this.chapterId,
+    required this.campaignId,
     required this.onRetry,
   });
 
   final AsyncValue<List<BetaCommentModel>> commentsAsync;
   final String chapterId;
+  final String campaignId;
   final VoidCallback onRetry;
 
   @override
@@ -329,7 +466,7 @@ class _CommentsBlock extends StatelessWidget {
               return Column(
                 children: [
                   for (final comment in chapterComments) ...[
-                    _CommentTile(comment: comment),
+                    _CommentTile(comment: comment, campaignId: campaignId),
                     const Divider(color: PlumoraColors.border),
                   ],
                 ],
@@ -342,24 +479,55 @@ class _CommentsBlock extends StatelessWidget {
   }
 }
 
-class _CommentTile extends StatelessWidget {
-  const _CommentTile({required this.comment});
+class _CommentTile extends ConsumerStatefulWidget {
+  const _CommentTile({required this.comment, required this.campaignId});
 
   final BetaCommentModel comment;
+  final String campaignId;
+
+  @override
+  ConsumerState<_CommentTile> createState() => _CommentTileState();
+}
+
+class _CommentTileState extends ConsumerState<_CommentTile> {
+  bool _isDeleting = false;
 
   @override
   Widget build(BuildContext context) {
+    final comment = widget.comment;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FigmaBadge(label: comment.type.label),
-              FigmaBadge(label: comment.status.apiValue),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FigmaBadge(label: comment.type.label),
+                    FigmaBadge(label: comment.status.apiValue),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: _isDeleting ? null : _delete,
+                icon: _isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(
+                        Icons.delete_outline,
+                        size: 20,
+                        color: PlumoraColors.destructive,
+                      ),
+                tooltip: 'Supprimer ce commentaire',
+              ),
             ],
           ),
           if ((comment.selectedText ?? '').trim().isNotEmpty) ...[
@@ -377,6 +545,47 @@ class _CommentTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer ce commentaire ?'),
+        content: const Text("Cette action n'est pas réversible."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() => _isDeleting = true);
+    try {
+      await ref
+          .read(betaReadingRepositoryProvider)
+          .deleteComment(widget.comment.id);
+      ref.invalidate(betaCommentsForCampaignProvider(widget.campaignId));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
+    }
   }
 }
 

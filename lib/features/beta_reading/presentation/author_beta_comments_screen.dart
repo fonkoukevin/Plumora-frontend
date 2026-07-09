@@ -302,7 +302,7 @@ class _CommentsContent extends StatelessWidget {
       'Tous' => true,
       'À traiter' =>
         comment.status == BetaCommentStatus.open ||
-            comment.status == BetaCommentStatus.pending ||
+            comment.status == BetaCommentStatus.inProgress ||
             comment.status == BetaCommentStatus.unknown,
       'Résolus' => comment.status == BetaCommentStatus.resolved,
       'Ignorés' => comment.status == BetaCommentStatus.ignored,
@@ -379,11 +379,19 @@ class _SummaryCard extends StatelessWidget {
           Container(
             width: 38,
             height: 38,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: item.color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(item.icon, color: item.color, size: 20),
+            child: Text(
+              '${item.count}',
+              style: TextStyle(
+                color: item.color,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ],
       ),
@@ -406,11 +414,12 @@ class _FilterBar extends StatelessWidget {
 
   static const _types = [
     'Tous',
-    'Incohérence',
-    'Rythme lent',
-    'Dialogue',
-    'Style',
+    'Intrigue',
     'Personnage',
+    'Style',
+    'Rythme',
+    'Continuité',
+    'Faute',
     'Autre',
   ];
 
@@ -492,6 +501,8 @@ class _AuthorCommentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = _statusLabel(comment.status);
+    final typeBadgeColor =
+        _priorityColor(comment.priority) ?? _typeColor(comment.type);
     final chapter = comment.chapterTitle.isEmpty
         ? 'Chapitre'
         : comment.chapterTitle;
@@ -534,10 +545,10 @@ class _AuthorCommentCard extends StatelessWidget {
                         ),
                         PlumoraBadge(
                           label: comment.type.label,
-                          backgroundColor: _typeColor(
-                            comment.type,
-                          ).withValues(alpha: 0.12),
-                          foregroundColor: _typeColor(comment.type),
+                          backgroundColor: typeBadgeColor.withValues(
+                            alpha: 0.12,
+                          ),
+                          foregroundColor: typeBadgeColor,
                         ),
                         PlumoraBadge(
                           label: status,
@@ -758,10 +769,10 @@ List<_SummaryItem> _summaryFor(List<BetaCommentModel> comments) {
 
   return [
     _SummaryItem(
-      label: 'Rythme',
-      count: count(BetaCommentType.rhythm),
-      icon: Icons.schedule,
-      color: const Color(0xFFA4683E),
+      label: 'Intrigue',
+      count: count(BetaCommentType.plot),
+      icon: Icons.auto_stories_outlined,
+      color: PlumoraColors.destructive,
     ),
     _SummaryItem(
       label: 'Personnage',
@@ -770,23 +781,23 @@ List<_SummaryItem> _summaryFor(List<BetaCommentModel> comments) {
       color: PlumoraColors.info,
     ),
     _SummaryItem(
-      label: 'Incohérence',
-      count: count(BetaCommentType.incoherence),
-      icon: Icons.error_outline,
-      color: PlumoraColors.destructive,
-    ),
-    _SummaryItem(
       label: 'Style',
       count: count(BetaCommentType.style),
       icon: Icons.auto_fix_high_outlined,
       color: const Color(0xFF7C3AED),
+    ),
+    _SummaryItem(
+      label: 'Rythme',
+      count: count(BetaCommentType.pacing),
+      icon: Icons.schedule,
+      color: const Color(0xFFC69200),
     ),
   ];
 }
 
 String _statusLabel(BetaCommentStatus status) {
   return switch (status) {
-    BetaCommentStatus.open || BetaCommentStatus.pending => 'À traiter',
+    BetaCommentStatus.open || BetaCommentStatus.inProgress => 'À traiter',
     BetaCommentStatus.resolved => 'Résolu',
     BetaCommentStatus.ignored => 'Ignoré',
     BetaCommentStatus.unknown => 'À traiter',
@@ -798,31 +809,39 @@ Color _statusColor(BetaCommentStatus status) {
     BetaCommentStatus.resolved => PlumoraColors.success,
     BetaCommentStatus.ignored => PlumoraColors.textSecondary,
     BetaCommentStatus.open ||
-    BetaCommentStatus.pending ||
+    BetaCommentStatus.inProgress ||
     BetaCommentStatus.unknown => PlumoraColors.primary,
   };
 }
 
 IconData _typeIcon(BetaCommentType type) {
   return switch (type) {
-    BetaCommentType.incoherence => Icons.error_outline,
-    BetaCommentType.rhythm => Icons.schedule,
-    BetaCommentType.typo => Icons.visibility_outlined,
-    BetaCommentType.dialogue => Icons.forum_outlined,
-    BetaCommentType.confusing => Icons.bolt_outlined,
-    BetaCommentType.style => Icons.auto_fix_high_outlined,
+    BetaCommentType.plot => Icons.auto_stories_outlined,
     BetaCommentType.character => Icons.person_outline,
+    BetaCommentType.style => Icons.auto_fix_high_outlined,
+    BetaCommentType.pacing => Icons.schedule,
+    BetaCommentType.continuity => Icons.sync_problem_outlined,
+    BetaCommentType.typo => Icons.spellcheck,
     BetaCommentType.other => Icons.chat_bubble_outline,
+  };
+}
+
+Color? _priorityColor(BetaCommentPriority priority) {
+  return switch (priority) {
+    BetaCommentPriority.critical => PlumoraColors.destructive,
+    BetaCommentPriority.high => PlumoraColors.destructive,
+    BetaCommentPriority.medium => const Color(0xFFA4683E),
+    BetaCommentPriority.low => PlumoraColors.textSecondary,
+    BetaCommentPriority.unknown => null,
   };
 }
 
 Color _typeColor(BetaCommentType type) {
   return switch (type) {
-    BetaCommentType.incoherence => PlumoraColors.destructive,
-    BetaCommentType.rhythm => const Color(0xFFA4683E),
+    BetaCommentType.plot => PlumoraColors.destructive,
+    BetaCommentType.continuity => const Color(0xFFA4683E),
     BetaCommentType.typo => PlumoraColors.info,
-    BetaCommentType.dialogue => const Color(0xFF7C3AED),
-    BetaCommentType.confusing => const Color(0xFFC69200),
+    BetaCommentType.pacing => const Color(0xFFC69200),
     BetaCommentType.style => const Color(0xFF8B5CF6),
     BetaCommentType.character => const Color(0xFF2563EB),
     BetaCommentType.other => PlumoraColors.textSecondary,

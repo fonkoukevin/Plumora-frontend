@@ -26,6 +26,9 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final campaignAsync = ref.watch(betaCampaignProvider(campaignId));
     final chaptersAsync = ref.watch(betaSharedChaptersProvider(campaignId));
+    final commentsAsync = ref.watch(
+      betaCommentsForCampaignProvider(campaignId),
+    );
 
     return FigmaScreen(
       maxWidth: 900,
@@ -95,6 +98,16 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
                 );
               }
 
+              final commentsByChapter = commentsAsync.maybeWhen(
+                data: (comments) => <String, int>{
+                  for (final chapter in sorted)
+                    chapter.id: comments
+                        .where((comment) => comment.chapterId == chapter.id)
+                        .length,
+                },
+                orElse: () => const <String, int>{},
+              );
+
               return Column(
                 children: [
                   for (final chapter in sorted) ...[
@@ -103,6 +116,7 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
                       campaignId: campaignId,
                       invitationId: invitationId,
                       fallbackBookId: bookId,
+                      commentsCount: commentsByChapter[chapter.id] ?? 0,
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -152,16 +166,18 @@ class _ChapterCard extends StatelessWidget {
     required this.campaignId,
     required this.invitationId,
     required this.fallbackBookId,
+    required this.commentsCount,
   });
 
   final BetaSharedChapterModel chapter;
   final String campaignId;
   final String? invitationId;
   final String? fallbackBookId;
+  final int commentsCount;
 
   @override
   Widget build(BuildContext context) {
-    final hasFeedback = chapter.commentsCount > 0;
+    final hasFeedback = commentsCount > 0;
 
     return FigmaCard(
       onTap: () => context.go(
@@ -205,7 +221,7 @@ class _ChapterCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${chapter.commentsCount} commentaire(s) laisse(s)',
+                  '$commentsCount commentaire(s) laisse(s)',
                   style: const TextStyle(
                     color: PlumoraColors.textSecondary,
                     fontSize: 12,

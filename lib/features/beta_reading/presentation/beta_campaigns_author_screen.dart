@@ -132,6 +132,7 @@ class _BetaCampaignsAuthorScreenState
                             betaCampaignsForBookProvider(widget.bookId),
                           ),
                           onClose: _closeCampaign,
+                          onCancel: _cancelCampaign,
                           onComments: (campaign) => context.go(
                             AppRoutes.authorBetaCommentsPath(book.id),
                           ),
@@ -203,13 +204,21 @@ class _BetaCampaignsAuthorScreenState
       for (final invitee in _readInvitees()) {
         await repository.createInvitation(campaign.id, invitee);
       }
+      final skipped = _readInvalidInvitees();
 
       ref.invalidate(betaCampaignsForBookProvider(widget.bookId));
       ref.invalidate(myBooksProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Campagne bêta créée.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              skipped.isEmpty
+                  ? 'Campagne bêta créée.'
+                  : 'Campagne bêta créée. Non invités (identifiant invalide) : '
+                        '${skipped.join(', ')}',
+            ),
+          ),
+        );
       }
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
@@ -239,18 +248,64 @@ class _BetaCampaignsAuthorScreenState
     }
   }
 
+  Future<void> _cancelCampaign(BetaCampaignModel campaign) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler cette campagne ?'),
+        content: const Text(
+          "Les bêta-lecteurs ne pourront plus lire ni commenter cette "
+          "campagne. Cette action n'est pas réversible.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Retour'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Annuler la campagne'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() => _busyCampaignId = campaign.id);
+    try {
+      await ref.read(betaReadingRepositoryProvider).cancelCampaign(campaign.id);
+      ref.invalidate(betaCampaignsForBookProvider(widget.bookId));
+      ref.invalidate(betaCampaignProvider(campaign.id));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busyCampaignId = null);
+      }
+    }
+  }
+
+  static final _uuidPattern = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
   List<BetaInvitationCreateRequest> _readInvitees() {
-    return _inviteesController.text
-        .split(RegExp(r'[,;\n]'))
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty)
-        .map((value) {
-          if (value.contains('@')) {
-            return BetaInvitationCreateRequest(email: value);
-          }
-          return BetaInvitationCreateRequest(betaReaderId: value);
-        })
+    return _parseInviteeTokens(_inviteesController.text)
+        .where(_uuidPattern.hasMatch)
+        .map((value) => BetaInvitationCreateRequest(betaReaderId: value))
         .toList(growable: false);
+  }
+
+  List<String> _readInvalidInvitees() {
+    return _parseInviteeTokens(
+      _inviteesController.text,
+    ).where((value) => !_uuidPattern.hasMatch(value)).toList(growable: false);
   }
 
   DateTime? _parseDeadline(String rawValue) {
@@ -275,6 +330,14 @@ class _BetaCampaignsAuthorScreenState
       int.parse(french.group(1)!),
     );
   }
+}
+
+List<String> _parseInviteeTokens(String raw) {
+  return raw
+      .split(RegExp(r'[,;\n]'))
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toList(growable: false);
 }
 
 class _Header extends StatelessWidget {
@@ -419,11 +482,38 @@ class _CampaignForm extends StatelessWidget {
             minLines: 2,
             maxLines: 4,
             decoration: const InputDecoration(
-              labelText: 'Invitations',
+              labelText: 'Invitations (optionnel)',
               hintText:
-                  'IDs ou emails des bêta-lecteurs, séparés par des virgules',
+                  "Identifiants (UUID) des bêta-lecteurs à notifier, séparés par "
+                  'des virgules. Tout bêta-lecteur peut déjà rejoindre la '
+                  "campagne sans invitation — ce champ n'envoie qu'une notification ciblée.",
               alignLabelWithHint: true,
             ),
+          ),
+          ListenableBuilder(
+            listenable: inviteesController,
+            builder: (context, _) {
+              final invitees = _parseInviteeTokens(inviteesController.text);
+              if (invitees.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final invitee in invitees)
+                      Chip(
+                        avatar: const Icon(Icons.person_outline, size: 16),
+                        label: Text(invitee),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+              );
+            },
           ),
           if (error != null) ...[
             const SizedBox(height: 14),
@@ -461,6 +551,7 @@ class _CampaignList extends StatelessWidget {
     required this.busyCampaignId,
     required this.onRetry,
     required this.onClose,
+    required this.onCancel,
     required this.onComments,
   });
 
@@ -468,6 +559,7 @@ class _CampaignList extends StatelessWidget {
   final String? busyCampaignId;
   final VoidCallback onRetry;
   final ValueChanged<BetaCampaignModel> onClose;
+  final ValueChanged<BetaCampaignModel> onCancel;
   final ValueChanged<BetaCampaignModel> onComments;
 
   @override
@@ -512,16 +604,16 @@ class _CampaignList extends StatelessWidget {
                   children: [
                     PlumoraIconTile(
                       backgroundColor:
-                          campaign.status == BetaCampaignStatus.closed
-                          ? PlumoraColors.muted
-                          : const Color(0xFFE8F0F5),
+                          campaign.status == BetaCampaignStatus.active
+                          ? const Color(0xFFE8F0F5)
+                          : PlumoraColors.muted,
                       child: Icon(
-                        campaign.status == BetaCampaignStatus.closed
-                            ? Icons.lock_outline
-                            : Icons.groups_outlined,
-                        color: campaign.status == BetaCampaignStatus.closed
-                            ? PlumoraColors.textSecondary
-                            : PlumoraColors.info,
+                        campaign.status == BetaCampaignStatus.active
+                            ? Icons.groups_outlined
+                            : Icons.lock_outline,
+                        color: campaign.status == BetaCampaignStatus.active
+                            ? PlumoraColors.info
+                            : PlumoraColors.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -553,7 +645,7 @@ class _CampaignList extends StatelessWidget {
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              PlumoraBadge(label: campaign.status.apiValue),
+                              PlumoraBadge(label: campaign.status.label),
                               if (campaign.deadline != null)
                                 PlumoraBadge(
                                   label: _dateLabel(campaign.deadline!),
@@ -586,7 +678,8 @@ class _CampaignList extends StatelessWidget {
                                 ),
                                 label: const Text('Voir les retours'),
                               ),
-                              if (campaign.status != BetaCampaignStatus.closed)
+                              if (campaign.status ==
+                                  BetaCampaignStatus.active) ...[
                                 TextButton(
                                   onPressed: busyCampaignId == campaign.id
                                       ? null
@@ -597,6 +690,20 @@ class _CampaignList extends StatelessWidget {
                                         : 'Fermer',
                                   ),
                                 ),
+                                TextButton(
+                                  onPressed: busyCampaignId == campaign.id
+                                      ? null
+                                      : () => onCancel(campaign),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: PlumoraColors.destructive,
+                                  ),
+                                  child: Text(
+                                    busyCampaignId == campaign.id
+                                        ? 'Annulation...'
+                                        : 'Annuler',
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ],

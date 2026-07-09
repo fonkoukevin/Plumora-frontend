@@ -48,6 +48,19 @@ class BetaReadingApiService {
     }).toList();
   }
 
+  Future<List<BetaCampaignModel>> openCampaigns() async {
+    final response = await _dio.get('/beta-campaigns');
+    return _readPayloadList(response.data, [
+      'content',
+      'items',
+      'campaigns',
+      'betaCampaigns',
+      'data',
+    ]).map(BetaCampaignModel.fromJson).where((campaign) {
+      return campaign.id.isNotEmpty;
+    }).toList();
+  }
+
   Future<BetaCampaignModel> campaignById(String campaignId) async {
     final response = await _dio.get('/beta-campaigns/$campaignId');
     return BetaCampaignModel.fromJson(_readPayloadMap(response.data));
@@ -67,6 +80,43 @@ class BetaReadingApiService {
     }
 
     return BetaCampaignModel.fromJson(payload);
+  }
+
+  Future<BetaCampaignModel> cancelCampaign(String campaignId) async {
+    final response = await _dio.patch('/beta-campaigns/$campaignId/cancel');
+    final payload = _tryReadPayloadMap(response.data);
+    if (payload == null) {
+      return BetaCampaignModel(
+        id: campaignId,
+        bookId: '',
+        bookTitle: '',
+        status: BetaCampaignStatus.cancelled,
+        closedAt: DateTime.now(),
+      );
+    }
+
+    return BetaCampaignModel.fromJson(payload);
+  }
+
+  Future<List<BetaInvitationModel>> invitationsForCampaign(
+    String campaignId,
+  ) async {
+    final response = await _dio.get('/beta-campaigns/$campaignId/invitations');
+    return _readPayloadList(response.data, [
+          'content',
+          'items',
+          'invitations',
+          'betaInvitations',
+          'data',
+        ])
+        .map(BetaInvitationModel.fromJson)
+        .map((invitation) {
+          return invitation.campaignId.isEmpty
+              ? invitation.copyWith(campaignId: campaignId)
+              : invitation;
+        })
+        .where((invitation) => invitation.id.isNotEmpty)
+        .toList();
   }
 
   Future<BetaInvitationModel> createInvitation(
@@ -247,6 +297,10 @@ class BetaReadingApiService {
     }
 
     return BetaCommentModel.fromJson(payload).copyWith(status: status);
+  }
+
+  Future<void> deleteComment(String commentId) {
+    return _dio.delete('/beta-comments/$commentId');
   }
 
   Map<String, dynamic> _readPayloadMap(Object? data) {

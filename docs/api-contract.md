@@ -136,23 +136,109 @@ the Plumora catalog first.
 
 ## Beta-reading
 
-POST `/books/{bookId}/beta-campaigns`
-GET `/books/{bookId}/beta-campaigns`
-GET `/beta-campaigns/{campaignId}`
-PATCH `/beta-campaigns/{campaignId}/close`
+Verified 2026-07 against the backend source (`plumora-api`, Spring Boot —
+controllers, DTOs, entities, enums, service layer read directly). Access model:
+**any user with role `BETA_READER` can read and comment on any campaign with
+status `ACTIVE`** — invitations do not gate access, they are only an optional
+targeted notification. Jackson uses plain camelCase field names (Java field
+name as-is) everywhere in this module except `NotificationResponse`, which
+uses `@JsonProperty` for `is_read`/`created_at`/`read_at` (snake_case).
 
-POST `/beta-campaigns/{campaignId}/invitations`
-GET `/beta-invitations/my-invitations`
-PATCH `/beta-invitations/{invitationId}/accept`
-PATCH `/beta-invitations/{invitationId}/refuse`
+Enums (exact constant names, no other values exist):
+- `BetaCampaignStatus`: `ACTIVE`, `CLOSED`, `CANCELLED` (campaigns are
+  `ACTIVE` immediately on creation; there is no `DRAFT`/`OPEN`).
+- `BetaCommentFeedbackType`: `PLOT`, `CHARACTER`, `STYLE`, `PACING`,
+  `CONTINUITY`, `TYPO`, `OTHER`.
+- `BetaCommentPriority`: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`.
+- `BetaCommentStatus`: `OPEN`, `IN_PROGRESS`, `RESOLVED`, `IGNORED`.
+- `BetaInvitationStatus`: `PENDING`, `ACCEPTED`, `REFUSED`.
 
-GET `/beta-campaigns/{campaignId}/chapters`
-PUT `/beta-campaigns/{campaignId}/chapters`
+POST `/books/{bookId}/beta-campaigns` — role `AUTHOR`
+- Body (`CreateBetaCampaignRequest`): `{ "title": string (required, ≤150),
+  "instructions"?: string (≤5000), "deadline"?: "YYYY-MM-DD" }`.
+- Returns `BetaCampaignResponse`: `id`, `bookId`, `bookTitle`, `bookCoverUrl`,
+  `authorId`, `authorUsername`, `title`, `instructions`, `deadline`, `status`,
+  `createdAt`, `closedAt`. Every user with role `BETA_READER` (except the
+  author) is sent a `BETA_CAMPAIGN_OPEN` notification when this succeeds.
 
-POST `/beta-comments`
-GET `/books/{bookId}/beta-comments`
-GET `/beta-campaigns/{campaignId}/comments`
-PATCH `/beta-comments/{commentId}/status`
+GET `/books/{bookId}/beta-campaigns` — role `AUTHOR`
+- Returns `BetaCampaignResponse[]` for that book (all statuses).
+
+GET `/beta-campaigns` — role `BETA_READER`
+- **New endpoint.** No params. Returns `BetaCampaignResponse[]` filtered to
+  `status == ACTIVE` only, ordered by `createdAt` descending. Same DTO shape
+  as above (includes `bookCoverUrl`/`authorUsername`) — no chapter-count or
+  per-user progress field exists on this DTO.
+
+GET `/beta-campaigns/{campaignId}` — role `AUTHOR` or `BETA_READER`
+- Returns one `BetaCampaignResponse`.
+
+PATCH `/beta-campaigns/{campaignId}/close` — role `AUTHOR`
+PATCH `/beta-campaigns/{campaignId}/cancel` — role `AUTHOR`
+- No body. Sets `status` to `CLOSED`/`CANCELLED` and `closedAt` to now. Both
+  require the campaign to currently be `ACTIVE`, else 400
+  `"Only active beta-reading campaigns can be modified"`.
+
+POST `/beta-campaigns/{campaignId}/invitations` — role `AUTHOR`
+- Body (`CreateBetaInvitationRequest`): `{ "betaReaderId": UUID }` — **required,
+  no email alternative.** Purely a targeted notification; has no effect on
+  who can already access the campaign.
+- Returns `BetaInvitationResponse`.
+
+GET `/beta-campaigns/{campaignId}/invitations` — role `AUTHOR`
+- Returns `BetaInvitationResponse[]` for that campaign.
+
+GET `/beta-invitations/my-invitations` — role `BETA_READER`
+- Returns `BetaInvitationResponse[]`: `id`, `campaignId`, `campaignTitle`,
+  `bookId`, `bookTitle`, `bookCoverUrl`, `betaReaderId`, `betaReaderUsername`,
+  `status`, `invitedAt`, `respondedAt`. **No author field, no chapter/feedback
+  count field** — those must not be assumed present.
+
+PATCH `/beta-invitations/{invitationId}/accept` — role `BETA_READER`
+PATCH `/beta-invitations/{invitationId}/refuse` — role `BETA_READER`
+- No body. Flips `status`/`respondedAt` only — does not grant or revoke
+  campaign access.
+
+GET `/beta-campaigns/{campaignId}/chapters` — role `AUTHOR` or `BETA_READER`
+- Returns `BetaSharedChapterResponse[]`: `id`, `title`, `content`,
+  `chapterOrder`, `wordCount`. **No `bookId`, no comment count** on this DTO.
+
+PUT `/beta-campaigns/{campaignId}/chapters` — role `AUTHOR`
+- Body (`UpdateSharedChaptersRequest`): `{ "chapterIds": UUID[] }` (required,
+  each id required). Returns `BetaSharedChapterResponse[]`.
+
+POST `/beta-comments` — role `BETA_READER`
+- Body (`CreateBetaCommentRequest`): `{ "campaignId": UUID, "chapterId": UUID,
+  "commentText": string (required, ≤5000), "selectedText"?: string (≤2000),
+  "positionStart"?: int (≥0), "positionEnd"?: int (≥0), "feedbackType":
+  <enum> (required), "priority": <enum> (required) }`. No `bookId` field.
+  400 if `positionStart > positionEnd`
+  (`"positionStart must be less than or equal to positionEnd"`); 400 if the
+  campaign isn't `ACTIVE`
+  (`"Beta comments can only be added to active beta-reading campaigns"`); 400
+  if the chapter isn't shared on this campaign
+  (`"Beta comments can only target shared chapters"`) or doesn't belong to
+  the campaign's book (`"Commented chapter must belong to the campaign book"`).
+- Returns `BetaCommentResponse`: `id`, `campaignId`, `campaignTitle`,
+  `bookId`, `bookTitle`, `bookCoverUrl`, `chapterId`, `chapterTitle`,
+  `betaReaderId`, `betaReaderUsername`, `commentText`, `selectedText`,
+  `positionStart`, `positionEnd`, `feedbackType`, `priority`, `status`,
+  `createdAt`, `updatedAt`.
+
+GET `/beta-campaigns/{campaignId}/comments` — role `AUTHOR` or `BETA_READER`
+- Author sees every comment on the campaign; a beta reader sees **only their
+  own** comments on it (server-side filtered, not a client concern).
+
+GET `/books/{bookId}/beta-comments` — role `AUTHOR`
+GET `/chapters/{chapterId}/beta-comments` — role `AUTHOR` or `BETA_READER`
+- Return `BetaCommentResponse[]`, same shape as above.
+
+PATCH `/beta-comments/{commentId}/status` — role `AUTHOR`
+- Body (`UpdateBetaCommentStatusRequest`): `{ "status": <BetaCommentStatus> }`.
+  Restricted to the book's author.
+
+DELETE `/beta-comments/{commentId}` — role `BETA_READER`
+- Restricted to the comment's own author. Returns 204, no body.
 
 ## AI
 
