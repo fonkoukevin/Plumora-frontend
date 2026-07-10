@@ -508,6 +508,7 @@ void main() {
       expect(myReviews.single.id, 'review-1');
       expect(updatedReview.rating, 4);
 
+      final betaReaders = await beta.betaReaders();
       final invitations = await beta.myInvitations();
       final openCampaigns = await beta.openCampaigns();
       final campaign = await beta.createCampaign(
@@ -551,6 +552,7 @@ void main() {
       );
       await beta.deleteComment('comment-1');
 
+      expect(betaReaders.single.username, 'sarah_seed');
       expect(invitations.single.id, 'invitation-1');
       expect(invitations.single.coverUrl, createdBook.coverUrl);
       expect(openCampaigns.single.id, 'campaign-1');
@@ -655,6 +657,7 @@ void main() {
           'GET /reviews/my',
           'PUT /reviews/review-1',
           'DELETE /reviews/review-1',
+          'GET /users',
           'GET /beta-invitations/my-invitations',
           'GET /beta-campaigns',
           'POST /books/book-1/beta-campaigns',
@@ -1082,6 +1085,9 @@ Map<String, Object?> _seedResponses() {
     },
     'PUT /reviews/review-1': {...review, 'rating': 4, 'comment': 'Très bon.'},
     'DELETE /reviews/review-1': _emptyResponse,
+    'GET /users': [
+      {'id': 'user-2', 'username': 'sarah_seed'},
+    ],
     'GET /beta-invitations/my-invitations': {
       'invitations': [invitation],
     },

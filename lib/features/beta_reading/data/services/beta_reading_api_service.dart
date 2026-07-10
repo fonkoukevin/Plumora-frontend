@@ -4,12 +4,28 @@ import '../../../../core/errors/app_error.dart';
 import '../models/beta_campaign_model.dart';
 import '../models/beta_comment_model.dart';
 import '../models/beta_invitation_model.dart';
+import '../models/beta_reader_summary_model.dart';
 import '../models/beta_shared_chapter_model.dart';
 
 class BetaReadingApiService {
   const BetaReadingApiService(this._dio);
 
   final Dio _dio;
+
+  Future<List<BetaReaderSummaryModel>> betaReaders() async {
+    final response = await _dio.get(
+      '/users',
+      queryParameters: {'role': 'BETA_READER'},
+    );
+    return _readPayloadList(response.data, [
+      'content',
+      'items',
+      'users',
+      'data',
+    ]).map(BetaReaderSummaryModel.fromJson).where((reader) {
+      return reader.id.isNotEmpty;
+    }).toList();
+  }
 
   Future<List<BetaInvitationModel>> myInvitations() async {
     final response = await _dio.get('/beta-invitations/my-invitations');
