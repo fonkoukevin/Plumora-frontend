@@ -30,12 +30,24 @@ class BetaInvitationsScreen extends ConsumerStatefulWidget {
 class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
   final Set<String> _mutatingIds = {};
   String? _error;
+  bool _markedSeen = false;
 
   @override
   Widget build(BuildContext context) {
     final openCampaignsAsync = ref.watch(betaOpenCampaignsProvider);
     final invitationsAsync = ref.watch(betaInvitationsProvider);
     final query = widget.query.trim().toLowerCase();
+
+    if (!_markedSeen &&
+        invitationsAsync.hasValue &&
+        openCampaignsAsync.hasValue) {
+      _markedSeen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          markBetaOpportunitiesSeen(ref);
+        }
+      });
+    }
 
     final content = openCampaignsAsync.when(
       loading: () => const Center(

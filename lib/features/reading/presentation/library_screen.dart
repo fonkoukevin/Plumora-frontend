@@ -10,6 +10,9 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../auth/presentation/controllers/auth_controller.dart';
+import '../../beta_reading/data/models/beta_campaign_model.dart';
+import '../../beta_reading/data/models/beta_comment_model.dart';
 import '../../beta_reading/data/models/beta_invitation_model.dart';
 import '../../beta_reading/data/repositories/beta_reading_repository.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
@@ -17,6 +20,89 @@ import '../data/models/favorite_model.dart';
 import '../data/models/reading_progress_model.dart';
 import '../data/repositories/favorite_repository.dart';
 import '../data/repositories/reading_repository.dart';
+
+/// Campagnes ouvertes sur lesquelles l'utilisateur a deja laisse au moins un
+/// commentaire, meme sans avoir accepte d'invitation personnelle.
+///
+/// D'apres le contrat API (`docs/api-contract.md`), `GET
+/// /beta-campaigns/{id}/comments` filtre deja cote serveur : un beta-lecteur
+/// n'y voit que ses propres commentaires (l'auteur, lui, voit tout). On evite
+/// donc de re-filtrer par `betaReaderId` cote client (pas fiable a 100% et
+/// redondant) et on exclut nos propres campagnes (ou on serait vu comme
+/// l'auteur, pas comme beta-lecteur).
+final _betaCommentedCampaignsProvider = FutureProvider<List<BetaCampaignModel>>(
+  (ref) async {
+    final userId = ref.watch(authControllerProvider).valueOrNull?.user?.id;
+    if (userId == null || userId.isEmpty) {
+      return const <BetaCampaignModel>[];
+    }
+
+    final allCampaigns = await ref.watch(betaOpenCampaignsProvider.future);
+    final campaigns = allCampaigns
+        .where((campaign) => campaign.authorId != userId)
+        .toList();
+    if (campaigns.isEmpty) {
+      return const <BetaCampaignModel>[];
+    }
+
+    final repository = ref.watch(betaReadingRepositoryProvider);
+    final commentsByCampaign = await Future.wait(
+      campaigns.map((campaign) async {
+        try {
+          return await repository.commentsForCampaign(campaign.id);
+        } catch (_) {
+          return const <BetaCommentModel>[];
+        }
+      }),
+    );
+
+    return [
+      for (var i = 0; i < campaigns.length; i++)
+        if (commentsByCampaign[i].isNotEmpty) campaigns[i],
+    ];
+  },
+);
+
+/// Livre beta-lu par l'utilisateur, qu'il vienne d'une invitation acceptee
+/// ou d'une campagne ouverte rejointe et commentee sans invitation.
+class _BetaLibraryEntry {
+  const _BetaLibraryEntry({
+    required this.campaignId,
+    required this.bookId,
+    required this.bookTitle,
+    required this.authorName,
+    this.coverUrl,
+    this.invitationId,
+  });
+
+  factory _BetaLibraryEntry.fromInvitation(BetaInvitationModel invitation) {
+    return _BetaLibraryEntry(
+      campaignId: invitation.campaignId,
+      bookId: invitation.bookId,
+      bookTitle: invitation.bookTitle,
+      authorName: invitation.authorName,
+      coverUrl: invitation.coverUrl,
+      invitationId: invitation.id,
+    );
+  }
+
+  factory _BetaLibraryEntry.fromCampaign(BetaCampaignModel campaign) {
+    return _BetaLibraryEntry(
+      campaignId: campaign.id,
+      bookId: campaign.bookId,
+      bookTitle: campaign.bookTitle,
+      authorName: campaign.authorUsername ?? '',
+      coverUrl: campaign.coverUrl,
+    );
+  }
+
+  final String campaignId;
+  final String bookId;
+  final String bookTitle;
+  final String authorName;
+  final String? coverUrl;
+  final String? invitationId;
+}
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -41,6 +127,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final favoritesAsync = ref.watch(myFavoritesProvider);
     final invitationsAsync = ref.watch(betaInvitationsProvider);
     final query = _searchController.text.trim().toLowerCase();
+    final betaBadgeCount = ref.watch(betaNewOpportunitiesCountProvider);
 
     return ColoredBox(
       color: PlumoraColors.background,
@@ -53,6 +140,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               delegate: _LibraryHeaderDelegate(
                 searchController: _searchController,
                 activeTab: _activeTab,
+                betaBadgeCount: betaBadgeCount,
                 onSearchChanged: () => setState(() {}),
                 onTabSelected: (tab) => setState(() => _activeTab = tab),
               ),
@@ -97,12 +185,14 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
   const _LibraryHeaderDelegate({
     required this.searchController,
     required this.activeTab,
+    required this.betaBadgeCount,
     required this.onSearchChanged,
     required this.onTabSelected,
   });
 
   final TextEditingController searchController;
   final String activeTab;
+  final int betaBadgeCount;
   final VoidCallback onSearchChanged;
   final ValueChanged<String> onTabSelected;
 
@@ -191,6 +281,7 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
                             label: 'Beta',
                             icon: Icons.edit_note_outlined,
                             selected: activeTab == 'beta',
+                            badgeCount: betaBadgeCount,
                             onTap: () => onTabSelected('beta'),
                           ),
                         ],
@@ -209,7 +300,8 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _LibraryHeaderDelegate oldDelegate) {
     return oldDelegate.searchController != searchController ||
-        oldDelegate.activeTab != activeTab;
+        oldDelegate.activeTab != activeTab ||
+        oldDelegate.betaBadgeCount != betaBadgeCount;
   }
 }
 
@@ -342,7 +434,7 @@ class _FavoritesTab extends StatelessWidget {
   }
 }
 
-class _BetaTab extends StatelessWidget {
+class _BetaTab extends ConsumerWidget {
   const _BetaTab({
     required this.invitationsAsync,
     required this.query,
@@ -354,7 +446,10 @@ class _BetaTab extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final newOpportunitiesCount = ref.watch(betaNewOpportunitiesCountProvider);
+    final commentedCampaignsAsync = ref.watch(_betaCommentedCampaignsProvider);
+
     return invitationsAsync.when(
       loading: () => const _Loading(),
       error: (error, _) =>
@@ -363,15 +458,27 @@ class _BetaTab extends StatelessWidget {
         final pendingCount = invitations
             .where((invitation) => invitation.isPending)
             .length;
-        final filtered = invitations.where((invitation) {
-          if (!invitation.isAccepted) {
-            return false;
-          }
+
+        final knownCampaignIds = invitations
+            .map((invitation) => invitation.campaignId)
+            .toSet();
+        final entries = [
+          for (final invitation in invitations)
+            if (invitation.isAccepted)
+              _BetaLibraryEntry.fromInvitation(invitation),
+          ...commentedCampaignsAsync.maybeWhen(
+            data: (campaigns) => campaigns
+                .where((campaign) => !knownCampaignIds.contains(campaign.id))
+                .map(_BetaLibraryEntry.fromCampaign),
+            orElse: () => const Iterable<_BetaLibraryEntry>.empty(),
+          ),
+        ];
+        final filtered = entries.where((entry) {
           if (query.isEmpty) {
             return true;
           }
-          return invitation.bookTitle.toLowerCase().contains(query) ||
-              invitation.authorName.toLowerCase().contains(query);
+          return entry.bookTitle.toLowerCase().contains(query) ||
+              entry.authorName.toLowerCase().contains(query);
         }).toList();
 
         return Column(
@@ -383,16 +490,21 @@ class _BetaTab extends StatelessWidget {
               colors: [PlumoraColors.secondary, PlumoraColors.primary],
               backgroundGradientColors: [Color(0xFF5BA8FF), Color(0xFFC084FC)],
             ),
+            if (pendingCount > 0) ...[
+              const SizedBox(height: 12),
+              _PendingInvitationsBanner(count: pendingCount),
+            ],
             const SizedBox(height: 18),
             if (filtered.isEmpty)
               const FigmaEmptyState(
                 title: 'Aucune beta-lecture',
-                message: 'Tes invitations acceptees apparaitront ici.',
+                message:
+                    'Les livres que tu as acceptes ou commentes apparaitront ici.',
                 icon: Icons.edit_note_outlined,
               )
             else
-              for (final invitation in filtered) ...[
-                _BetaTile(invitation: invitation),
+              for (final entry in filtered) ...[
+                _BetaTile(entry: entry),
                 const SizedBox(height: 12),
               ],
             Align(
@@ -400,16 +512,104 @@ class _BetaTab extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () => context.go(AppRoutes.betaInvitations),
                 icon: const Icon(Icons.open_in_new, size: 16),
-                label: Text(
-                  pendingCount > 0
-                      ? 'Gerer les invitations ($pendingCount en attente)'
-                      : 'Gerer les invitations',
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      pendingCount > 0
+                          ? 'Gerer les invitations ($pendingCount en attente)'
+                          : 'Gerer les invitations',
+                    ),
+                    if (newOpportunitiesCount > 0) ...[
+                      const SizedBox(width: 8),
+                      _NewInvitationsBadge(count: newOpportunitiesCount),
+                    ],
+                  ],
                 ),
               ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+class _NewInvitationsBadge extends StatelessWidget {
+  const _NewInvitationsBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: PlumoraColors.destructive,
+        borderRadius: BorderRadius.all(Radius.circular(999)),
+      ),
+      child: Text(
+        count > 9 ? '9+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingInvitationsBanner extends StatelessWidget {
+  const _PendingInvitationsBanner({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return FigmaCard(
+      onTap: () => context.go(AppRoutes.betaInvitations),
+      color: PlumoraColors.orange.withValues(alpha: 0.08),
+      borderColor: PlumoraColors.orange.withValues(alpha: 0.3),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: PlumoraColors.orange.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                color: PlumoraColors.orange,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              count > 1
+                  ? '$count nouveaux livres te sont proposes en beta-lecture'
+                  : "Un nouveau livre t'est propose en beta-lecture",
+              style: const TextStyle(
+                color: PlumoraColors.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: PlumoraColors.orange),
+        ],
+      ),
     );
   }
 }
@@ -623,23 +823,23 @@ class _FavoriteTile extends ConsumerWidget {
 }
 
 class _BetaTile extends ConsumerWidget {
-  const _BetaTile({required this.invitation});
+  const _BetaTile({required this.entry});
 
-  final BetaInvitationModel invitation;
+  final _BetaLibraryEntry entry;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final author = invitation.authorName.trim();
-    final cachedCover = ref.watch(bookCoverBytesProvider(invitation.bookId));
+    final author = entry.authorName.trim();
+    final cachedCover = ref.watch(bookCoverBytesProvider(entry.bookId));
 
     return FigmaCard(
-      onTap: invitation.campaignId.isEmpty
+      onTap: entry.campaignId.isEmpty
           ? null
           : () => context.go(
               AppRoutes.betaChaptersPath(
-                invitation.campaignId,
-                invitationId: invitation.id,
-                bookId: invitation.bookId,
+                entry.campaignId,
+                invitationId: entry.invitationId,
+                bookId: entry.bookId,
               ),
             ),
       padding: const EdgeInsets.all(16),
@@ -649,8 +849,8 @@ class _BetaTile extends ConsumerWidget {
             width: 64,
             height: 96,
             radius: 12,
-            colors: _coverColors(invitation.bookId),
-            imageUrl: invitation.coverUrl,
+            colors: _coverColors(entry.bookId),
+            imageUrl: entry.coverUrl,
             imageBytes: cachedCover,
           ),
           const SizedBox(width: 14),
@@ -659,9 +859,9 @@ class _BetaTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  invitation.bookTitle.isEmpty
+                  entry.bookTitle.isEmpty
                       ? 'Manuscrit sans titre'
-                      : invitation.bookTitle,
+                      : entry.bookTitle,
                   style: const TextStyle(
                     color: PlumoraColors.textPrimary,
                     fontSize: 14,

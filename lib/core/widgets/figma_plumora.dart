@@ -549,6 +549,7 @@ class FigmaPillTab extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.icon,
+    this.badgeCount,
     super.key,
   });
 
@@ -556,10 +557,11 @@ class FigmaPillTab extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final IconData? icon;
+  final int? badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final pill = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
@@ -609,6 +611,39 @@ class FigmaPillTab extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    if (badgeCount == null || badgeCount! <= 0) {
+      return pill;
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        pill,
+        Positioned(
+          right: -4,
+          top: -4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: PlumoraColors.destructive,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+            child: Text(
+              badgeCount! > 9 ? '9+' : '$badgeCount',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -12,6 +12,7 @@ import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
 import '../../book/presentation/widgets/book_status_badge.dart';
 import '../data/models/beta_campaign_model.dart';
+import '../data/models/beta_reader_summary_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
 
 class BetaCampaignsAuthorScreen extends ConsumerStatefulWidget {
@@ -31,6 +32,7 @@ class _BetaCampaignsAuthorScreenState
   final _deadlineController = TextEditingController();
   final _inviteesController = TextEditingController();
   final Set<String> _selectedChapterIds = {};
+  final Set<String> _selectedReaderIds = {};
   String? _initializedBookId;
   bool _isSubmitting = false;
   String? _busyCampaignId;
@@ -52,6 +54,7 @@ class _BetaCampaignsAuthorScreenState
     final campaignsAsync = ref.watch(
       betaCampaignsForBookProvider(widget.bookId),
     );
+    final readersAsync = ref.watch(betaReaderOptionsProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -119,9 +122,12 @@ class _BetaCampaignsAuthorScreenState
                           inviteesController: _inviteesController,
                           chapters: chapters,
                           selectedChapterIds: _selectedChapterIds,
+                          readersAsync: readersAsync,
+                          selectedReaderIds: _selectedReaderIds,
                           isSubmitting: _isSubmitting,
                           error: _error,
                           onToggleChapter: _toggleChapter,
+                          onToggleReader: _toggleReader,
                           onSubmit: chapters.isEmpty ? null : _createCampaign,
                         ),
                         const SizedBox(height: 26),
@@ -166,6 +172,16 @@ class _BetaCampaignsAuthorScreenState
         _selectedChapterIds.remove(chapterId);
       } else {
         _selectedChapterIds.add(chapterId);
+      }
+    });
+  }
+
+  void _toggleReader(String readerId) {
+    setState(() {
+      if (_selectedReaderIds.contains(readerId)) {
+        _selectedReaderIds.remove(readerId);
+      } else {
+        _selectedReaderIds.add(readerId);
       }
     });
   }
@@ -296,8 +312,11 @@ class _BetaCampaignsAuthorScreenState
   );
 
   List<BetaInvitationCreateRequest> _readInvitees() {
-    return _parseInviteeTokens(_inviteesController.text)
-        .where(_uuidPattern.hasMatch)
+    final fromText = _parseInviteeTokens(
+      _inviteesController.text,
+    ).where(_uuidPattern.hasMatch);
+    final ids = {...fromText, ..._selectedReaderIds};
+    return ids
         .map((value) => BetaInvitationCreateRequest(betaReaderId: value))
         .toList(growable: false);
   }
@@ -394,8 +413,11 @@ class _CampaignForm extends StatelessWidget {
     required this.inviteesController,
     required this.chapters,
     required this.selectedChapterIds,
+    required this.readersAsync,
+    required this.selectedReaderIds,
     required this.isSubmitting,
     required this.onToggleChapter,
+    required this.onToggleReader,
     required this.onSubmit,
     this.error,
   });
@@ -406,8 +428,11 @@ class _CampaignForm extends StatelessWidget {
   final TextEditingController inviteesController;
   final List<ChapterModel> chapters;
   final Set<String> selectedChapterIds;
+  final AsyncValue<List<BetaReaderSummaryModel>> readersAsync;
+  final Set<String> selectedReaderIds;
   final bool isSubmitting;
   final ValueChanged<String> onToggleChapter;
+  final ValueChanged<String> onToggleReader;
   final VoidCallback? onSubmit;
   final String? error;
 
@@ -475,18 +500,50 @@ class _CampaignForm extends StatelessWidget {
                 controlAffinity: ListTileControlAffinity.leading,
               ),
             ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
+          const Text(
+            'Inviter des bêta-lecteurs (optionnel)',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            "Tout bêta-lecteur peut déjà rejoindre la campagne sans "
+            "invitation — ceci n'envoie qu'une notification ciblée.",
+            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 10),
+          readersAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(),
+            ),
+            error: (error, _) => Text(
+              AppError.messageFor(error),
+              style: const TextStyle(color: PlumoraColors.textSecondary),
+            ),
+            data: (readers) => readers.isEmpty
+                ? const Text(
+                    'Aucun bêta-lecteur enregistré pour le moment.',
+                    style: TextStyle(color: PlumoraColors.textSecondary),
+                  )
+                : _ReaderPicker(
+                    readers: readers,
+                    selectedIds: selectedReaderIds,
+                    onToggle: onToggleReader,
+                    enabled: !isSubmitting,
+                  ),
+          ),
+          const SizedBox(height: 10),
           TextField(
             controller: inviteesController,
             enabled: !isSubmitting,
             minLines: 2,
             maxLines: 4,
             decoration: const InputDecoration(
-              labelText: 'Invitations (optionnel)',
+              labelText: 'Ou saisir des identifiants directement',
               hintText:
-                  "Identifiants (UUID) des bêta-lecteurs à notifier, séparés par "
-                  'des virgules. Tout bêta-lecteur peut déjà rejoindre la '
-                  "campagne sans invitation — ce champ n'envoie qu'une notification ciblée.",
+                  'Identifiants (UUID) des bêta-lecteurs, séparés par des '
+                  "virgules — utile si la personne n'apparaît pas dans la liste.",
               alignLabelWithHint: true,
             ),
           ),
@@ -541,6 +598,91 @@ class _CampaignForm extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ReaderPicker extends StatefulWidget {
+  const _ReaderPicker({
+    required this.readers,
+    required this.selectedIds,
+    required this.onToggle,
+    required this.enabled,
+  });
+
+  final List<BetaReaderSummaryModel> readers;
+  final Set<String> selectedIds;
+  final ValueChanged<String> onToggle;
+  final bool enabled;
+
+  @override
+  State<_ReaderPicker> createState() => _ReaderPickerState();
+}
+
+class _ReaderPickerState extends State<_ReaderPicker> {
+  TextEditingController? _fieldController;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.readers
+        .where((reader) => widget.selectedIds.contains(reader.id))
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Autocomplete<BetaReaderSummaryModel>(
+          optionsBuilder: (textEditingValue) {
+            if (!widget.enabled) {
+              return const Iterable<BetaReaderSummaryModel>.empty();
+            }
+            final query = textEditingValue.text.trim().toLowerCase();
+            return widget.readers.where((reader) {
+              if (widget.selectedIds.contains(reader.id)) {
+                return false;
+              }
+              return query.isEmpty ||
+                  reader.username.toLowerCase().contains(query);
+            });
+          },
+          displayStringForOption: (reader) => reader.username,
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            _fieldController = controller;
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              enabled: widget.enabled,
+              decoration: const InputDecoration(
+                labelText: 'Rechercher un bêta-lecteur',
+                hintText: 'Nom d\'utilisateur...',
+                prefixIcon: Icon(Icons.search),
+              ),
+            );
+          },
+          onSelected: (reader) {
+            widget.onToggle(reader.id);
+            _fieldController?.clear();
+          },
+        ),
+        if (selected.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final reader in selected)
+                Chip(
+                  avatar: const Icon(Icons.person, size: 16),
+                  label: Text(reader.username),
+                  visualDensity: VisualDensity.compact,
+                  onDeleted: widget.enabled
+                      ? () => widget.onToggle(reader.id)
+                      : null,
+                ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
