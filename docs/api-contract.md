@@ -10,7 +10,14 @@ POST `/auth/login`
 POST `/auth/google`
 GET `/auth/me`
 GET `/users/me`
+PUT `/users/me`
 PUT `/users/me/roles`
+
+PUT `/users/me` request body: `{ "firstname", "lastname", "username", "bio"?,
+"avatarUrl"? }`. Returns the updated `UserModel` (same shape as `GET
+/users/me`). Used by the profile "Informations personnelles" editor
+(`edit_profile_screen.dart`) to update name/username/bio; roles are edited
+separately via `PUT /users/me/roles`, not through this endpoint.
 
 POST `/auth/google` request body: `{ "idToken": "<Google ID token>" }`.
 Response: same shape as `/auth/login` (`accessToken` + `user`).

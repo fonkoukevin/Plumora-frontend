@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../auth/data/models/role_model.dart';
 import '../../auth/data/models/user_model.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../book/data/repositories/book_repository.dart';
@@ -27,6 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final authState = ref.watch(authControllerProvider);
     final session = authState.valueOrNull;
     final user = session?.user;
+    final roles = session?.roles ?? const <RoleModel>[];
 
     if (user == null) {
       return FigmaScreen(
@@ -41,9 +43,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Connecte-toi pour afficher les donnees de ton compte.',
-                style: TextStyle(color: PlumoraColors.textSecondary),
+                style: TextStyle(color: context.colors.textSecondary),
               ),
               const SizedBox(height: 16),
               FilledButton(
@@ -59,6 +61,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (_showPersonalInfo) {
       return _PersonalInfoView(
         user: user,
+        roles: roles,
         onBack: () => setState(() => _showPersonalInfo = false),
       );
     }
@@ -108,7 +111,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ),
                 Text(
-                  _roleLabel(user),
+                  _roleLabel(roles),
                   style: const TextStyle(color: Colors.white70, fontSize: 15),
                 ),
                 const SizedBox(height: 22),
@@ -128,10 +131,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(height: 18),
           const _ProfileStats(),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'A propos',
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w900,
             ),
@@ -142,18 +145,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               (user.bio ?? '').trim().isEmpty
                   ? 'Aucune biographie renseignee.'
                   : user.bio!,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 fontSize: 14,
                 height: 1.45,
               ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Parametres',
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w900,
             ),
@@ -192,8 +195,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 : const Icon(Icons.logout),
             label: Text(_loggingOut ? 'Deconnexion...' : 'Se deconnecter'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: PlumoraColors.destructive,
-              side: const BorderSide(color: PlumoraColors.destructive),
+              foregroundColor: context.colors.destructive,
+              side: BorderSide(color: context.colors.destructive),
             ),
           ),
         ],
@@ -211,9 +214,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 }
 
 class _PersonalInfoView extends StatelessWidget {
-  const _PersonalInfoView({required this.user, required this.onBack});
+  const _PersonalInfoView({
+    required this.user,
+    required this.roles,
+    required this.onBack,
+  });
 
   final UserModel user;
+  final List<RoleModel> roles;
   final VoidCallback onBack;
 
   @override
@@ -223,7 +231,6 @@ class _PersonalInfoView extends StatelessWidget {
       (Icons.person_outline, 'Nom', user.lastname),
       (Icons.mail_outline, 'Email', user.email),
       (Icons.alternate_email, 'Nom utilisateur', user.username ?? ''),
-      (Icons.shield_outlined, 'Roles', _roleLabel(user)),
       (Icons.edit_note_outlined, 'Biographie', user.bio ?? ''),
     ];
 
@@ -239,17 +246,20 @@ class _PersonalInfoView extends StatelessWidget {
                 icon: const Icon(Icons.chevron_left),
                 label: const Text('Profil'),
               ),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Informations personnelles',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              const SizedBox(width: 76),
+              TextButton(
+                onPressed: () => context.push(AppRoutes.editProfile),
+                child: const Text('Modifier'),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -278,6 +288,74 @@ class _PersonalInfoView extends StatelessWidget {
             _InfoField(icon: field.$1, label: field.$2, value: field.$3),
             const SizedBox(height: 10),
           ],
+          _RolesField(roles: roles),
+        ],
+      ),
+    );
+  }
+}
+
+class _RolesField extends StatelessWidget {
+  const _RolesField({required this.roles});
+
+  final List<RoleModel> roles;
+
+  @override
+  Widget build(BuildContext context) {
+    return FigmaCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      shadow: false,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5E3C).withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.shield_outlined,
+              color: context.colors.primary,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Roles',
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _roleLabel(roles),
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.push(AppRoutes.editRoles),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 28),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Modifier'),
+          ),
         ],
       ),
     );
@@ -310,7 +388,7 @@ class _InfoField extends StatelessWidget {
               color: const Color(0xFF8B5E3C).withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: PlumoraColors.primary, size: 18),
+            child: Icon(icon, color: context.colors.primary, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -319,8 +397,8 @@ class _InfoField extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -328,8 +406,8 @@ class _InfoField extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   value.trim().isEmpty ? 'Non renseigne' : value,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     height: 1.35,
@@ -369,20 +447,20 @@ class _ProfileStats extends ConsumerWidget {
             Expanded(
               child: Column(
                 children: [
-                  Icon(stat.$1, color: PlumoraColors.textSecondary, size: 21),
+                  Icon(stat.$1, color: context.colors.textSecondary, size: 21),
                   const SizedBox(height: 8),
                   Text(
                     stat.$2,
-                    style: const TextStyle(
-                      color: PlumoraColors.textPrimary,
+                    style: TextStyle(
+                      color: context.colors.textPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   Text(
                     stat.$3,
-                    style: const TextStyle(
-                      color: PlumoraColors.textSecondary,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
                       fontSize: 11,
                     ),
                   ),
@@ -435,23 +513,23 @@ class _SettingsTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: PlumoraColors.textPrimary,
+                    style: TextStyle(
+                      color: context.colors.textPrimary,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: PlumoraColors.textSecondary,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+            Icon(Icons.chevron_right, color: context.colors.textSecondary),
           ],
         ),
       ),
@@ -471,14 +549,23 @@ String _initials(UserModel user) {
   return parts.take(2).map((part) => part.substring(0, 1).toUpperCase()).join();
 }
 
-String _roleLabel(UserModel user) {
-  final roles = user.roles
-      .map((role) => role.name)
+String _roleLabel(List<RoleModel> roles) {
+  final names = roles
+      .map((role) => _friendlyRoleName(role.name))
       .where((name) => name.isNotEmpty);
-  if (roles.isEmpty) {
+  if (names.isEmpty) {
     return 'Utilisateur Plumora';
   }
-  return roles.join(', ');
+  return names.join(', ');
+}
+
+String _friendlyRoleName(String value) {
+  return switch (value.trim().toUpperCase()) {
+    'AUTHOR' => 'Auteur',
+    'READER' => 'Lecteur',
+    'BETA_READER' => 'Beta-testeur',
+    _ => value,
+  };
 }
 
 String _compactNumber(int value) {

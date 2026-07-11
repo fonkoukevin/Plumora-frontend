@@ -22,6 +22,7 @@ import '../../features/catalog/presentation/public_domain_catalog_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/presentation/landing_screen.dart';
 import '../../features/notification/presentation/notifications_screen.dart';
+import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/reading/presentation/library_screen.dart';
 import '../../features/reading/presentation/my_favorites_screen.dart';
@@ -77,6 +78,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.roleSelection,
         name: 'role-selection',
         builder: (context, state) => const RoleSelectionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.editRoles,
+        name: 'edit-roles',
+        builder: (context, state) =>
+            const RoleSelectionScreen(isOnboarding: false),
+      ),
+      GoRoute(
+        path: AppRoutes.editProfile,
+        name: 'edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {
@@ -358,6 +370,7 @@ abstract final class AppRoutes {
   static const String login = '/login';
   static const String register = '/register';
   static const String roleSelection = '/roles';
+  static const String editRoles = '/roles/edit';
   static const String home = '/home';
   static const String discover = '/discover';
   static const String publicDomainCatalog = '/discover/public-domain';
@@ -390,6 +403,7 @@ abstract final class AppRoutes {
   static const String libraryFavorites = '/library/favorites';
   static const String libraryReviews = '/library/reviews';
   static const String profile = '/profile';
+  static const String editProfile = '/profile/edit';
   static const String notifications = '/notifications';
 
   static String authorBookDetailPath(String bookId) {

@@ -48,7 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    context.go(AppRoutes.roleSelection);
+    context.go(session!.roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home);
   }
 
   Future<void> _submitGoogle() async {
@@ -59,7 +59,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    context.go(AppRoutes.roleSelection);
+    context.go(session!.roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home);
   }
 
   @override
@@ -78,22 +78,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         children: [
           const _PlumoraLetterMark(),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Bienvenue sur Plumora',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 30,
               fontWeight: FontWeight.w900,
               height: 1.1,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Connectez-vous pour continuer votre aventure litteraire',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: PlumoraColors.textSecondary,
+              color: context.colors.textSecondary,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -201,7 +201,7 @@ class _PlumoraLetterMark extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: PlumoraColors.primary,
+        color: context.colors.primary,
         borderRadius: BorderRadius.circular(14),
         boxShadow: const [
           BoxShadow(
@@ -241,7 +241,7 @@ class _SocialButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: PlumoraColors.textPrimary,
+        foregroundColor: context.colors.textPrimary,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
