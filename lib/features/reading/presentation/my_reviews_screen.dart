@@ -25,27 +25,27 @@ class MyReviewsScreen extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const PlumoraIconTile(
+              PlumoraIconTile(
                 backgroundColor: Color(0xFFFFF5D8),
-                child: Icon(Icons.star, color: PlumoraColors.primary),
+                child: Icon(Icons.star, color: context.colors.primary),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'Mes avis',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Retrouvez les avis que vous avez publiés sur les livres Plumora.',
                       style: TextStyle(
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                         height: 1.45,
                       ),
                     ),
@@ -161,7 +161,7 @@ class _MyReviewCardState extends ConsumerState<_MyReviewCard> {
                 icon: const Icon(Icons.delete_outline, size: 16),
                 label: Text(_isDeleting ? '...' : 'Supprimer'),
                 style: TextButton.styleFrom(
-                  foregroundColor: PlumoraColors.destructive,
+                  foregroundColor: context.colors.destructive,
                 ),
               ),
             ],
@@ -170,8 +170,8 @@ class _MyReviewCardState extends ConsumerState<_MyReviewCard> {
             const SizedBox(height: 10),
             Text(
               review.comment,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 height: 1.45,
               ),
             ),
@@ -242,7 +242,7 @@ class _StateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           if (action != null) ...[const SizedBox(height: 14), action!],
         ],

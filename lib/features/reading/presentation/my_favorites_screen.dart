@@ -36,19 +36,19 @@ class MyFavoritesScreen extends ConsumerWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'Mes Favoris',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Les livres que vous avez adorés et que vous voulez retrouver facilement.',
                       style: TextStyle(
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                         height: 1.45,
                       ),
                     ),
@@ -205,8 +205,8 @@ class _FavoriteCard extends ConsumerWidget {
                   book.authorName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 11,
                   ),
                 ),
@@ -250,7 +250,7 @@ class _StateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           if (action != null) ...[const SizedBox(height: 14), action!],
         ],

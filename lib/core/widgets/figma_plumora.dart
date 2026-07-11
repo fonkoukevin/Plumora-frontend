@@ -11,6 +11,7 @@ class FigmaScreen extends StatelessWidget {
     this.padding = const EdgeInsets.fromLTRB(16, 24, 16, 88),
     this.scroll = true,
     this.center = true,
+    this.physics,
     super.key,
   });
 
@@ -19,6 +20,7 @@ class FigmaScreen extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final bool scroll;
   final bool center;
+  final ScrollPhysics? physics;
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +35,10 @@ class FigmaScreen extends StatelessWidget {
     final content = center ? Center(child: body) : body;
 
     return ColoredBox(
-      color: PlumoraColors.background,
-      child: scroll ? SingleChildScrollView(child: content) : content,
+      color: context.colors.background,
+      child: scroll
+          ? SingleChildScrollView(physics: physics, child: content)
+          : content,
     );
   }
 }
@@ -44,8 +48,8 @@ class FigmaCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(24),
     this.onTap,
-    this.color = PlumoraColors.cards,
-    this.borderColor = PlumoraColors.border,
+    this.color,
+    this.borderColor,
     this.gradient,
     this.radius = 16,
     this.shadow = true,
@@ -56,8 +60,8 @@ class FigmaCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
-  final Color color;
-  final Color borderColor;
+  final Color? color;
+  final Color? borderColor;
   final Gradient? gradient;
   final double radius;
   final bool shadow;
@@ -65,16 +69,18 @@ class FigmaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedColor = color ?? context.colors.cards;
+    final resolvedBorderColor = borderColor ?? context.colors.border;
     final radiusValue = BorderRadius.circular(radius);
     final decorated = AnimatedContainer(
       duration: const Duration(milliseconds: 160),
       width: double.infinity,
       clipBehavior: clip ? Clip.antiAlias : Clip.none,
       decoration: BoxDecoration(
-        color: gradient == null ? color : null,
+        color: gradient == null ? resolvedColor : null,
         gradient: gradient,
         borderRadius: radiusValue,
-        border: Border.all(color: borderColor),
+        border: Border.all(color: resolvedBorderColor),
         boxShadow: shadow
             ? const [
                 BoxShadow(
@@ -97,7 +103,7 @@ class FigmaCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: radiusValue,
-        hoverColor: PlumoraColors.muted.withValues(alpha: 0.5),
+        hoverColor: context.colors.muted.withValues(alpha: 0.5),
         child: decorated,
       ),
     );
@@ -109,7 +115,7 @@ class FigmaGradientIcon extends StatelessWidget {
     required this.icon,
     this.size = 48,
     this.iconSize = 24,
-    this.colors = const [PlumoraColors.primary, PlumoraColors.primaryLight],
+    this.colors,
     this.radius = 16,
     super.key,
   });
@@ -117,17 +123,19 @@ class FigmaGradientIcon extends StatelessWidget {
   final IconData icon;
   final double size;
   final double iconSize;
-  final List<Color> colors;
+  final List<Color>? colors;
   final double radius;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedColors =
+        colors ?? [context.colors.primary, context.colors.primaryLight];
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: colors,
+          colors: resolvedColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -168,10 +176,10 @@ class FigmaBrandMark extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: gradient ? null : PlumoraColors.primary,
+            color: gradient ? null : context.colors.primary,
             gradient: gradient
-                ? const LinearGradient(
-                    colors: [PlumoraColors.primary, PlumoraColors.primaryLight],
+                ? LinearGradient(
+                    colors: [context.colors.primary, context.colors.primaryLight],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
@@ -191,7 +199,7 @@ class FigmaBrandMark extends StatelessWidget {
           Text(
             'Plumora',
             style: GoogleFonts.playfairDisplay(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: textSize,
               fontWeight: FontWeight.w800,
               height: 1,
@@ -219,11 +227,11 @@ class FigmaBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = foregroundColor ?? PlumoraColors.primary;
+    final fg = foregroundColor ?? context.colors.primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: backgroundColor ?? PlumoraColors.primary.withValues(alpha: 0.12),
+        color: backgroundColor ?? context.colors.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -315,8 +323,8 @@ class FigmaBookCover extends StatelessWidget {
                 height: 22,
                 decoration: BoxDecoration(
                   color: rank! <= 3
-                      ? PlumoraColors.orange
-                      : PlumoraColors.secondary,
+                      ? context.colors.orange
+                      : context.colors.secondary,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -338,7 +346,7 @@ class FigmaBookCover extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: PlumoraColors.success.withValues(alpha: 0.9),
+                  color: context.colors.success.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -392,18 +400,21 @@ class FigmaProgressBar extends StatelessWidget {
   const FigmaProgressBar({
     required this.value,
     this.height = 6,
-    this.backgroundColor = PlumoraColors.muted,
-    this.colors = const [PlumoraColors.orange, PlumoraColors.orangeLight],
+    this.backgroundColor,
+    this.colors,
     super.key,
   });
 
   final double value;
   final double height;
-  final Color backgroundColor;
-  final List<Color> colors;
+  final Color? backgroundColor;
+  final List<Color>? colors;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedBackgroundColor = backgroundColor ?? context.colors.muted;
+    final resolvedColors =
+        colors ?? [context.colors.orange, context.colors.orangeLight];
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: SizedBox(
@@ -413,13 +424,15 @@ class FigmaProgressBar extends StatelessWidget {
             final clampedValue = value.clamp(0.0, 1.0);
             return Stack(
               children: [
-                Positioned.fill(child: ColoredBox(color: backgroundColor)),
+                Positioned.fill(
+                  child: ColoredBox(color: resolvedBackgroundColor),
+                ),
                 FractionallySizedBox(
                   widthFactor: clampedValue,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: colors,
+                        colors: resolvedColors,
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
@@ -440,28 +453,28 @@ class FigmaSectionHeader extends StatelessWidget {
     required this.title,
     this.icon,
     this.trailing,
-    this.iconColor = PlumoraColors.primary,
+    this.iconColor,
     super.key,
   });
 
   final String title;
   final IconData? icon;
   final Widget? trailing;
-  final Color iconColor;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         if (icon != null) ...[
-          Icon(icon, size: 18, color: iconColor),
+          Icon(icon, size: 18, color: iconColor ?? context.colors.primary),
           const SizedBox(width: 8),
         ],
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.w900,
             ),
@@ -478,7 +491,7 @@ class FigmaStatCard extends StatelessWidget {
     required this.label,
     required this.value,
     this.icon,
-    this.valueColor = PlumoraColors.primary,
+    this.valueColor,
     this.gradient,
     super.key,
   });
@@ -486,15 +499,16 @@ class FigmaStatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData? icon;
-  final Color valueColor;
+  final Color? valueColor;
   final Gradient? gradient;
 
   @override
   Widget build(BuildContext context) {
     final onGradient = gradient != null;
+    final resolvedValueColor = valueColor ?? context.colors.primary;
     return FigmaCard(
       gradient: gradient,
-      borderColor: onGradient ? Colors.transparent : PlumoraColors.border,
+      borderColor: onGradient ? Colors.transparent : context.colors.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -507,7 +521,7 @@ class FigmaStatCard extends StatelessWidget {
                   size: 16,
                   color: onGradient
                       ? Colors.white.withValues(alpha: 0.85)
-                      : PlumoraColors.textSecondary,
+                      : context.colors.textSecondary,
                 ),
                 const SizedBox(width: 6),
               ],
@@ -519,7 +533,7 @@ class FigmaStatCard extends StatelessWidget {
                   style: TextStyle(
                     color: onGradient
                         ? Colors.white.withValues(alpha: 0.85)
-                        : PlumoraColors.textSecondary,
+                        : context.colors.textSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -531,7 +545,7 @@ class FigmaStatCard extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              color: onGradient ? Colors.white : valueColor,
+              color: onGradient ? Colors.white : resolvedValueColor,
               fontSize: 30,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -568,15 +582,15 @@ class FigmaPillTab extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
           gradient: selected
-              ? const LinearGradient(
-                  colors: [PlumoraColors.orange, PlumoraColors.orangeLight],
+              ? LinearGradient(
+                  colors: [context.colors.orange, context.colors.orangeLight],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: selected ? null : PlumoraColors.cards,
+          color: selected ? null : context.colors.cards,
           border: Border.all(
-            color: selected ? Colors.transparent : PlumoraColors.border,
+            color: selected ? Colors.transparent : context.colors.border,
           ),
           borderRadius: BorderRadius.circular(999),
           boxShadow: selected
@@ -596,14 +610,14 @@ class FigmaPillTab extends StatelessWidget {
               Icon(
                 icon,
                 size: 15,
-                color: selected ? Colors.white : PlumoraColors.textSecondary,
+                color: selected ? Colors.white : context.colors.textSecondary,
               ),
               const SizedBox(width: 6),
             ],
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : PlumoraColors.textSecondary,
+                color: selected ? Colors.white : context.colors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
               ),
@@ -628,9 +642,9 @@ class FigmaPillTab extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: PlumoraColors.destructive,
-              borderRadius: BorderRadius.all(Radius.circular(999)),
+            decoration: BoxDecoration(
+              color: context.colors.destructive,
+              borderRadius: const BorderRadius.all(Radius.circular(999)),
             ),
             child: Text(
               badgeCount! > 9 ? '9+' : '$badgeCount',
@@ -661,7 +675,7 @@ class FigmaBackButton extends StatelessWidget {
       icon: const Icon(Icons.arrow_back, size: 19),
       label: Text(label),
       style: TextButton.styleFrom(
-        foregroundColor: PlumoraColors.textSecondary,
+        foregroundColor: context.colors.textSecondary,
         padding: EdgeInsets.zero,
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
       ),
@@ -691,17 +705,17 @@ class FigmaEmptyState extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: PlumoraColors.cards,
+              color: context.colors.cards,
               shape: BoxShape.circle,
-              border: Border.all(color: PlumoraColors.border),
+              border: Border.all(color: context.colors.border),
             ),
-            child: Icon(icon, color: PlumoraColors.textSecondary, size: 28),
+            child: Icon(icon, color: context.colors.textSecondary, size: 28),
           ),
           const SizedBox(height: 14),
           Text(
             title,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -709,8 +723,8 @@ class FigmaEmptyState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 13,
             ),
           ),

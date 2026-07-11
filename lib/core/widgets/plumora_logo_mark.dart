@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../theme/plumora_colors.dart';
-
 class PlumoraLogoMark extends StatelessWidget {
   const PlumoraLogoMark({
     this.size = 28,
-    this.color = PlumoraColors.primary,
+    this.color = const Color(0xFF4B2E83),
     this.strokeWidth = 2.6,
     super.key,
   });

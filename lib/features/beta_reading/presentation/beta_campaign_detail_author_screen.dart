@@ -221,8 +221,8 @@ class _CampaignHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PlumoraIconTile(
-            backgroundColor: PlumoraColors.info,
+          PlumoraIconTile(
+            backgroundColor: context.colors.info,
             child: Icon(Icons.groups_outlined, color: Colors.white),
           ),
           const SizedBox(width: 16),
@@ -235,7 +235,7 @@ class _CampaignHeader extends StatelessWidget {
                       ? 'Campagne bêta'
                       : campaign.bookTitle,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -244,8 +244,8 @@ class _CampaignHeader extends StatelessWidget {
                   campaign.instructions?.isNotEmpty == true
                       ? campaign.instructions!
                       : 'Aucune consigne renseignée.',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     height: 1.45,
                   ),
                 ),
@@ -258,8 +258,8 @@ class _CampaignHeader extends StatelessWidget {
                     if (campaign.deadline != null)
                       PlumoraBadge(
                         label: _dateLabel(campaign.deadline!),
-                        backgroundColor: PlumoraColors.muted,
-                        foregroundColor: PlumoraColors.textSecondary,
+                        backgroundColor: context.colors.muted,
+                        foregroundColor: context.colors.textSecondary,
                         icon: Icons.schedule,
                       ),
                     OutlinedButton.icon(
@@ -270,15 +270,15 @@ class _CampaignHeader extends StatelessWidget {
                     if (onCancel != null)
                       TextButton.icon(
                         onPressed: isClosing || isCancelling ? null : onCancel,
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.cancel_outlined,
                           size: 17,
-                          color: PlumoraColors.destructive,
+                          color: context.colors.destructive,
                         ),
                         label: Text(
                           isCancelling ? 'Annulation...' : 'Annuler',
-                          style: const TextStyle(
-                            color: PlumoraColors.destructive,
+                          style: TextStyle(
+                            color: context.colors.destructive,
                           ),
                         ),
                       ),
@@ -323,27 +323,27 @@ class _AsyncInvitations extends StatelessWidget {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               "L'invitation ne conditionne pas l'accès : tout bêta-lecteur "
               'peut déjà lire et commenter cette campagne.',
               style: TextStyle(
-                color: PlumoraColors.textSecondary,
+                color: context.colors.textSecondary,
                 fontSize: 12,
               ),
             ),
             const SizedBox(height: 14),
             if (invitations.isEmpty)
-              const Text(
+              Text(
                 "Aucun bêta-lecteur invité personnellement pour l'instant.",
-                style: TextStyle(color: PlumoraColors.textSecondary),
+                style: TextStyle(color: context.colors.textSecondary),
               )
             else
               for (final invitation in invitations) ...[
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.person_outline,
-                    color: PlumoraColors.primary,
+                    color: context.colors.primary,
                   ),
                   title: Text(
                     invitation.betaReaderName?.trim().isNotEmpty == true
@@ -400,17 +400,17 @@ class _AsyncChapters extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             if (chapters.isEmpty)
-              const Text(
+              Text(
                 'Aucun chapitre partagé pour cette campagne.',
-                style: TextStyle(color: PlumoraColors.textSecondary),
+                style: TextStyle(color: context.colors.textSecondary),
               )
             else
               for (final chapter in chapters) ...[
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
-                    backgroundColor: PlumoraColors.secondary,
-                    foregroundColor: PlumoraColors.primary,
+                    backgroundColor: context.colors.secondary,
+                    foregroundColor: context.colors.primary,
                     child: Text(chapter.order == 0 ? '-' : '${chapter.order}'),
                   ),
                   title: Text(
@@ -456,17 +456,17 @@ class _AsyncComments extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             if (comments.isEmpty)
-              const Text(
+              Text(
                 'Aucun commentaire reçu pour cette campagne.',
-                style: TextStyle(color: PlumoraColors.textSecondary),
+                style: TextStyle(color: context.colors.textSecondary),
               )
             else
               for (final comment in comments) ...[
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.forum_outlined,
-                    color: PlumoraColors.primary,
+                    color: context.colors.primary,
                   ),
                   title: Text(comment.content),
                   subtitle: Text(comment.type.label),
@@ -514,7 +514,7 @@ class _StateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],

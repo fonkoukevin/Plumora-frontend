@@ -64,7 +64,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               'Notifications',
                               style: Theme.of(context).textTheme.headlineMedium
                                   ?.copyWith(
-                                    color: PlumoraColors.textPrimary,
+                                    color: context.colors.textPrimary,
                                     fontWeight: FontWeight.w900,
                                   ),
                             ),
@@ -74,14 +74,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 count == 0
                                     ? 'Tout est lu'
                                     : '$count notification${count > 1 ? 's' : ''} non lue${count > 1 ? 's' : ''}',
-                                style: const TextStyle(
-                                  color: PlumoraColors.textSecondary,
+                                style: TextStyle(
+                                  color: context.colors.textSecondary,
                                 ),
                               ),
-                              orElse: () => const Text(
+                              orElse: () => Text(
                                 'Activité Plumora récente',
                                 style: TextStyle(
-                                  color: PlumoraColors.textSecondary,
+                                  color: context.colors.textSecondary,
                                 ),
                               ),
                             ),
@@ -208,9 +208,9 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _typeColor(notification.type);
+    final color = _typeColor(context, notification.type);
     return PlumoraCard(
-      leftAccent: notification.isRead ? PlumoraColors.border : color,
+      leftAccent: notification.isRead ? context.colors.border : color,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -240,10 +240,10 @@ class _NotificationCard extends StatelessWidget {
                       ),
                     ),
                     if (!notification.isRead)
-                      const PlumoraBadge(
+                      PlumoraBadge(
                         label: 'Nouveau',
                         backgroundColor: Color(0xFFE6EFE4),
-                        foregroundColor: PlumoraColors.success,
+                        foregroundColor: context.colors.success,
                       ),
                   ],
                 ),
@@ -252,16 +252,16 @@ class _NotificationCard extends StatelessWidget {
                   notification.message.isEmpty
                       ? 'Nouvelle activité sur Plumora.'
                       : notification.message,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     height: 1.45,
                   ),
                 ),
                 const SizedBox(height: 9),
                 Text(
                   _dateLabel(notification.createdAt),
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -301,7 +301,7 @@ class _StateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],
@@ -328,22 +328,22 @@ IconData _typeIcon(String type) {
   return Icons.notifications_none_outlined;
 }
 
-Color _typeColor(String type) {
+Color _typeColor(BuildContext context, String type) {
   final normalized = type.trim().toUpperCase();
   if (normalized.contains('BETA')) {
-    return PlumoraColors.info;
+    return context.colors.info;
   }
   if (normalized.contains('BOOK') || normalized.contains('PUBLICATION')) {
-    return PlumoraColors.primary;
+    return context.colors.primary;
   }
   if (normalized.contains('REVIEW')) {
-    return PlumoraColors.mukemeAccent;
+    return context.colors.mukemeAccent;
   }
   if (normalized.contains('FAVORITE')) {
-    return PlumoraColors.destructive;
+    return context.colors.destructive;
   }
 
-  return PlumoraColors.textSecondary;
+  return context.colors.textSecondary;
 }
 
 String _dateLabel(DateTime? date) {

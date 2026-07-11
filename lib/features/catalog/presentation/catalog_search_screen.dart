@@ -68,7 +68,7 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                   Text(
                     'Recherche',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: PlumoraColors.textPrimary,
+                      color: context.colors.textPrimary,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -169,8 +169,8 @@ class _SearchBookCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'par ${book.authorName}',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -195,7 +195,7 @@ class _SearchBookCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+          Icon(Icons.chevron_right, color: context.colors.textSecondary),
         ],
       ),
     );
@@ -233,12 +233,12 @@ class _Meta extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: PlumoraColors.primary),
+        Icon(icon, size: 15, color: context.colors.primary),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: PlumoraColors.textSecondary,
+          style: TextStyle(
+            color: context.colors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
@@ -272,7 +272,7 @@ class _SearchStateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],

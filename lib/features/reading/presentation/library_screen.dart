@@ -10,58 +10,15 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
-import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../beta_reading/data/models/beta_campaign_model.dart';
-import '../../beta_reading/data/models/beta_comment_model.dart';
 import '../../beta_reading/data/models/beta_invitation_model.dart';
 import '../../beta_reading/data/repositories/beta_reading_repository.dart';
+import '../../beta_reading/presentation/beta_engagement_providers.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/favorite_model.dart';
 import '../data/models/reading_progress_model.dart';
 import '../data/repositories/favorite_repository.dart';
 import '../data/repositories/reading_repository.dart';
-
-/// Campagnes ouvertes sur lesquelles l'utilisateur a deja laisse au moins un
-/// commentaire, meme sans avoir accepte d'invitation personnelle.
-///
-/// D'apres le contrat API (`docs/api-contract.md`), `GET
-/// /beta-campaigns/{id}/comments` filtre deja cote serveur : un beta-lecteur
-/// n'y voit que ses propres commentaires (l'auteur, lui, voit tout). On evite
-/// donc de re-filtrer par `betaReaderId` cote client (pas fiable a 100% et
-/// redondant) et on exclut nos propres campagnes (ou on serait vu comme
-/// l'auteur, pas comme beta-lecteur).
-final _betaCommentedCampaignsProvider = FutureProvider<List<BetaCampaignModel>>(
-  (ref) async {
-    final userId = ref.watch(authControllerProvider).valueOrNull?.user?.id;
-    if (userId == null || userId.isEmpty) {
-      return const <BetaCampaignModel>[];
-    }
-
-    final allCampaigns = await ref.watch(betaOpenCampaignsProvider.future);
-    final campaigns = allCampaigns
-        .where((campaign) => campaign.authorId != userId)
-        .toList();
-    if (campaigns.isEmpty) {
-      return const <BetaCampaignModel>[];
-    }
-
-    final repository = ref.watch(betaReadingRepositoryProvider);
-    final commentsByCampaign = await Future.wait(
-      campaigns.map((campaign) async {
-        try {
-          return await repository.commentsForCampaign(campaign.id);
-        } catch (_) {
-          return const <BetaCommentModel>[];
-        }
-      }),
-    );
-
-    return [
-      for (var i = 0; i < campaigns.length; i++)
-        if (commentsByCampaign[i].isNotEmpty) campaigns[i],
-    ];
-  },
-);
 
 /// Livre beta-lu par l'utilisateur, qu'il vienne d'une invitation acceptee
 /// ou d'une campagne ouverte rejointe et commentee sans invitation.
@@ -73,6 +30,7 @@ class _BetaLibraryEntry {
     required this.authorName,
     this.coverUrl,
     this.invitationId,
+    this.fallbackDate,
   });
 
   factory _BetaLibraryEntry.fromInvitation(BetaInvitationModel invitation) {
@@ -83,6 +41,7 @@ class _BetaLibraryEntry {
       authorName: invitation.authorName,
       coverUrl: invitation.coverUrl,
       invitationId: invitation.id,
+      fallbackDate: invitation.respondedAt ?? invitation.createdAt,
     );
   }
 
@@ -93,6 +52,7 @@ class _BetaLibraryEntry {
       bookTitle: campaign.bookTitle,
       authorName: campaign.authorUsername ?? '',
       coverUrl: campaign.coverUrl,
+      fallbackDate: campaign.createdAt,
     );
   }
 
@@ -102,6 +62,10 @@ class _BetaLibraryEntry {
   final String authorName;
   final String? coverUrl;
   final String? invitationId;
+  // Utilise seulement si aucune activite locale (lecture/commentaire) n'a
+  // encore ete enregistree pour cette campagne -- voir
+  // `touchBetaCampaignActivity`.
+  final DateTime? fallbackDate;
 }
 
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -130,7 +94,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final betaBadgeCount = ref.watch(betaNewOpportunitiesCountProvider);
 
     return ColoredBox(
-      color: PlumoraColors.background,
+      color: context.colors.background,
       child: SafeArea(
         bottom: false,
         child: CustomScrollView(
@@ -215,9 +179,9 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: PlumoraColors.background.withValues(alpha: 0.95),
-            border: const Border(
-              bottom: BorderSide(color: PlumoraColors.border),
+            color: context.colors.background.withValues(alpha: 0.95),
+            border: Border(
+              bottom: BorderSide(color: context.colors.border),
             ),
             boxShadow: overlapsContent
                 ? const [
@@ -240,7 +204,7 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
                     Text(
                       'Bibliotheque',
                       style: GoogleFonts.playfairDisplay(
-                        color: PlumoraColors.textPrimary,
+                        color: context.colors.textPrimary,
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                         height: 1.1,
@@ -353,13 +317,13 @@ class _ReadingsTab extends StatelessWidget {
                   'Termines',
                   finished.toString(),
                   Icons.bar_chart,
-                  color: PlumoraColors.accent,
+                  color: context.colors.accent,
                 ),
                 _Stat(
                   'Moyenne',
                   '$average%',
                   Icons.schedule,
-                  color: PlumoraColors.primaryLight,
+                  color: context.colors.primaryLight,
                 ),
               ],
             ),
@@ -416,7 +380,7 @@ class _FavoritesTab extends StatelessWidget {
               title: 'Mes Favoris',
               subtitle: '${favorites.length} livres sauvegardes',
               icon: Icons.favorite,
-              colors: const [PlumoraColors.destructive, Color(0xFFB03030)],
+              colors: [context.colors.destructive, const Color(0xFFB03030)],
             ),
             const SizedBox(height: 18),
             if (filtered.isEmpty)
@@ -448,17 +412,19 @@ class _BetaTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final newOpportunitiesCount = ref.watch(betaNewOpportunitiesCountProvider);
-    final commentedCampaignsAsync = ref.watch(_betaCommentedCampaignsProvider);
+    final engagedCampaignsAsync = ref.watch(betaEngagedCampaignsProvider);
+    final pendingCount = ref
+        .watch(betaActionablePendingInvitationsProvider)
+        .length;
+    final activityByCampaignId =
+        ref.watch(betaCampaignActivityProvider).valueOrNull ??
+        const <String, DateTime>{};
 
     return invitationsAsync.when(
       loading: () => const _Loading(),
       error: (error, _) =>
           _ErrorPanel(message: AppError.messageFor(error), onRetry: onRetry),
       data: (invitations) {
-        final pendingCount = invitations
-            .where((invitation) => invitation.isPending)
-            .length;
-
         final knownCampaignIds = invitations
             .map((invitation) => invitation.campaignId)
             .toSet();
@@ -466,7 +432,7 @@ class _BetaTab extends ConsumerWidget {
           for (final invitation in invitations)
             if (invitation.isAccepted)
               _BetaLibraryEntry.fromInvitation(invitation),
-          ...commentedCampaignsAsync.maybeWhen(
+          ...engagedCampaignsAsync.maybeWhen(
             data: (campaigns) => campaigns
                 .where((campaign) => !knownCampaignIds.contains(campaign.id))
                 .map(_BetaLibraryEntry.fromCampaign),
@@ -479,15 +445,28 @@ class _BetaTab extends ConsumerWidget {
           }
           return entry.bookTitle.toLowerCase().contains(query) ||
               entry.authorName.toLowerCase().contains(query);
-        }).toList();
+        }).toList()..sort((a, b) {
+          final aDate = activityByCampaignId[a.campaignId] ?? a.fallbackDate;
+          final bDate = activityByCampaignId[b.campaignId] ?? b.fallbackDate;
+          if (aDate == null && bDate == null) {
+            return 0;
+          }
+          if (aDate == null) {
+            return 1;
+          }
+          if (bDate == null) {
+            return -1;
+          }
+          return bDate.compareTo(aDate);
+        });
 
         return Column(
           children: [
-            const _LibraryBanner(
+            _LibraryBanner(
               title: 'Espace Beta-lecture',
               subtitle: 'Aidez les auteurs avec vos retours',
               icon: Icons.chat_bubble_outline,
-              colors: [PlumoraColors.secondary, PlumoraColors.primary],
+              colors: [context.colors.secondary, context.colors.primary],
               backgroundGradientColors: [Color(0xFF5BA8FF), Color(0xFFC084FC)],
             ),
             if (pendingCount > 0) ...[
@@ -499,7 +478,7 @@ class _BetaTab extends ConsumerWidget {
               const FigmaEmptyState(
                 title: 'Aucune beta-lecture',
                 message:
-                    'Les livres que tu as acceptes ou commentes apparaitront ici.',
+                    'Les livres que tu as acceptes, commences a lire ou commentes apparaitront ici.',
                 icon: Icons.edit_note_outlined,
               )
             else
@@ -546,8 +525,8 @@ class _NewInvitationsBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: PlumoraColors.destructive,
+      decoration: BoxDecoration(
+        color: context.colors.destructive,
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       child: Text(
@@ -572,8 +551,8 @@ class _PendingInvitationsBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return FigmaCard(
       onTap: () => context.go(AppRoutes.betaInvitations),
-      color: PlumoraColors.orange.withValues(alpha: 0.08),
-      borderColor: PlumoraColors.orange.withValues(alpha: 0.3),
+      color: context.colors.orange.withValues(alpha: 0.08),
+      borderColor: context.colors.orange.withValues(alpha: 0.3),
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
@@ -582,13 +561,13 @@ class _PendingInvitationsBanner extends StatelessWidget {
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: PlumoraColors.orange.withValues(alpha: 0.16),
+              color: context.colors.orange.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(11),
             ),
             child: Text(
               '$count',
-              style: const TextStyle(
-                color: PlumoraColors.orange,
+              style: TextStyle(
+                color: context.colors.orange,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
               ),
@@ -600,14 +579,14 @@ class _PendingInvitationsBanner extends StatelessWidget {
               count > 1
                   ? '$count nouveaux livres te sont proposes en beta-lecture'
                   : "Un nouveau livre t'est propose en beta-lecture",
-              style: const TextStyle(
-                color: PlumoraColors.textPrimary,
+              style: TextStyle(
+                color: context.colors.textPrimary,
                 fontWeight: FontWeight.w800,
                 fontSize: 13,
               ),
             ),
           ),
-          const Icon(Icons.chevron_right, color: PlumoraColors.orange),
+          Icon(Icons.chevron_right, color: context.colors.orange),
         ],
       ),
     );
@@ -655,8 +634,8 @@ class _ReadingTile extends ConsumerWidget {
                             : reading.bookTitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: PlumoraColors.textPrimary,
+                        style: TextStyle(
+                          color: context.colors.textPrimary,
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                         ),
@@ -665,37 +644,37 @@ class _ReadingTile extends ConsumerWidget {
                     FigmaBadge(
                       label: complete ? 'Termine' : 'En cours',
                       backgroundColor: complete
-                          ? PlumoraColors.success.withValues(alpha: 0.15)
-                          : PlumoraColors.primary.withValues(alpha: 0.15),
+                          ? context.colors.success.withValues(alpha: 0.15)
+                          : context.colors.primary.withValues(alpha: 0.15),
                       foregroundColor: complete
-                          ? PlumoraColors.success
-                          : PlumoraColors.primary,
+                          ? context.colors.success
+                          : context.colors.primary,
                     ),
                   ],
                 ),
                 const SizedBox(height: 3),
                 Text(
                   'par ${reading.authorName}',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       'Progression',
                       style: TextStyle(
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                         fontSize: 12,
                       ),
                     ),
                     const Spacer(),
                     Text(
                       '${reading.progressPercent}%',
-                      style: const TextStyle(
-                        color: PlumoraColors.primary,
+                      style: TextStyle(
+                        color: context.colors.primary,
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
                       ),
@@ -707,9 +686,9 @@ class _ReadingTile extends ConsumerWidget {
                 const SizedBox(height: 9),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.schedule,
-                      color: PlumoraColors.textSecondary,
+                      color: context.colors.textSecondary,
                       size: 14,
                     ),
                     const SizedBox(width: 4),
@@ -717,8 +696,8 @@ class _ReadingTile extends ConsumerWidget {
                       reading.updatedAt == null
                           ? 'Progression sauvegardee'
                           : 'Lu le ${_shortDate(reading.updatedAt!)}',
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
                         fontSize: 11,
                       ),
                     ),
@@ -800,8 +779,8 @@ class _FavoriteTile extends ConsumerWidget {
             book.title.isEmpty ? 'Livre sans titre' : book.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w900,
               height: 1.1,
@@ -811,8 +790,8 @@ class _FavoriteTile extends ConsumerWidget {
             book.authorName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 10,
             ),
           ),
@@ -862,8 +841,8 @@ class _BetaTile extends ConsumerWidget {
                   entry.bookTitle.isEmpty
                       ? 'Manuscrit sans titre'
                       : entry.bookTitle,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),
@@ -872,8 +851,8 @@ class _BetaTile extends ConsumerWidget {
                   const SizedBox(height: 3),
                   Text(
                     'par $author',
-                    style: const TextStyle(
-                      color: PlumoraColors.textSecondary,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -881,7 +860,7 @@ class _BetaTile extends ConsumerWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+          Icon(Icons.chevron_right, color: context.colors.textSecondary),
         ],
       ),
     );
@@ -927,15 +906,15 @@ class _LibraryBanner extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -979,7 +958,7 @@ class _LibraryStatCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(stat.icon, size: 17, color: stat.color),
+          Icon(stat.icon, size: 17, color: stat.color ?? context.colors.primary),
           const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -987,7 +966,7 @@ class _LibraryStatCard extends StatelessWidget {
               stat.value,
               maxLines: 1,
               style: TextStyle(
-                color: stat.color,
+                color: stat.color ?? context.colors.primary,
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
                 height: 1,
@@ -1000,8 +979,8 @@ class _LibraryStatCard extends StatelessWidget {
             child: Text(
               stat.label,
               maxLines: 1,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
               ),
@@ -1014,17 +993,12 @@ class _LibraryStatCard extends StatelessWidget {
 }
 
 class _Stat {
-  const _Stat(
-    this.label,
-    this.value,
-    this.icon, {
-    this.color = PlumoraColors.primary,
-  });
+  const _Stat(this.label, this.value, this.icon, {this.color});
 
   final String label;
   final String value;
   final IconData icon;
-  final Color color;
+  final Color? color;
 }
 
 class _Loading extends StatelessWidget {
@@ -1060,7 +1034,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),

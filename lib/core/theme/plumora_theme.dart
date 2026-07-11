@@ -4,62 +4,46 @@ import 'package:google_fonts/google_fonts.dart';
 import 'plumora_colors.dart';
 
 abstract final class PlumoraTheme {
-  static ThemeData get light {
+  static ThemeData get light => _buildTheme(PlumoraColors.light);
+
+  static ThemeData get dark => _buildTheme(PlumoraColors.dark);
+
+  static ThemeData _buildTheme(PlumoraColors colors) {
+    final isDark = colors == PlumoraColors.dark;
+    final brightness = isDark ? Brightness.dark : Brightness.light;
+
     final colorScheme =
         ColorScheme.fromSeed(
-          seedColor: PlumoraColors.primary,
-          brightness: Brightness.light,
+          seedColor: colors.primary,
+          brightness: brightness,
         ).copyWith(
-          primary: PlumoraColors.primary,
-          onPrimary: PlumoraColors.cards,
-          secondary: PlumoraColors.mukemeAccent,
-          onSecondary: PlumoraColors.textPrimary,
-          surface: PlumoraColors.background,
-          onSurface: PlumoraColors.textPrimary,
-          onSurfaceVariant: PlumoraColors.textSecondary,
-          primaryContainer: const Color(0xFFEDE7F6),
-          onPrimaryContainer: PlumoraColors.textPrimary,
-          secondaryContainer: PlumoraColors.muted,
-          onSecondaryContainer: PlumoraColors.textPrimary,
-          surfaceContainerHighest: PlumoraColors.cards,
-          outlineVariant: PlumoraColors.border,
-          error: PlumoraColors.destructive,
+          primary: colors.primary,
+          onPrimary: isDark ? colors.textPrimary : colors.cards,
+          secondary: colors.mukemeAccent,
+          onSecondary: colors.textPrimary,
+          surface: colors.background,
+          onSurface: colors.textPrimary,
+          onSurfaceVariant: colors.textSecondary,
+          primaryContainer: isDark
+              ? colors.muted
+              : const Color(0xFFEDE7F6),
+          onPrimaryContainer: colors.textPrimary,
+          secondaryContainer: colors.muted,
+          onSecondaryContainer: colors.textPrimary,
+          surfaceContainerHighest: colors.cards,
+          outlineVariant: colors.border,
+          error: colors.destructive,
         );
-
-    return _buildTheme(colorScheme);
-  }
-
-  static ThemeData get dark {
-    final colorScheme =
-        ColorScheme.fromSeed(
-          seedColor: PlumoraColors.primary,
-          brightness: Brightness.dark,
-        ).copyWith(
-          primary: PlumoraColors.primary,
-          secondary: PlumoraColors.mukemeAccent,
-          surface: PlumoraColors.darkBackground,
-          onSurface: PlumoraColors.background,
-          onSurfaceVariant: const Color(0xFFD5CAB8),
-          surfaceContainerHighest: PlumoraColors.darkSurface,
-        );
-
-    return _buildTheme(colorScheme);
-  }
-
-  static ThemeData _buildTheme(ColorScheme colorScheme) {
-    final isDark = colorScheme.brightness == Brightness.dark;
 
     return ThemeData(
       useMaterial3: true,
+      brightness: brightness,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: isDark
-          ? PlumoraColors.darkBackground
-          : PlumoraColors.background,
-      textTheme: GoogleFonts.nunitoTextTheme(Typography.material2021().black)
-          .apply(
-            bodyColor: colorScheme.onSurface,
-            displayColor: colorScheme.onSurface,
-          ),
+      extensions: [colors],
+      scaffoldBackgroundColor: colors.background,
+      textTheme: GoogleFonts.nunitoTextTheme(
+        isDark ? Typography.material2021().white : Typography.material2021().black,
+      ).apply(bodyColor: colorScheme.onSurface, displayColor: colorScheme.onSurface),
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: colorScheme.surface,
@@ -68,26 +52,28 @@ abstract final class PlumoraTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: isDark
-            ? colorScheme.surfaceContainerHighest
-            : PlumoraColors.cards,
+        color: colors.cards,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return const Color(0xFFB9A7D7);
+              return isDark
+                  ? colors.primary.withValues(alpha: 0.35)
+                  : const Color(0xFFB9A7D7);
             }
             if (states.contains(WidgetState.hovered) ||
                 states.contains(WidgetState.pressed)) {
-              return PlumoraColors.primary.withValues(alpha: 0.9);
+              return colors.primary.withValues(alpha: 0.9);
             }
-            return PlumoraColors.primary;
+            return colors.primary;
           }),
-          foregroundColor: const WidgetStatePropertyAll(PlumoraColors.cards),
+          foregroundColor: WidgetStatePropertyAll(
+            isDark ? colors.textPrimary : colors.cards,
+          ),
           overlayColor: WidgetStatePropertyAll(
-            PlumoraColors.cards.withValues(alpha: 0.08),
+            (isDark ? colors.textPrimary : colors.cards).withValues(alpha: 0.08),
           ),
           elevation: const WidgetStatePropertyAll(1),
           shadowColor: const WidgetStatePropertyAll(Color(0x1A000000)),
@@ -108,24 +94,22 @@ abstract final class PlumoraTheme {
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered) ||
                 states.contains(WidgetState.pressed)) {
-              return PlumoraColors.primary;
+              return colors.primary;
             }
             return Colors.transparent;
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered) ||
                 states.contains(WidgetState.pressed)) {
-              return PlumoraColors.cards;
+              return isDark ? colors.textPrimary : colors.cards;
             }
-            return PlumoraColors.primary;
+            return colors.primary;
           }),
           overlayColor: WidgetStatePropertyAll(
-            PlumoraColors.primary.withValues(alpha: 0.08),
+            colors.primary.withValues(alpha: 0.08),
           ),
           minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
-          side: const WidgetStatePropertyAll(
-            BorderSide(color: PlumoraColors.border, width: 2),
-          ),
+          side: WidgetStatePropertyAll(BorderSide(color: colors.border, width: 2)),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -139,16 +123,16 @@ abstract final class PlumoraTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
-          foregroundColor: const WidgetStatePropertyAll(PlumoraColors.primary),
+          foregroundColor: WidgetStatePropertyAll(colors.primary),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered) ||
                 states.contains(WidgetState.pressed)) {
-              return PlumoraColors.muted;
+              return colors.muted;
             }
             return Colors.transparent;
           }),
           overlayColor: WidgetStatePropertyAll(
-            PlumoraColors.primary.withValues(alpha: 0.08),
+            colors.primary.withValues(alpha: 0.08),
           ),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -161,32 +145,23 @@ abstract final class PlumoraTheme {
       inputDecorationTheme: InputDecorationTheme(
         isDense: true,
         filled: true,
-        fillColor: PlumoraColors.cards,
+        fillColor: colors.cards,
         constraints: const BoxConstraints(minHeight: 48),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 12,
         ),
-        labelStyle: const TextStyle(
-          color: PlumoraColors.textPrimary,
-          fontSize: 14,
-        ),
-        floatingLabelStyle: const TextStyle(
-          color: PlumoraColors.textPrimary,
-          fontSize: 14,
-        ),
-        hintStyle: const TextStyle(color: PlumoraColors.textSecondary),
+        labelStyle: TextStyle(color: colors.textPrimary, fontSize: 14),
+        floatingLabelStyle: TextStyle(color: colors.textPrimary, fontSize: 14),
+        hintStyle: TextStyle(color: colors.textSecondary),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: PlumoraColors.border),
+          borderSide: BorderSide(color: colors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: PlumoraColors.primary,
-            width: 1.2,
-          ),
+          borderSide: BorderSide(color: colors.primary, width: 1.2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -198,6 +173,7 @@ abstract final class PlumoraTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: colors.cards,
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
@@ -206,6 +182,7 @@ abstract final class PlumoraTheme {
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: colors.cards,
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),

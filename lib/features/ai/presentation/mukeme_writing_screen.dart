@@ -46,8 +46,8 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
               .whenData((chapter) => chapter);
 
     return chapterAsync.when(
-      loading: () => const Scaffold(
-        backgroundColor: PlumoraColors.background,
+      loading: () => Scaffold(
+        backgroundColor: context.colors.background,
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => _ScaffoldError(
@@ -60,9 +60,9 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
         }
 
         return Scaffold(
-          backgroundColor: PlumoraColors.background,
+          backgroundColor: context.colors.background,
           appBar: AppBar(
-            backgroundColor: PlumoraColors.cards,
+            backgroundColor: context.colors.cards,
             leading: IconButton(
               onPressed: () {
                 if (chapter?.bookId.trim().isNotEmpty == true) {
@@ -73,7 +73,7 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
               },
               icon: const Icon(Icons.arrow_back),
             ),
-            title: const Row(
+            title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 FigmaGradientIcon(
@@ -95,7 +95,7 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
                     Text(
                       "Assistant d'ecriture",
                       style: TextStyle(
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                         fontSize: 11,
                       ),
                     ),
@@ -110,11 +110,11 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
             padding: const EdgeInsets.fromLTRB(16, 28, 16, 40),
             child: Column(
               children: [
-                const Text(
+                Text(
                   'Ameliore ton texte avec Mukeme',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
                   ),
@@ -125,7 +125,7 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
                       ? 'Colle un passage, choisis une action et envoie la demande au backend IA.'
                       : 'Chapitre charge : ${chapter.title.isEmpty ? "sans titre" : chapter.title}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 ),
                 const SizedBox(height: 28),
                 LayoutBuilder(
@@ -345,10 +345,10 @@ class _ActionColumn extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Actions disponibles',
                 style: TextStyle(
-                  color: PlumoraColors.textPrimary,
+                  color: context.colors.textPrimary,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -376,14 +376,14 @@ class _ActionColumn extends StatelessWidget {
           borderColor: const Color(0xFFBFDBFE),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Icon(Icons.auto_awesome, color: PlumoraColors.primary),
-              SizedBox(width: 12),
+            children: [
+              Icon(Icons.auto_awesome, color: context.colors.primary),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   "Mukeme est une aide a l'ecriture : chaque suggestion peut etre acceptee, modifiee ou ignoree.",
                   style: TextStyle(
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     height: 1.4,
                   ),
                 ),
@@ -416,7 +416,7 @@ class _SuggestionColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (suggestion == null && !loading && error == null) {
-      return const FigmaCard(
+      return FigmaCard(
         child: SizedBox(
           height: 360,
           child: Center(
@@ -427,13 +427,13 @@ class _SuggestionColumn extends StatelessWidget {
                   icon: Icons.auto_awesome,
                   size: 78,
                   iconSize: 38,
-                  colors: [PlumoraColors.muted, PlumoraColors.border],
+                  colors: [context.colors.muted, context.colors.border],
                 ),
                 SizedBox(height: 16),
                 Text(
                   'Choisis une action',
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -441,7 +441,7 @@ class _SuggestionColumn extends StatelessWidget {
                 Text(
                   'La suggestion du backend IA apparaitra ici.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 ),
               ],
             ),
@@ -454,14 +454,14 @@ class _SuggestionColumn extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.auto_awesome, color: PlumoraColors.primary),
+              Icon(Icons.auto_awesome, color: context.colors.primary),
               SizedBox(width: 8),
               Text(
                 'Suggestion de Mukeme',
                 style: TextStyle(
-                  color: PlumoraColors.textPrimary,
+                  color: context.colors.textPrimary,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -478,15 +478,15 @@ class _SuggestionColumn extends StatelessWidget {
           else if (error != null)
             Text(
               error!,
-              style: const TextStyle(
-                color: PlumoraColors.destructive,
+              style: TextStyle(
+                color: context.colors.destructive,
                 fontWeight: FontWeight.w700,
               ),
             )
           else if (suggestion != null) ...[
             FigmaCard(
-              color: PlumoraColors.primary.withValues(alpha: 0.06),
-              borderColor: PlumoraColors.primary,
+              color: context.colors.primary.withValues(alpha: 0.06),
+              borderColor: context.colors.primary,
               shadow: false,
               child: Text(
                 suggestion!.suggestionText,
@@ -500,8 +500,8 @@ class _SuggestionColumn extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 suggestion!.explanation,
-                style: const TextStyle(
-                  color: PlumoraColors.textSecondary,
+                style: TextStyle(
+                  color: context.colors.textSecondary,
                   height: 1.4,
                 ),
               ),
@@ -567,10 +567,10 @@ class _ActionButton extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: selected
-              ? PlumoraColors.primary.withValues(alpha: 0.06)
+              ? context.colors.primary.withValues(alpha: 0.06)
               : Colors.transparent,
           border: Border.all(
-            color: selected ? PlumoraColors.primary : PlumoraColors.border,
+            color: selected ? context.colors.primary : context.colors.border,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -583,7 +583,7 @@ class _ActionButton extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Icon(icon, color: PlumoraColors.primary),
+                : Icon(icon, color: context.colors.primary),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -607,7 +607,7 @@ class _ScaffoldError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.background,
+      backgroundColor: context.colors.background,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -623,7 +623,7 @@ class _ScaffoldError extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   message,
-                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(

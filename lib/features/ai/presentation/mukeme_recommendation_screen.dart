@@ -61,7 +61,7 @@ class _MukemeRecommendationScreenState
             onTap: () => context.go(AppRoutes.discover),
           ),
           const SizedBox(height: 22),
-          const Center(
+          Center(
             child: Column(
               children: [
                 FigmaGradientIcon(
@@ -73,7 +73,7 @@ class _MukemeRecommendationScreenState
                 Text(
                   'Mukeme',
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontSize: 38,
                     fontWeight: FontWeight.w900,
                   ),
@@ -81,7 +81,7 @@ class _MukemeRecommendationScreenState
                 Text(
                   'Assistant de lecture',
                   style: TextStyle(
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     fontSize: 20,
                   ),
                 ),
@@ -93,10 +93,10 @@ class _MukemeRecommendationScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   "Quel type de livre veux-tu lire aujourd'hui ?",
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
@@ -182,8 +182,8 @@ class _MukemeRecommendationScreenState
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(
-                color: PlumoraColors.destructive,
+              style: TextStyle(
+                color: context.colors.destructive,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -255,8 +255,8 @@ class _ChoiceCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -293,10 +293,10 @@ class _ChoiceButton extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: selected
-              ? PlumoraColors.primary.withValues(alpha: 0.07)
+              ? context.colors.primary.withValues(alpha: 0.07)
               : Colors.transparent,
           border: Border.all(
-            color: selected ? PlumoraColors.primary : PlumoraColors.border,
+            color: selected ? context.colors.primary : context.colors.border,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -304,21 +304,21 @@ class _ChoiceButton extends StatelessWidget {
         child: Column(
           children: [
             if (icon != null)
-              Icon(icon, color: PlumoraColors.primary, size: 26),
+              Icon(icon, color: context.colors.primary, size: 26),
             if (icon != null) const SizedBox(height: 8),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: PlumoraColors.textPrimary,
+              style: TextStyle(
+                color: context.colors.textPrimary,
                 fontWeight: FontWeight.w900,
               ),
             ),
             if (subtitle != null)
               Text(
                 subtitle!,
-                style: const TextStyle(
-                  color: PlumoraColors.textSecondary,
+                style: TextStyle(
+                  color: context.colors.textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -354,12 +354,12 @@ class _MukemeResults extends StatelessWidget {
         children: [
           FigmaBackButton(label: 'Nouvelle recherche', onTap: onBack),
           const SizedBox(height: 24),
-          const Center(
+          Center(
             child: Column(
               children: [
                 Icon(
                   Icons.auto_awesome,
-                  color: PlumoraColors.primary,
+                  color: context.colors.primary,
                   size: 34,
                 ),
                 SizedBox(height: 8),
@@ -367,7 +367,7 @@ class _MukemeResults extends StatelessWidget {
                   'Selection personnalisee',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontSize: 36,
                     fontWeight: FontWeight.w900,
                   ),
@@ -380,9 +380,9 @@ class _MukemeResults extends StatelessWidget {
             FigmaCard(
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline,
-                    color: PlumoraColors.destructive,
+                    color: context.colors.destructive,
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: Text(error!)),
@@ -453,16 +453,16 @@ class _RecommendationCard extends ConsumerWidget {
                             book.title.isEmpty
                                 ? 'Livre sans titre'
                                 : book.title,
-                            style: const TextStyle(
-                              color: PlumoraColors.textPrimary,
+                            style: TextStyle(
+                              color: context.colors.textPrimary,
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                           Text(
                             book.authorName,
-                            style: const TextStyle(
-                              color: PlumoraColors.textSecondary,
+                            style: TextStyle(
+                              color: context.colors.textSecondary,
                             ),
                           ),
                         ],
@@ -474,24 +474,24 @@ class _RecommendationCard extends ConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.auto_awesome,
-                                color: PlumoraColors.primary,
+                                color: context.colors.primary,
                               ),
                               Text(
                                 '${recommendation.matchScore}%',
-                                style: const TextStyle(
-                                  color: PlumoraColors.primary,
+                                style: TextStyle(
+                                  color: context.colors.primary,
                                   fontSize: 24,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
                             ],
                           ),
-                          const Text(
+                          Text(
                             'Correspondance',
                             style: TextStyle(
-                              color: PlumoraColors.textSecondary,
+                              color: context.colors.textSecondary,
                               fontSize: 11,
                             ),
                           ),
@@ -521,7 +521,7 @@ class _RecommendationCard extends ConsumerWidget {
                 if (recommendation.reasons.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   FigmaCard(
-                    color: PlumoraColors.primary.withValues(alpha: 0.06),
+                    color: context.colors.primary.withValues(alpha: 0.06),
                     shadow: false,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

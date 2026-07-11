@@ -42,12 +42,12 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     final progressAsync = ref.watch(readingProgressProvider(widget.bookId));
 
     return bookAsync.when(
-      loading: () => const Scaffold(
-        backgroundColor: PlumoraColors.background,
+      loading: () => Scaffold(
+        backgroundColor: context.colors.background,
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Scaffold(
-        backgroundColor: PlumoraColors.background,
+        backgroundColor: context.colors.background,
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
@@ -63,7 +63,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                   const SizedBox(height: 8),
                   Text(
                     AppError.messageFor(error),
-                    style: const TextStyle(color: PlumoraColors.textSecondary),
+                    style: TextStyle(color: context.colors.textSecondary),
                   ),
                   const SizedBox(height: 16),
                   FilledButton(
@@ -98,10 +98,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         return Scaffold(
           backgroundColor: _readerPaper,
           appBar: AppBar(
-            backgroundColor: PlumoraColors.cards,
+            backgroundColor: context.colors.cards,
             surfaceTintColor: Colors.transparent,
-            shape: const Border(
-              bottom: BorderSide(color: PlumoraColors.border),
+            shape: Border(
+              bottom: BorderSide(color: context.colors.border),
             ),
             leading: IconButton(
               onPressed: () => context.go(AppRoutes.library),
@@ -124,8 +124,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                       : chapter.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -173,9 +173,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: PlumoraColors.cards,
-                  border: const Border(
-                    top: BorderSide(color: PlumoraColors.border),
+                  color: context.colors.cards,
+                  border: Border(
+                    top: BorderSide(color: context.colors.border),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -197,8 +197,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                             children: [
                               Text(
                                 'Chapitre ${safeIndex + 1} sur ${chapters.length}',
-                                style: const TextStyle(
-                                  color: PlumoraColors.textSecondary,
+                                style: TextStyle(
+                                  color: context.colors.textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -207,8 +207,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                                 _saving
                                     ? 'Sauvegarde...'
                                     : '${(progress * 100).round()}% lu',
-                                style: const TextStyle(
-                                  color: PlumoraColors.textSecondary,
+                                style: TextStyle(
+                                  color: context.colors.textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -217,17 +217,17 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                           const SizedBox(height: 10),
                           FigmaProgressBar(
                             value: progress,
-                            colors: const [
-                              PlumoraColors.primary,
-                              PlumoraColors.primary,
+                            colors: [
+                              context.colors.primary,
+                              context.colors.primary,
                             ],
                           ),
                           if (_saveError != null) ...[
                             const SizedBox(height: 8),
                             Text(
                               _saveError!,
-                              style: const TextStyle(
-                                color: PlumoraColors.destructive,
+                              style: TextStyle(
+                                color: context.colors.destructive,
                                 fontSize: 12,
                               ),
                             ),
@@ -393,7 +393,7 @@ class _ReaderText extends StatelessWidget {
           Text(
             'Ce chapitre ne contient pas encore de texte.',
             style: TextStyle(
-              color: PlumoraColors.textSecondary,
+              color: context.colors.textSecondary,
               fontSize: compact ? 17 : 18,
               height: 1.65,
             ),
@@ -453,7 +453,7 @@ class _ReaderBlockView extends StatelessWidget {
                 decoration: BoxDecoration(
                   border: Border(
                     top: BorderSide(
-                      color: PlumoraColors.textPrimary.withValues(alpha: 0.55),
+                      color: context.colors.textPrimary.withValues(alpha: 0.55),
                     ),
                   ),
                 ),
@@ -828,9 +828,9 @@ class _EmptyReader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.background,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: PlumoraColors.cards,
+        backgroundColor: context.colors.cards,
         leading: IconButton(
           onPressed: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
           icon: const Icon(Icons.arrow_back),

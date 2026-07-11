@@ -74,12 +74,12 @@ class _CreateBetaCommentBottomSheetState
               children: [
                 Row(
                   children: [
-                    const PlumoraIconTile(
+                    PlumoraIconTile(
                       backgroundColor: Color(0xFFEAF3FF),
                       size: 44,
                       child: Icon(
                         Icons.chat_bubble_outline,
-                        color: PlumoraColors.info,
+                        color: context.colors.info,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -157,8 +157,8 @@ class _CreateBetaCommentBottomSheetState
                   const SizedBox(height: 12),
                   Text(
                     _error!,
-                    style: const TextStyle(
-                      color: PlumoraColors.destructive,
+                    style: TextStyle(
+                      color: context.colors.destructive,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -271,7 +271,7 @@ class _TypeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _typeColor(type);
+    final color = _typeColor(context, type);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -282,7 +282,7 @@ class _TypeButton extends StatelessWidget {
           color: selected ? color.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? color : PlumoraColors.border,
+            color: selected ? color : context.colors.border,
             width: selected ? 2 : 1,
           ),
         ),
@@ -320,14 +320,14 @@ IconData _typeIcon(BetaCommentType type) {
   };
 }
 
-Color _typeColor(BetaCommentType type) {
+Color _typeColor(BuildContext context, BetaCommentType type) {
   return switch (type) {
     BetaCommentType.plot => const Color(0xFFB42318),
     BetaCommentType.character => const Color(0xFF2563EB),
     BetaCommentType.style => const Color(0xFF8B5CF6),
     BetaCommentType.pacing => const Color(0xFFC69200),
     BetaCommentType.continuity => const Color(0xFFA4683E),
-    BetaCommentType.typo => PlumoraColors.info,
-    BetaCommentType.other => PlumoraColors.textSecondary,
+    BetaCommentType.typo => context.colors.info,
+    BetaCommentType.other => context.colors.textSecondary,
   };
 }

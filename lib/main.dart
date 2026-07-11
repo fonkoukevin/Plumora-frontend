@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_router.dart';
 import 'core/theme/plumora_theme.dart';
+import 'core/theme/theme_mode_controller.dart';
 
 void main() {
   runApp(const PlumoraApp());
@@ -27,6 +28,7 @@ class _PlumoraMaterialApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: PlumoraTheme.light,
       darkTheme: PlumoraTheme.dark,
+      themeMode: ref.watch(themeModeControllerProvider),
       routerConfig: ref.watch(appRouterProvider),
     );
   }

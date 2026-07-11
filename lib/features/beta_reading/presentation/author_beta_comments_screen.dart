@@ -240,7 +240,7 @@ class _CommentsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final filtered = comments.where(_matchesFilters).toList(growable: false);
-    final summary = _summaryFor(comments);
+    final summary = _summaryFor(context, comments);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,14 +248,14 @@ class _CommentsContent extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: PlumoraColors.textPrimary,
+            color: context.colors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 6),
         Text(
           subtitle,
-          style: const TextStyle(color: PlumoraColors.textSecondary),
+          style: TextStyle(color: context.colors.textSecondary),
         ),
         const SizedBox(height: 22),
         _SummaryGrid(summary: summary),
@@ -359,16 +359,16 @@ class _SummaryCard extends StatelessWidget {
                   item.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '${item.count}',
-                  style: const TextStyle(
-                    color: PlumoraColors.primary,
+                  style: TextStyle(
+                    color: context.colors.primary,
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
                   ),
@@ -467,7 +467,7 @@ class _ChipLine extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          Icon(icon, color: PlumoraColors.textSecondary, size: 20),
+          Icon(icon, color: context.colors.textSecondary, size: 20),
           const SizedBox(width: 8),
           for (final value in values) ...[
             ChoiceChip(
@@ -502,7 +502,8 @@ class _AuthorCommentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = _statusLabel(comment.status);
     final typeBadgeColor =
-        _priorityColor(comment.priority) ?? _typeColor(comment.type);
+        _priorityColor(context, comment.priority) ??
+        _typeColor(context, comment.type);
     final chapter = comment.chapterTitle.isEmpty
         ? 'Chapitre'
         : comment.chapterTitle;
@@ -520,12 +521,13 @@ class _AuthorCommentCard extends StatelessWidget {
             children: [
               PlumoraIconTile(
                 backgroundColor: _typeColor(
+                  context,
                   comment.type,
                 ).withValues(alpha: 0.1),
                 size: 44,
                 child: Icon(
                   _typeIcon(comment.type),
-                  color: _typeColor(comment.type),
+                  color: _typeColor(context, comment.type),
                   size: 22,
                 ),
               ),
@@ -553,9 +555,10 @@ class _AuthorCommentCard extends StatelessWidget {
                         PlumoraBadge(
                           label: status,
                           backgroundColor: _statusColor(
+                            context,
                             comment.status,
                           ).withValues(alpha: 0.12),
-                          foregroundColor: _statusColor(comment.status),
+                          foregroundColor: _statusColor(context, comment.status),
                         ),
                       ],
                     ),
@@ -572,8 +575,8 @@ class _AuthorCommentCard extends StatelessWidget {
                     ],
                     Text(
                       comment.content,
-                      style: const TextStyle(
-                        color: PlumoraColors.textPrimary,
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
                         fontWeight: FontWeight.w700,
                         height: 1.35,
                       ),
@@ -590,8 +593,8 @@ class _AuthorCommentCard extends StatelessWidget {
                         ),
                         child: Text(
                           '"${comment.selectedText}"',
-                          style: const TextStyle(
-                            color: PlumoraColors.textSecondary,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
                             fontStyle: FontStyle.italic,
                             height: 1.35,
                           ),
@@ -601,8 +604,8 @@ class _AuthorCommentCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       'Par $reader',
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -679,9 +682,9 @@ class _PassivePanel extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PlumoraIconTile(
+          PlumoraIconTile(
             backgroundColor: Color(0xFFEAF3FF),
-            child: Icon(Icons.forum_outlined, color: PlumoraColors.info),
+            child: Icon(Icons.forum_outlined, color: context.colors.info),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -698,8 +701,8 @@ class _PassivePanel extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     height: 1.4,
                   ),
                 ),
@@ -738,9 +741,9 @@ class _ErrorPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PlumoraIconTile(
+          PlumoraIconTile(
             backgroundColor: Color(0xFFF7E0DC),
-            child: Icon(Icons.error_outline, color: PlumoraColors.destructive),
+            child: Icon(Icons.error_outline, color: context.colors.destructive),
           ),
           const SizedBox(height: 16),
           Text(
@@ -752,7 +755,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 18),
           FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
@@ -762,7 +765,10 @@ class _ErrorPanel extends StatelessWidget {
   }
 }
 
-List<_SummaryItem> _summaryFor(List<BetaCommentModel> comments) {
+List<_SummaryItem> _summaryFor(
+  BuildContext context,
+  List<BetaCommentModel> comments,
+) {
   int count(BetaCommentType type) {
     return comments.where((comment) => comment.type == type).length;
   }
@@ -772,13 +778,13 @@ List<_SummaryItem> _summaryFor(List<BetaCommentModel> comments) {
       label: 'Intrigue',
       count: count(BetaCommentType.plot),
       icon: Icons.auto_stories_outlined,
-      color: PlumoraColors.destructive,
+      color: context.colors.destructive,
     ),
     _SummaryItem(
       label: 'Personnage',
       count: count(BetaCommentType.character),
       icon: Icons.person_outline,
-      color: PlumoraColors.info,
+      color: context.colors.info,
     ),
     _SummaryItem(
       label: 'Style',
@@ -804,13 +810,13 @@ String _statusLabel(BetaCommentStatus status) {
   };
 }
 
-Color _statusColor(BetaCommentStatus status) {
+Color _statusColor(BuildContext context, BetaCommentStatus status) {
   return switch (status) {
-    BetaCommentStatus.resolved => PlumoraColors.success,
-    BetaCommentStatus.ignored => PlumoraColors.textSecondary,
+    BetaCommentStatus.resolved => context.colors.success,
+    BetaCommentStatus.ignored => context.colors.textSecondary,
     BetaCommentStatus.open ||
     BetaCommentStatus.inProgress ||
-    BetaCommentStatus.unknown => PlumoraColors.primary,
+    BetaCommentStatus.unknown => context.colors.primary,
   };
 }
 
@@ -826,24 +832,24 @@ IconData _typeIcon(BetaCommentType type) {
   };
 }
 
-Color? _priorityColor(BetaCommentPriority priority) {
+Color? _priorityColor(BuildContext context, BetaCommentPriority priority) {
   return switch (priority) {
-    BetaCommentPriority.critical => PlumoraColors.destructive,
-    BetaCommentPriority.high => PlumoraColors.destructive,
+    BetaCommentPriority.critical => context.colors.destructive,
+    BetaCommentPriority.high => context.colors.destructive,
     BetaCommentPriority.medium => const Color(0xFFA4683E),
-    BetaCommentPriority.low => PlumoraColors.textSecondary,
+    BetaCommentPriority.low => context.colors.textSecondary,
     BetaCommentPriority.unknown => null,
   };
 }
 
-Color _typeColor(BetaCommentType type) {
+Color _typeColor(BuildContext context, BetaCommentType type) {
   return switch (type) {
-    BetaCommentType.plot => PlumoraColors.destructive,
+    BetaCommentType.plot => context.colors.destructive,
     BetaCommentType.continuity => const Color(0xFFA4683E),
-    BetaCommentType.typo => PlumoraColors.info,
+    BetaCommentType.typo => context.colors.info,
     BetaCommentType.pacing => const Color(0xFFC69200),
     BetaCommentType.style => const Color(0xFF8B5CF6),
     BetaCommentType.character => const Color(0xFF2563EB),
-    BetaCommentType.other => PlumoraColors.textSecondary,
+    BetaCommentType.other => context.colors.textSecondary,
   };
 }

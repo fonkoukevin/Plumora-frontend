@@ -54,7 +54,7 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
                     borderColor: const Color(0xFFFDE68A),
                     child: Row(
                       children: [
-                        const Icon(Icons.schedule, color: PlumoraColors.orange),
+                        Icon(Icons.schedule, color: context.colors.orange),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -144,8 +144,8 @@ class _CampaignHeader extends StatelessWidget {
           campaign?.bookTitle.trim().isNotEmpty == true
               ? campaign!.bookTitle
               : 'Beta-lecture',
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 36,
             fontWeight: FontWeight.w900,
           ),
@@ -153,7 +153,7 @@ class _CampaignHeader extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           campaign == null ? 'Chapitres disponibles' : 'Chapitres disponibles',
-          style: const TextStyle(color: PlumoraColors.textSecondary),
+          style: TextStyle(color: context.colors.textSecondary),
         ),
       ],
     );
@@ -195,8 +195,8 @@ class _ChapterCard extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               color: hasFeedback
-                  ? PlumoraColors.success.withValues(alpha: 0.12)
-                  : PlumoraColors.primary.withValues(alpha: 0.10),
+                  ? context.colors.success.withValues(alpha: 0.12)
+                  : context.colors.primary.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
@@ -204,8 +204,8 @@ class _ChapterCard extends StatelessWidget {
                   ? Icons.check_circle_outline
                   : Icons.description_outlined,
               color: hasFeedback
-                  ? PlumoraColors.success
-                  : PlumoraColors.primary,
+                  ? context.colors.success
+                  : context.colors.primary,
             ),
           ),
           const SizedBox(width: 14),
@@ -215,22 +215,22 @@ class _ChapterCard extends StatelessWidget {
               children: [
                 Text(
                   chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 Text(
                   '$commentsCount commentaire(s) laisse(s)',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+          Icon(Icons.chevron_right, color: context.colors.textSecondary),
         ],
       ),
     );
@@ -256,7 +256,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
