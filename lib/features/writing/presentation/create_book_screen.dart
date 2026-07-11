@@ -13,6 +13,7 @@ import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart' show resolvePlumoraImageUrl;
 import '../../book/data/models/book_model.dart';
 import '../../book/data/repositories/book_repository.dart';
+import '../data/writing_cache_invalidator.dart';
 
 const XTypeGroup _coverImageTypeGroup = XTypeGroup(
   label: 'images',
@@ -163,7 +164,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
         final canSubmit = _canSubmit && !_isSubmitting;
 
         return ColoredBox(
-          color: PlumoraColors.background,
+          color: context.colors.background,
           child: Column(
             children: [
               _Header(
@@ -286,8 +287,8 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                             const SizedBox(height: 16),
                             Text(
                               _error!,
-                              style: const TextStyle(
-                                color: PlumoraColors.destructive,
+                              style: TextStyle(
+                                color: context.colors.destructive,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -395,6 +396,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
       ref.invalidate(authorBookProvider(saved.id));
       if (_editing) {
         ref.invalidate(authorBookProvider(widget.bookId!));
+        invalidateBookPublicationCaches(ref, widget.bookId!);
       }
 
       if (!mounted) {
@@ -438,9 +440,9 @@ class _Header extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           decoration: BoxDecoration(
-            color: PlumoraColors.background.withValues(alpha: 0.95),
-            border: const Border(
-              bottom: BorderSide(color: PlumoraColors.border),
+            color: context.colors.background.withValues(alpha: 0.95),
+            border: Border(
+              bottom: BorderSide(color: context.colors.border),
             ),
           ),
           child: SafeArea(
@@ -467,10 +469,10 @@ class _Header extends StatelessWidget {
                   ),
                   Text(
                     editing ? "Modifier l'histoire" : 'Nouvelle histoire',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
-                      color: PlumoraColors.textPrimary,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   _HeaderSubmitButton(
@@ -515,7 +517,7 @@ class _HeaderSubmitButton extends StatelessWidget {
           gradient: canSubmit
               ? const LinearGradient(colors: [_writeAccent, _writeAccentLight])
               : null,
-          color: canSubmit ? null : PlumoraColors.muted,
+          color: canSubmit ? null : context.colors.muted,
           borderRadius: BorderRadius.circular(12),
           boxShadow: canSubmit
               ? [
@@ -532,7 +534,7 @@ class _HeaderSubmitButton extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: canSubmit ? Colors.white : PlumoraColors.textSecondary,
+            color: canSubmit ? Colors.white : context.colors.textSecondary,
           ),
         ),
       ),
@@ -549,8 +551,8 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
-        color: PlumoraColors.textPrimary,
+      style: TextStyle(
+        color: context.colors.textPrimary,
         fontSize: 12.5,
         fontWeight: FontWeight.w800,
         letterSpacing: 1.1,
@@ -570,17 +572,17 @@ class _FieldLabel extends StatelessWidget {
     return RichText(
       text: TextSpan(
         text: label.toUpperCase(),
-        style: const TextStyle(
-          color: PlumoraColors.textSecondary,
+        style: TextStyle(
+          color: context.colors.textSecondary,
           fontSize: 11.5,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.6,
         ),
         children: required
-            ? const [
+            ? [
                 TextSpan(
                   text: ' *',
-                  style: TextStyle(color: PlumoraColors.destructive),
+                  style: TextStyle(color: context.colors.destructive),
                 ),
               ]
             : null,
@@ -703,8 +705,8 @@ class _CoverSection extends StatelessWidget {
                   ),
                   label: Text(hasImage ? 'Changer' : 'Importer'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: PlumoraColors.textSecondary,
-                    side: const BorderSide(color: PlumoraColors.border),
+                    foregroundColor: context.colors.textSecondary,
+                    side: BorderSide(color: context.colors.border),
                     minimumSize: const Size(0, 38),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     textStyle: const TextStyle(
@@ -722,10 +724,10 @@ class _CoverSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Choisir une couleur',
                 style: TextStyle(
-                  color: PlumoraColors.textSecondary,
+                  color: context.colors.textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -830,9 +832,9 @@ class _GenreChip extends StatelessWidget {
           gradient: selected
               ? const LinearGradient(colors: [_writeAccent, _writeAccentLight])
               : null,
-          color: selected ? null : PlumoraColors.cards,
+          color: selected ? null : context.colors.cards,
           border: Border.all(
-            color: selected ? Colors.transparent : PlumoraColors.border,
+            color: selected ? Colors.transparent : context.colors.border,
           ),
           borderRadius: BorderRadius.circular(999),
         ),
@@ -841,7 +843,7 @@ class _GenreChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w700,
-            color: selected ? Colors.white : PlumoraColors.textSecondary,
+            color: selected ? Colors.white : context.colors.textSecondary,
           ),
         ),
       ),
@@ -872,11 +874,11 @@ class _VisibilityTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected
                 ? _writeAccent.withValues(alpha: 0.06)
-                : PlumoraColors.cards,
+                : context.colors.cards,
             border: Border.all(
               color: selected
                   ? _writeAccent.withValues(alpha: 0.5)
-                  : PlumoraColors.border,
+                  : context.colors.border,
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -888,13 +890,13 @@ class _VisibilityTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: selected
                       ? _writeAccent.withValues(alpha: 0.15)
-                      : PlumoraColors.muted,
+                      : context.colors.muted,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   data.icon,
                   size: 20,
-                  color: selected ? _writeAccent : PlumoraColors.textSecondary,
+                  color: selected ? _writeAccent : context.colors.textSecondary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -904,8 +906,8 @@ class _VisibilityTile extends StatelessWidget {
                   children: [
                     Text(
                       data.label,
-                      style: const TextStyle(
-                        color: PlumoraColors.textPrimary,
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -913,8 +915,8 @@ class _VisibilityTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       data.description,
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -927,7 +929,7 @@ class _VisibilityTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: selected ? _writeAccent : PlumoraColors.border,
+                    color: selected ? _writeAccent : context.colors.border,
                     width: 2,
                   ),
                   color: selected ? _writeAccent : Colors.transparent,
@@ -967,20 +969,20 @@ class _MatureToggle extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: PlumoraColors.cards,
-          border: Border.all(color: PlumoraColors.border),
+          color: context.colors.cards,
+          border: Border.all(color: context.colors.border),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Contenu mature',
                     style: TextStyle(
-                      color: PlumoraColors.textPrimary,
+                      color: context.colors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -989,7 +991,7 @@ class _MatureToggle extends StatelessWidget {
                   Text(
                     'Violence, thèmes adultes — réservé aux +18',
                     style: TextStyle(
-                      color: PlumoraColors.textSecondary,
+                      color: context.colors.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -1002,7 +1004,7 @@ class _MatureToggle extends StatelessWidget {
               activeThumbColor: Colors.white,
               activeTrackColor: _writeAccent,
               inactiveThumbColor: Colors.white,
-              inactiveTrackColor: PlumoraColors.muted,
+              inactiveTrackColor: context.colors.muted,
             ),
           ],
         ),
@@ -1041,7 +1043,7 @@ class _CreateCta extends StatelessWidget {
                       colors: [_writeAccent, _writeAccentLight],
                     )
                   : null,
-              color: canSubmit ? null : PlumoraColors.muted,
+              color: canSubmit ? null : context.colors.muted,
               borderRadius: BorderRadius.circular(18),
               boxShadow: canSubmit
                   ? [
@@ -1062,17 +1064,17 @@ class _CreateCta extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
-                color: canSubmit ? Colors.white : PlumoraColors.textSecondary,
+                color: canSubmit ? Colors.white : context.colors.textSecondary,
               ),
             ),
           ),
         ),
         if (!canSubmit && !submitting) ...[
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Remplissez le titre et le genre pour continuer',
             textAlign: TextAlign.center,
-            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
           ),
         ],
       ],
@@ -1099,7 +1101,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),

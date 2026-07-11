@@ -11,6 +11,7 @@ import '../../book/data/models/book_model.dart';
 import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
+import '../data/writing_cache_invalidator.dart';
 
 const _writeAccent = Color(0xFF7C5CFF);
 const _writeAccentLight = Color(0xFF9B80FF);
@@ -60,7 +61,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
     final chaptersAsync = ref.watch(bookChaptersProvider(bookId));
 
     return Scaffold(
-      backgroundColor: PlumoraColors.background,
+      backgroundColor: context.colors.background,
       body: bookAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _CenteredError(
@@ -278,6 +279,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
       ref.invalidate(authorBookProvider(bookId));
       ref.invalidate(chapterProvider(saved.id));
       ref.invalidate(myBooksProvider);
+      invalidateBookPublicationCaches(ref, bookId);
       setState(() {
         _selectedChapterId = saved.id;
         _hydratedChapterId = saved.id;
@@ -315,10 +317,10 @@ class _BookSelectionView extends StatelessWidget {
             onTap: () => context.go(AppRoutes.write),
           ),
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'Choisir un manuscrit',
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 34,
               fontWeight: FontWeight.w900,
             ),
@@ -376,24 +378,24 @@ class _BookSelectionView extends StatelessWidget {
                                   book.title.isEmpty
                                       ? 'Livre sans titre'
                                       : book.title,
-                                  style: const TextStyle(
-                                    color: PlumoraColors.textPrimary,
+                                  style: TextStyle(
+                                    color: context.colors.textPrimary,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
                                 Text(
                                   '${book.chapterCount} chapitres - ${book.wordCount} mots',
-                                  style: const TextStyle(
-                                    color: PlumoraColors.textSecondary,
+                                  style: TextStyle(
+                                    color: context.colors.textSecondary,
                                     fontSize: 12,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.chevron_right,
-                            color: PlumoraColors.textSecondary,
+                            color: context.colors.textSecondary,
                           ),
                         ],
                       ),
@@ -566,16 +568,16 @@ class _FigmaBookNavigationRail extends StatelessWidget {
 
     return Container(
       width: 224,
-      decoration: const BoxDecoration(
-        color: PlumoraColors.cards,
-        border: Border(right: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        color: context.colors.cards,
+        border: Border(right: BorderSide(color: context.colors.border)),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: PlumoraColors.border)),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: context.colors.border)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +587,7 @@ class _FigmaBookNavigationRail extends StatelessWidget {
                   icon: const Icon(Icons.arrow_back, size: 15),
                   label: const Text('Mes histoires'),
                   style: TextButton.styleFrom(
-                    foregroundColor: PlumoraColors.textSecondary,
+                    foregroundColor: context.colors.textSecondary,
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(0, 30),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -608,8 +610,8 @@ class _FigmaBookNavigationRail extends StatelessWidget {
                             title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: PlumoraColors.textPrimary,
+                            style: TextStyle(
+                              color: context.colors.textPrimary,
                               fontSize: 14,
                               fontWeight: FontWeight.w900,
                             ),
@@ -619,8 +621,8 @@ class _FigmaBookNavigationRail extends StatelessWidget {
                             '${_figmaBookGenre(book)} - $chaptersCount chap.',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: PlumoraColors.textSecondary,
+                            style: TextStyle(
+                              color: context.colors.textSecondary,
                               fontSize: 12,
                             ),
                           ),
@@ -675,8 +677,8 @@ class _FigmaBookNavigationRail extends StatelessWidget {
           ),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: PlumoraColors.border)),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: context.colors.border)),
             ),
             child: _FigmaBookNavButton(
               icon: Icons.smartphone_outlined,
@@ -723,16 +725,16 @@ class _FigmaChapterNavigationRail extends StatelessWidget {
 
     return Container(
       width: 240,
-      decoration: const BoxDecoration(
-        color: PlumoraColors.background,
-        border: Border(right: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        color: context.colors.background,
+        border: Border(right: BorderSide(color: context.colors.border)),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: PlumoraColors.border)),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: context.colors.border)),
             ),
             child: Row(
               children: [
@@ -740,10 +742,10 @@ class _FigmaChapterNavigationRail extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Chapitres',
                         style: TextStyle(
-                          color: PlumoraColors.textPrimary,
+                          color: context.colors.textPrimary,
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                         ),
@@ -753,8 +755,8 @@ class _FigmaChapterNavigationRail extends StatelessWidget {
                         '${chapters.length} chapitres - ${_figmaCompactNumber(totalWords)} mots',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: PlumoraColors.textSecondary,
+                        style: TextStyle(
+                          color: context.colors.textSecondary,
                           fontSize: 11,
                         ),
                       ),
@@ -798,8 +800,8 @@ class _FigmaChapterNavigationRail extends StatelessWidget {
           ),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: PlumoraColors.border)),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: context.colors.border)),
             ),
             child: _FigmaDashedButton(
               icon: Icons.add,
@@ -910,7 +912,7 @@ class _FigmaEditorPane extends StatelessWidget {
                         Text(
                           title,
                           style: GoogleFonts.playfairDisplay(
-                            color: PlumoraColors.textPrimary,
+                            color: context.colors.textPrimary,
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
                           ),
@@ -927,7 +929,7 @@ class _FigmaEditorPane extends StatelessWidget {
                             hintText: 'Titre du chapitre...',
                           ),
                           style: GoogleFonts.playfairDisplay(
-                            color: PlumoraColors.textPrimary,
+                            color: context.colors.textPrimary,
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
                           ),
@@ -959,8 +961,8 @@ class _FigmaEditorPane extends StatelessWidget {
                             focusedBorder: InputBorder.none,
                             hintText: 'Commencez à écrire ce chapitre...',
                           ),
-                          style: const TextStyle(
-                            color: PlumoraColors.textPrimary,
+                          style: TextStyle(
+                            color: context.colors.textPrimary,
                             fontSize: 17,
                             height: 1.9,
                             fontFamily: 'Georgia',
@@ -1061,9 +1063,9 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
           bottom: false,
           child: Container(
             padding: const EdgeInsets.fromLTRB(8, 5, 10, 5),
-            decoration: const BoxDecoration(
-              color: PlumoraColors.cards,
-              border: Border(bottom: BorderSide(color: PlumoraColors.border)),
+            decoration: BoxDecoration(
+              color: context.colors.cards,
+              border: Border(bottom: BorderSide(color: context.colors.border)),
             ),
             child: Row(
               children: [
@@ -1145,7 +1147,7 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
                           hintText: 'Titre du chapitre...',
                         ),
                         style: GoogleFonts.playfairDisplay(
-                          color: PlumoraColors.textPrimary,
+                          color: context.colors.textPrimary,
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
                           height: 1.15,
@@ -1159,7 +1161,7 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
                         onPublish: onSave,
                       ),
                       const SizedBox(height: 18),
-                      const Divider(color: PlumoraColors.border),
+                      Divider(color: context.colors.border),
                       const SizedBox(height: 20),
                       TextField(
                         controller: contentController,
@@ -1176,8 +1178,8 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
                           contentPadding: EdgeInsets.zero,
                           hintText: 'Commencez à écrire ce chapitre...',
                         ),
-                        style: const TextStyle(
-                          color: PlumoraColors.textPrimary,
+                        style: TextStyle(
+                          color: context.colors.textPrimary,
                           fontSize: 16,
                           height: 1.85,
                           fontFamily: 'Georgia',
@@ -1337,8 +1339,8 @@ class _FigmaChapterPublishStrip extends StatelessWidget {
         OutlinedButton(
           onPressed: onPublish,
           style: OutlinedButton.styleFrom(
-            foregroundColor: PlumoraColors.textPrimary,
-            side: const BorderSide(color: PlumoraColors.border),
+            foregroundColor: context.colors.textPrimary,
+            side: BorderSide(color: context.colors.border),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -1374,8 +1376,8 @@ class _FigmaTinyMeta extends StatelessWidget {
           Container(
             width: 5,
             height: 5,
-            decoration: const BoxDecoration(
-              color: PlumoraColors.textSecondary,
+            decoration: BoxDecoration(
+              color: context.colors.textSecondary,
               shape: BoxShape.circle,
             ),
           ),
@@ -1383,8 +1385,8 @@ class _FigmaTinyMeta extends StatelessWidget {
         ],
         Text(
           value,
-          style: const TextStyle(
-            color: PlumoraColors.textSecondary,
+          style: TextStyle(
+            color: context.colors.textSecondary,
             fontSize: 10,
             height: 1.15,
           ),
@@ -1412,16 +1414,16 @@ class _FigmaMobileFooterStats extends StatelessWidget {
     return Container(
       height: 28,
       padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: const BoxDecoration(
-        color: PlumoraColors.cards,
-        border: Border(top: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        color: context.colors.cards,
+        border: Border(top: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
           Text(
             '$words mots',
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 10,
               fontWeight: FontWeight.w800,
             ),
@@ -1429,8 +1431,8 @@ class _FigmaMobileFooterStats extends StatelessWidget {
           const SizedBox(width: 16),
           Text(
             '$chars car.',
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 10,
               fontWeight: FontWeight.w800,
             ),
@@ -1438,8 +1440,8 @@ class _FigmaMobileFooterStats extends StatelessWidget {
           const SizedBox(width: 16),
           Text(
             '~$readTime min lecture',
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 10,
             ),
           ),
@@ -1481,9 +1483,9 @@ class _FigmaBottomChapterToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
-      decoration: const BoxDecoration(
-        color: PlumoraColors.cards,
-        border: Border(top: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        color: context.colors.cards,
+        border: Border(top: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
@@ -1492,7 +1494,7 @@ class _FigmaBottomChapterToolbar extends StatelessWidget {
             icon: Icon(
               readMode ? Icons.edit_outlined : Icons.visibility_outlined,
             ),
-            color: PlumoraColors.textSecondary,
+            color: context.colors.textSecondary,
             tooltip: readMode ? 'Écrire' : 'Lire',
           ),
           const SizedBox(width: 8),
@@ -1572,9 +1574,9 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
           bottom: false,
           child: Container(
             padding: const EdgeInsets.fromLTRB(8, 5, 10, 5),
-            decoration: const BoxDecoration(
-              color: PlumoraColors.cards,
-              border: Border(bottom: BorderSide(color: PlumoraColors.border)),
+            decoration: BoxDecoration(
+              color: context.colors.cards,
+              border: Border(bottom: BorderSide(color: context.colors.border)),
             ),
             child: Row(
               children: [
@@ -1605,8 +1607,8 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: PlumoraColors.textPrimary,
+                                  style: TextStyle(
+                                    color: context.colors.textPrimary,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -1617,8 +1619,8 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
                                   '${_figmaChapterIsPublished(book, activeChapter) ? ' - Publié' : ''}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: PlumoraColors.textSecondary,
+                                  style: TextStyle(
+                                    color: context.colors.textSecondary,
                                     fontSize: 11,
                                   ),
                                 ),
@@ -1626,10 +1628,10 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(
+                          Icon(
                             Icons.keyboard_arrow_down,
                             size: 18,
-                            color: PlumoraColors.textSecondary,
+                            color: context.colors.textSecondary,
                           ),
                         ],
                       ),
@@ -1642,7 +1644,7 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
                       ? Icons.edit_outlined
                       : Icons.visibility_outlined,
                   tooltip: readMode ? 'Écrire' : 'Lire',
-                  color: readMode ? _writeAccent : PlumoraColors.textSecondary,
+                  color: readMode ? _writeAccent : context.colors.textSecondary,
                   onTap: () => onReadModeChanged(!readMode),
                 ),
                 const SizedBox(width: 6),
@@ -1679,8 +1681,8 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
                       focusedBorder: InputBorder.none,
                       hintText: 'Commencez à écrire...',
                     ),
-                    style: const TextStyle(
-                      color: PlumoraColors.textPrimary,
+                    style: TextStyle(
+                      color: context.colors.textPrimary,
                       fontSize: 16,
                       height: 1.9,
                       fontFamily: 'Georgia',
@@ -1742,9 +1744,9 @@ class _FigmaEditorToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: const BoxDecoration(
-        color: PlumoraColors.cards,
-        border: Border(bottom: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        color: context.colors.cards,
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
@@ -1826,19 +1828,19 @@ class _FigmaMukemeDesktopPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-      decoration: const BoxDecoration(
-        color: PlumoraColors.cards,
-        border: Border(bottom: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        color: context.colors.cards,
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
           const _FigmaGradientIconBox(icon: Icons.auto_awesome, size: 34),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Sélectionnez du texte puis demandez à Mukeme.',
               style: TextStyle(
-                color: PlumoraColors.textSecondary,
+                color: context.colors.textSecondary,
                 fontSize: 12,
               ),
             ),
@@ -1869,7 +1871,7 @@ class _FigmaMukemeDesktopPanel extends StatelessWidget {
           IconButton(
             onPressed: onClose,
             icon: const Icon(Icons.close, size: 18),
-            color: PlumoraColors.textSecondary,
+            color: context.colors.textSecondary,
           ),
         ],
       ),
@@ -1984,7 +1986,7 @@ class _FigmaBookNavButton extends StatelessWidget {
               Icon(
                 icon,
                 size: compact ? 16 : 18,
-                color: selected ? Colors.white : PlumoraColors.textSecondary,
+                color: selected ? Colors.white : context.colors.textSecondary,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1995,7 +1997,7 @@ class _FigmaBookNavButton extends StatelessWidget {
                   style: TextStyle(
                     color: selected
                         ? Colors.white
-                        : PlumoraColors.textSecondary,
+                        : context.colors.textSecondary,
                     fontSize: compact ? 12 : 14,
                     fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
                   ),
@@ -2047,7 +2049,7 @@ class _FigmaChapterNavTile extends StatelessWidget {
                   style: TextStyle(
                     color: selected
                         ? Colors.white70
-                        : PlumoraColors.textSecondary,
+                        : context.colors.textSecondary,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                   ),
@@ -2065,7 +2067,7 @@ class _FigmaChapterNavTile extends StatelessWidget {
                       style: TextStyle(
                         color: selected
                             ? Colors.white
-                            : PlumoraColors.textPrimary,
+                            : context.colors.textPrimary,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
@@ -2078,7 +2080,7 @@ class _FigmaChapterNavTile extends StatelessWidget {
                       style: TextStyle(
                         color: selected
                             ? Colors.white70
-                            : PlumoraColors.textSecondary,
+                            : context.colors.textSecondary,
                         fontSize: 10,
                       ),
                     ),
@@ -2088,7 +2090,7 @@ class _FigmaChapterNavTile extends StatelessWidget {
               Icon(
                 Icons.more_vert,
                 size: 14,
-                color: selected ? Colors.white70 : PlumoraColors.textSecondary,
+                color: selected ? Colors.white70 : context.colors.textSecondary,
               ),
             ],
           ),
@@ -2115,8 +2117,8 @@ class _FigmaToolbarIcon extends StatelessWidget {
           onPressed: () {},
           padding: EdgeInsets.zero,
           icon: Icon(icon, size: 18),
-          color: PlumoraColors.textSecondary,
-          hoverColor: PlumoraColors.muted,
+          color: context.colors.textSecondary,
+          hoverColor: context.colors.muted,
           splashRadius: 18,
         ),
       ),
@@ -2133,7 +2135,7 @@ class _FigmaToolbarSeparator extends StatelessWidget {
       width: 1,
       height: 22,
       margin: const EdgeInsets.symmetric(horizontal: 6),
-      color: PlumoraColors.border,
+      color: context.colors.border,
     );
   }
 }
@@ -2259,13 +2261,13 @@ class _FigmaSquareIconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
-    this.color = PlumoraColors.textSecondary,
+    this.color,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -2277,7 +2279,7 @@ class _FigmaSquareIconButton extends StatelessWidget {
         child: SizedBox(
           width: 36,
           height: 36,
-          child: Icon(icon, size: 20, color: color),
+          child: Icon(icon, size: 20, color: color ?? context.colors.textSecondary),
         ),
       ),
     );
@@ -2383,11 +2385,11 @@ class _FigmaEditorErrorBar extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      color: PlumoraColors.destructive.withValues(alpha: 0.08),
+      color: context.colors.destructive.withValues(alpha: 0.08),
       child: Text(
         message,
-        style: const TextStyle(
-          color: PlumoraColors.destructive,
+        style: TextStyle(
+          color: context.colors.destructive,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -2410,15 +2412,15 @@ class _FigmaChapterStatusStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(bottom: 16),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
           Text(
             published ? '● Publié' : '● Brouillon',
             style: TextStyle(
-              color: published ? _writeGreen : PlumoraColors.textSecondary,
+              color: published ? _writeGreen : context.colors.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -2426,8 +2428,8 @@ class _FigmaChapterStatusStrip extends StatelessWidget {
           const SizedBox(width: 16),
           Text(
             '$wordCount mots - ~$readTime min lecture',
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 12,
             ),
           ),
@@ -2457,18 +2459,18 @@ class _FigmaEditorBreadcrumb extends StatelessWidget {
             bookTitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 12,
             ),
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 8),
           child: Icon(
             Icons.chevron_right,
             size: 14,
-            color: PlumoraColors.textSecondary,
+            color: context.colors.textSecondary,
           ),
         ),
         Flexible(
@@ -2476,8 +2478,8 @@ class _FigmaEditorBreadcrumb extends StatelessWidget {
             '$chapterIndex. $chapterTitle',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -2509,7 +2511,7 @@ class _FigmaReadingContent extends StatelessWidget {
           Text(
             title,
             style: GoogleFonts.playfairDisplay(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 23,
               fontWeight: FontWeight.w900,
             ),
@@ -2520,8 +2522,8 @@ class _FigmaReadingContent extends StatelessWidget {
           text.isEmpty ? 'Ce chapitre est vide.' : content,
           style: TextStyle(
             color: text.isEmpty
-                ? PlumoraColors.textSecondary
-                : PlumoraColors.textPrimary,
+                ? context.colors.textSecondary
+                : context.colors.textPrimary,
             fontSize: 17,
             height: 1.9,
             fontFamily: 'Georgia',
@@ -2550,8 +2552,8 @@ class _FigmaChapterJumpRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(top: 20),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
@@ -2607,9 +2609,9 @@ class _FigmaMobileChapterJumps extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      decoration: const BoxDecoration(
-        color: PlumoraColors.background,
-        border: Border(top: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        color: context.colors.background,
+        border: Border(top: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
@@ -2670,8 +2672,8 @@ class _FigmaChapterBottomSheet extends StatelessWidget {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.80,
         ),
-        decoration: const BoxDecoration(
-          color: PlumoraColors.cards,
+        decoration: BoxDecoration(
+          color: context.colors.cards,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -2684,10 +2686,10 @@ class _FigmaChapterBottomSheet extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Tous les chapitres',
                           style: TextStyle(
-                            color: PlumoraColors.textPrimary,
+                            color: context.colors.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
                           ),
@@ -2697,8 +2699,8 @@ class _FigmaChapterBottomSheet extends StatelessWidget {
                           '${_figmaBookTitle(book)} - ${chapters.length} chapitres',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: PlumoraColors.textSecondary,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
                             fontSize: 12,
                           ),
                         ),
@@ -2723,7 +2725,7 @@ class _FigmaChapterBottomSheet extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(height: 1, color: PlumoraColors.border),
+            Divider(height: 1, color: context.colors.border),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(12),
@@ -2798,7 +2800,7 @@ class _FigmaBottomSheetChapterTile extends StatelessWidget {
                   style: TextStyle(
                     color: selected
                         ? Colors.white70
-                        : PlumoraColors.textSecondary,
+                        : context.colors.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
@@ -2808,7 +2810,7 @@ class _FigmaBottomSheetChapterTile extends StatelessWidget {
               Icon(
                 Icons.description_outlined,
                 size: 18,
-                color: selected ? Colors.white70 : PlumoraColors.textSecondary,
+                color: selected ? Colors.white70 : context.colors.textSecondary,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -2822,7 +2824,7 @@ class _FigmaBottomSheetChapterTile extends StatelessWidget {
                       style: TextStyle(
                         color: selected
                             ? Colors.white
-                            : PlumoraColors.textPrimary,
+                            : context.colors.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -2834,7 +2836,7 @@ class _FigmaBottomSheetChapterTile extends StatelessWidget {
                       style: TextStyle(
                         color: selected
                             ? Colors.white70
-                            : PlumoraColors.textSecondary,
+                            : context.colors.textSecondary,
                         fontSize: 11,
                       ),
                     ),
@@ -2870,21 +2872,21 @@ class _FigmaDashedButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
-          border: Border.all(color: PlumoraColors.border, width: 1.4),
+          border: Border.all(color: context.colors.border, width: 1.4),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 17, color: PlumoraColors.textSecondary),
+            Icon(icon, size: 17, color: context.colors.textSecondary),
             const SizedBox(width: 7),
             Flexible(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: PlumoraColors.textSecondary,
+                style: TextStyle(
+                  color: context.colors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -2922,8 +2924,8 @@ class _FigmaChapterJumpButton extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 10,
               fontWeight: FontWeight.w700,
             ),
@@ -2932,8 +2934,8 @@ class _FigmaChapterJumpButton extends StatelessWidget {
             _figmaChapterTitle(chapter),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w800,
             ),
@@ -2948,15 +2950,15 @@ class _FigmaChapterJumpButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          border: Border.all(color: PlumoraColors.border),
+          border: Border.all(color: context.colors.border),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: leading
               ? [
-                  const Icon(
+                  Icon(
                     Icons.chevron_left,
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     size: 20,
                   ),
                   const SizedBox(width: 6),
@@ -2965,9 +2967,9 @@ class _FigmaChapterJumpButton extends StatelessWidget {
               : [
                   content,
                   const SizedBox(width: 6),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right,
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     size: 20,
                   ),
                 ],
@@ -3002,8 +3004,8 @@ class _FigmaMobileJumpButton extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 10,
             ),
           ),
@@ -3011,8 +3013,8 @@ class _FigmaMobileJumpButton extends StatelessWidget {
             _figmaChapterTitle(chapter),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
@@ -3027,14 +3029,14 @@ class _FigmaMobileJumpButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          border: Border.all(color: PlumoraColors.border),
+          border: Border.all(color: context.colors.border),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: trailing
-              ? [text, Icon(icon, color: PlumoraColors.textSecondary, size: 18)]
+              ? [text, Icon(icon, color: context.colors.textSecondary, size: 18)]
               : [
-                  Icon(icon, color: PlumoraColors.textSecondary, size: 18),
+                  Icon(icon, color: context.colors.textSecondary, size: 18),
                   text,
                 ],
         ),
@@ -3054,9 +3056,9 @@ class _FigmaMobileWritingToolbar extends StatelessWidget {
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
-        decoration: const BoxDecoration(
-          color: PlumoraColors.cards,
-          border: Border(top: BorderSide(color: PlumoraColors.border)),
+        decoration: BoxDecoration(
+          color: context.colors.cards,
+          border: Border(top: BorderSide(color: context.colors.border)),
         ),
         child: Row(
           children: [
@@ -3133,7 +3135,7 @@ class _FigmaMobileToolbarIcon extends StatelessWidget {
           onPressed: () {},
           padding: EdgeInsets.zero,
           icon: Icon(icon, size: 20),
-          color: PlumoraColors.textSecondary,
+          color: context.colors.textSecondary,
         ),
       ),
     );
@@ -3151,9 +3153,9 @@ class _FigmaMobileMukemePanel extends StatelessWidget {
       top: false,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: PlumoraColors.cards,
-          border: Border(top: BorderSide(color: PlumoraColors.border)),
+        decoration: BoxDecoration(
+          color: context.colors.cards,
+          border: Border(top: BorderSide(color: context.colors.border)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -3162,11 +3164,11 @@ class _FigmaMobileMukemePanel extends StatelessWidget {
               children: [
                 const _FigmaGradientIconBox(icon: Icons.auto_awesome, size: 30),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Mukeme',
                     style: TextStyle(
-                      color: PlumoraColors.textPrimary,
+                      color: context.colors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                     ),
@@ -3175,7 +3177,7 @@ class _FigmaMobileMukemePanel extends StatelessWidget {
                 IconButton(
                   onPressed: onClose,
                   icon: const Icon(Icons.close, size: 20),
-                  color: PlumoraColors.textSecondary,
+                  color: context.colors.textSecondary,
                 ),
               ],
             ),
@@ -3225,9 +3227,9 @@ class _FigmaEditorStatsBar extends StatelessWidget {
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-          decoration: const BoxDecoration(
-            color: PlumoraColors.cards,
-            border: Border(top: BorderSide(color: PlumoraColors.border)),
+          decoration: BoxDecoration(
+            color: context.colors.cards,
+            border: Border(top: BorderSide(color: context.colors.border)),
           ),
           child: Row(
             children: [
@@ -3237,16 +3239,16 @@ class _FigmaEditorStatsBar extends StatelessWidget {
               const SizedBox(width: 18),
               Text(
                 '~$readTime min lecture',
-                style: const TextStyle(
-                  color: PlumoraColors.textSecondary,
+                style: TextStyle(
+                  color: context.colors.textSecondary,
                   fontSize: 12,
                 ),
               ),
               const SizedBox(width: 18),
               Text(
                 'Chapitre ${activeIndex + 1}/$chapterCount',
-                style: const TextStyle(
-                  color: PlumoraColors.textSecondary,
+                style: TextStyle(
+                  color: context.colors.textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -3280,15 +3282,15 @@ class _FigmaStatsText extends StatelessWidget {
         children: [
           TextSpan(
             text: label,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontWeight: FontWeight.w900,
             ),
           ),
           TextSpan(text: ' $suffix'),
         ],
       ),
-      style: const TextStyle(color: PlumoraColors.textSecondary, fontSize: 12),
+      style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
     );
   }
 }
@@ -3466,7 +3468,7 @@ class _ErrorCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),

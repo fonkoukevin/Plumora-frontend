@@ -9,6 +9,7 @@ import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
+import '../data/writing_cache_invalidator.dart';
 
 class ChapterDetailAuthorScreen extends ConsumerStatefulWidget {
   const ChapterDetailAuthorScreen({
@@ -202,6 +203,7 @@ class _ChapterDetailAuthorScreenState
     if (bookId.isNotEmpty) {
       ref.invalidate(bookChaptersProvider(bookId));
       ref.invalidate(authorBookProvider(bookId));
+      invalidateBookPublicationCaches(ref, bookId);
     }
     ref.invalidate(myBooksProvider);
   }
@@ -244,7 +246,7 @@ class _ChapterDetailForm extends StatelessWidget {
             padding: EdgeInsets.zero,
             minimumSize: const Size(0, 32),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            foregroundColor: PlumoraColors.textSecondary,
+            foregroundColor: context.colors.textSecondary,
           ),
           icon: const Icon(Icons.arrow_back, size: 16),
           label: const Text('Retour'),
@@ -253,14 +255,14 @@ class _ChapterDetailForm extends StatelessWidget {
         Text(
           chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: PlumoraColors.textPrimary,
+            color: context.colors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Chapitre ${chapter.order == 0 ? '-' : chapter.order} · ${chapter.content.length} caractères',
-          style: const TextStyle(color: PlumoraColors.textSecondary),
+          style: TextStyle(color: context.colors.textSecondary),
         ),
         const SizedBox(height: 24),
         PlumoraCard(
@@ -303,7 +305,7 @@ class _ChapterDetailForm extends StatelessWidget {
                     icon: const Icon(Icons.delete_outline, size: 18),
                     label: const Text('Supprimer'),
                     style: TextButton.styleFrom(
-                      foregroundColor: PlumoraColors.destructive,
+                      foregroundColor: context.colors.destructive,
                     ),
                   ),
                   OutlinedButton.icon(
@@ -340,7 +342,7 @@ class _DeleteChapterDialog extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color: PlumoraColors.cards,
+            color: context.colors.cards,
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [
               BoxShadow(
@@ -364,9 +366,9 @@ class _DeleteChapterDialog extends StatelessWidget {
                       color: const Color(0xFFFBE6E4),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.delete_outline,
-                      color: PlumoraColors.destructive,
+                      color: context.colors.destructive,
                       size: 24,
                     ),
                   ),
@@ -387,8 +389,8 @@ class _DeleteChapterDialog extends StatelessWidget {
                           chapterTitle.trim().isEmpty
                               ? 'Cette action est définitive.'
                               : '"$chapterTitle" sera définitivement supprimé.',
-                          style: const TextStyle(
-                            color: PlumoraColors.textSecondary,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
                             height: 1.4,
                           ),
                         ),
@@ -435,8 +437,8 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 7),
       child: Text(
         label,
-        style: const TextStyle(
-          color: PlumoraColors.textPrimary,
+        style: TextStyle(
+          color: context.colors.textPrimary,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
@@ -461,8 +463,8 @@ class _InlineError extends StatelessWidget {
       ),
       child: Text(
         message,
-        style: const TextStyle(
-          color: PlumoraColors.destructive,
+        style: TextStyle(
+          color: context.colors.destructive,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -510,7 +512,7 @@ class _ErrorCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 16),
           FilledButton(onPressed: onRetry, child: const Text('Réessayer')),

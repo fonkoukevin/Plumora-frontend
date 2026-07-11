@@ -14,6 +14,7 @@ import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
+import '../data/writing_cache_invalidator.dart';
 
 const _detailAccent = Color(0xFF7C5CFF);
 const _detailAccentLight = Color(0xFF9B80FF);
@@ -47,7 +48,7 @@ class _BookDetailAuthorScreenState
     final chaptersAsync = ref.watch(bookChaptersProvider(widget.bookId));
 
     return ColoredBox(
-      color: PlumoraColors.background,
+      color: context.colors.background,
       child: bookAsync.when(
         loading: () => const Center(
           child: Padding(
@@ -97,6 +98,7 @@ class _BookDetailAuthorScreenState
       await action();
       ref.invalidate(authorBookProvider(widget.bookId));
       ref.invalidate(myBooksProvider);
+      invalidateBookPublicationCaches(ref, widget.bookId);
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
     } finally {
@@ -147,8 +149,8 @@ class _BookDetailBody extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
                       child: Text(
                         error!,
-                        style: const TextStyle(
-                          color: PlumoraColors.destructive,
+                        style: TextStyle(
+                          color: context.colors.destructive,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -189,8 +191,8 @@ class _TopBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       decoration: BoxDecoration(
-        color: PlumoraColors.background.withValues(alpha: 0.95),
-        border: const Border(bottom: BorderSide(color: PlumoraColors.border)),
+        color: context.colors.background.withValues(alpha: 0.95),
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
@@ -199,7 +201,7 @@ class _TopBar extends StatelessWidget {
             icon: const Icon(Icons.arrow_back, size: 16),
             label: const Text('Mes histoires'),
             style: TextButton.styleFrom(
-              foregroundColor: PlumoraColors.primary,
+              foregroundColor: context.colors.primary,
               padding: EdgeInsets.zero,
               minimumSize: const Size(0, 34),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -234,6 +236,12 @@ class _BookHero extends ConsumerWidget {
     final chapterTotal = chapters.isNotEmpty
         ? chapters.length
         : book.chapterCount;
+    final wordTotal = chapters.isNotEmpty
+        ? chapters.fold<int>(
+            0,
+            (sum, chapter) => sum + _chapterWordCount(chapter),
+          )
+        : book.wordCount;
     final doneChapters = _completedChapterCount(book, chapters, chapterTotal);
     final modified = _shortModified(book.updatedAt ?? book.createdAt);
     final status = _statusStyle(book.status);
@@ -278,10 +286,10 @@ class _BookHero extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.edit_outlined,
                         size: 15,
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                       ),
                     ),
                   ),
@@ -299,7 +307,7 @@ class _BookHero extends ConsumerWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.playfairDisplay(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                     height: 1.05,
@@ -310,8 +318,8 @@ class _BookHero extends ConsumerWidget {
                   _bookMetaLine(book),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 11,
                     height: 1.1,
                   ),
@@ -339,7 +347,7 @@ class _BookHero extends ConsumerWidget {
                     Expanded(
                       child: _MiniStatCard(
                         icon: Icons.energy_savings_leaf_outlined,
-                        value: _compactNumber(book.wordCount, fixed: true),
+                        value: _compactNumber(wordTotal, fixed: true),
                         label: 'Mots',
                       ),
                     ),
@@ -387,15 +395,15 @@ class _MiniStatCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: PlumoraColors.textSecondary),
+          Icon(icon, size: 13, color: context.colors.textSecondary),
           const SizedBox(height: 3),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 11.5,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -407,8 +415,8 @@ class _MiniStatCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 8,
               height: 1,
             ),
@@ -488,7 +496,7 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? Colors.white : PlumoraColors.textPrimary;
+    final foreground = selected ? Colors.white : context.colors.textPrimary;
 
     return Material(
       color: Colors.transparent,
@@ -552,8 +560,8 @@ class _DetailTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: PlumoraColors.border)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
@@ -592,7 +600,7 @@ class _DetailTabButton extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: selected ? PlumoraColors.primary : Colors.transparent,
+              color: selected ? context.colors.primary : Colors.transparent,
               width: 2,
             ),
           ),
@@ -602,7 +610,7 @@ class _DetailTabButton extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: selected ? PlumoraColors.primary : PlumoraColors.textPrimary,
+            color: selected ? context.colors.primary : context.colors.textPrimary,
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
@@ -664,8 +672,8 @@ class _OverviewTab extends StatelessWidget {
             onAction: () => context.go(AppRoutes.editBookPath(book.id)),
             child: Text(
               _bookSummary(book),
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 fontSize: 12,
                 height: 1.55,
               ),
@@ -675,10 +683,10 @@ class _OverviewTab extends StatelessWidget {
           _DetailSectionCard(
             title: 'Tags',
             child: tags.isEmpty
-                ? const Text(
+                ? Text(
                     'Aucun tag enregistré en base.',
                     style: TextStyle(
-                      color: PlumoraColors.textSecondary,
+                      color: context.colors.textSecondary,
                       fontSize: 12,
                     ),
                   )
@@ -729,8 +737,8 @@ class _DetailSectionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
@@ -740,7 +748,7 @@ class _DetailSectionCard extends StatelessWidget {
                 TextButton(
                   onPressed: onAction,
                   style: TextButton.styleFrom(
-                    foregroundColor: PlumoraColors.primary,
+                    foregroundColor: context.colors.primary,
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(0, 28),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -776,8 +784,8 @@ class _TagPill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: PlumoraColors.textSecondary,
+        style: TextStyle(
+          color: context.colors.textSecondary,
           fontSize: 10,
           fontWeight: FontWeight.w700,
         ),
@@ -825,14 +833,14 @@ class _MukemeHint extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Idées de Mukeme pour ce livre',
                       style: TextStyle(
-                        color: PlumoraColors.textPrimary,
+                        color: context.colors.textPrimary,
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
                       ),
@@ -841,17 +849,17 @@ class _MukemeHint extends StatelessWidget {
                     Text(
                       'Obtenez des suggestions pour enrichir votre histoire',
                       style: TextStyle(
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                         fontSize: 10,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
                 size: 17,
-                color: PlumoraColors.textSecondary,
+                color: context.colors.textSecondary,
               ),
             ],
           ),
@@ -900,8 +908,8 @@ class _ChaptersTab extends ConsumerWidget {
                       '$published publié${published > 1 ? 's' : ''} · '
                       '${chapters.length - published} brouillon'
                       '${chapters.length - published > 1 ? 's' : ''}',
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
                         fontSize: 11,
                       ),
                     ),
@@ -968,7 +976,7 @@ class _ChapterRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: published
                       ? _detailGreen.withValues(alpha: 0.12)
-                      : PlumoraColors.textSecondary.withValues(alpha: 0.10),
+                      : context.colors.textSecondary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Center(
@@ -977,7 +985,7 @@ class _ChapterRow extends StatelessWidget {
                     style: TextStyle(
                       color: published
                           ? _detailGreen
-                          : PlumoraColors.textSecondary,
+                          : context.colors.textSecondary,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -997,8 +1005,8 @@ class _ChapterRow extends StatelessWidget {
                                 : chapter.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: PlumoraColors.textPrimary,
+                            style: TextStyle(
+                              color: context.colors.textPrimary,
                               fontSize: 13,
                               fontWeight: FontWeight.w900,
                             ),
@@ -1008,7 +1016,7 @@ class _ChapterRow extends StatelessWidget {
                           label: published ? 'Publié' : 'Brouillon',
                           color: published
                               ? _detailGreen
-                              : PlumoraColors.textSecondary,
+                              : context.colors.textSecondary,
                         ),
                       ],
                     ),
@@ -1018,8 +1026,8 @@ class _ChapterRow extends StatelessWidget {
                       ' · ${_relativeModified(chapter.updatedAt ?? chapter.createdAt)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
                         fontSize: 11,
                       ),
                     ),
@@ -1030,7 +1038,7 @@ class _ChapterRow extends StatelessWidget {
                 onPressed: () =>
                     context.go(AppRoutes.chapterEditorPath(book.id)),
                 icon: const Icon(Icons.edit_outlined),
-                color: PlumoraColors.primary,
+                color: context.colors.primary,
                 iconSize: 18,
                 tooltip: 'Écrire',
               ),
@@ -1085,15 +1093,15 @@ class _AddChapterCard extends StatelessWidget {
           border: Border.all(color: _detailBorder, width: 1.4),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add, size: 19, color: PlumoraColors.textSecondary),
+            Icon(Icons.add, size: 19, color: context.colors.textSecondary),
             SizedBox(width: 7),
             Text(
               'Ajouter un chapitre',
               style: TextStyle(
-                color: PlumoraColors.textSecondary,
+                color: context.colors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
               ),
@@ -1172,11 +1180,11 @@ class _StatsTab extends StatelessWidget {
                   ),
                   SizedBox(
                     width: width,
-                    child: const _StatsCard(
+                    child: _StatsCard(
                       icon: Icons.trending_up,
                       label: 'Revenus',
                       value: '—',
-                      color: PlumoraColors.textSecondary,
+                      color: context.colors.textSecondary,
                       sub: 'Pas encore publié',
                     ),
                   ),
@@ -1190,10 +1198,10 @@ class _StatsTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Publiez votre livre pour voir les vues, notes et revenus en temps réel.',
                   style: TextStyle(
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                     height: 1.4,
                   ),
@@ -1203,7 +1211,7 @@ class _StatsTab extends StatelessWidget {
                   onPressed: () =>
                       context.go(AppRoutes.publishBookPath(book.id)),
                   style: TextButton.styleFrom(
-                    foregroundColor: PlumoraColors.primary,
+                    foregroundColor: context.colors.primary,
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(0, 28),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1258,8 +1266,8 @@ class _StatsCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 22,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -1268,8 +1276,8 @@ class _StatsCard extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             label,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 11,
               fontWeight: FontWeight.w800,
             ),
@@ -1277,8 +1285,8 @@ class _StatsCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             sub,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 9,
             ),
           ),
@@ -1391,15 +1399,15 @@ class _SettingsRow extends StatelessWidget {
       decoration: BoxDecoration(
         border: last
             ? null
-            : const Border(bottom: BorderSide(color: PlumoraColors.border)),
+            : Border(bottom: BorderSide(color: context.colors.border)),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 fontSize: 11,
               ),
             ),
@@ -1411,8 +1419,8 @@ class _SettingsRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
-              style: const TextStyle(
-                color: PlumoraColors.textPrimary,
+              style: TextStyle(
+                color: context.colors.textPrimary,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
               ),
@@ -1444,7 +1452,7 @@ class _VisibilityRow extends StatelessWidget {
         Icon(
           icon,
           size: 17,
-          color: selected ? PlumoraColors.primary : PlumoraColors.textSecondary,
+          color: selected ? context.colors.primary : context.colors.textSecondary,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1453,16 +1461,16 @@ class _VisibilityRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  color: PlumoraColors.textPrimary,
+                style: TextStyle(
+                  color: context.colors.textPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               Text(
                 description,
-                style: const TextStyle(
-                  color: PlumoraColors.textSecondary,
+                style: TextStyle(
+                  color: context.colors.textSecondary,
                   fontSize: 11,
                 ),
               ),
@@ -1470,7 +1478,7 @@ class _VisibilityRow extends StatelessWidget {
           ),
         ),
         if (selected)
-          const Icon(Icons.check, size: 17, color: PlumoraColors.primary),
+          Icon(Icons.check, size: 17, color: context.colors.primary),
       ],
     );
   }
@@ -1514,7 +1522,7 @@ class _QuickLinkRow extends StatelessWidget {
         decoration: BoxDecoration(
           border: last
               ? null
-              : const Border(bottom: BorderSide(color: PlumoraColors.border)),
+              : Border(bottom: BorderSide(color: context.colors.border)),
         ),
         child: Row(
           children: [
@@ -1531,17 +1539,17 @@ class _QuickLinkRow extends StatelessWidget {
             Expanded(
               child: Text(
                 item.label,
-                style: const TextStyle(
-                  color: PlumoraColors.textPrimary,
+                style: TextStyle(
+                  color: context.colors.textPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right,
               size: 17,
-              color: PlumoraColors.textSecondary,
+              color: context.colors.textSecondary,
             ),
           ],
         ),
@@ -1577,7 +1585,7 @@ class _DangerCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _detailSurface,
         border: Border.all(
-          color: PlumoraColors.destructive.withValues(alpha: 0.22),
+          color: context.colors.destructive.withValues(alpha: 0.22),
         ),
         borderRadius: BorderRadius.circular(14),
       ),
@@ -1589,13 +1597,13 @@ class _DangerCard extends StatelessWidget {
               Icon(
                 Icons.warning_amber_rounded,
                 size: 17,
-                color: PlumoraColors.destructive,
+                color: context.colors.destructive,
               ),
               const SizedBox(width: 7),
-              const Text(
+              Text(
                 'Zone de danger',
                 style: TextStyle(
-                  color: PlumoraColors.destructive,
+                  color: context.colors.destructive,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1603,10 +1611,10 @@ class _DangerCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 9),
-          const Text(
+          Text(
             'Archive ce livre si tu ne veux plus le voir dans tes histoires actives.',
             style: TextStyle(
-              color: PlumoraColors.textSecondary,
+              color: context.colors.textSecondary,
               fontSize: 11,
               height: 1.4,
             ),
@@ -1617,9 +1625,9 @@ class _DangerCard extends StatelessWidget {
             child: OutlinedButton(
               onPressed: disabled ? null : onArchive,
               style: OutlinedButton.styleFrom(
-                foregroundColor: PlumoraColors.destructive,
+                foregroundColor: context.colors.destructive,
                 side: BorderSide(
-                  color: PlumoraColors.destructive.withValues(alpha: 0.4),
+                  color: context.colors.destructive.withValues(alpha: 0.4),
                 ),
               ),
               child: const Text('Archiver ce livre'),
@@ -1687,12 +1695,12 @@ class _VisibilityChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(style.icon, size: 11, color: PlumoraColors.textSecondary),
+          Icon(style.icon, size: 11, color: context.colors.textSecondary),
           const SizedBox(width: 5),
           Text(
             style.label,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 10,
               fontWeight: FontWeight.w700,
               height: 1,
@@ -1802,9 +1810,9 @@ class _EmptyChapters extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Ouvre l’éditeur pour créer le premier chapitre de ce livre.',
-            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 14),
           _GradientPillButton(
@@ -1835,16 +1843,16 @@ class _ArchiveConfirmDialog extends StatelessWidget {
           children: [
             Text(
               'Archiver « $title » ?',
-              style: const TextStyle(
-                color: PlumoraColors.textPrimary,
+              style: TextStyle(
+                color: context.colors.textPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'Ce livre sera retiré de tes histoires actives.',
-              style: TextStyle(color: PlumoraColors.textSecondary, height: 1.4),
+              style: TextStyle(color: context.colors.textSecondary, height: 1.4),
             ),
             const SizedBox(height: 20),
             Row(
@@ -1859,7 +1867,7 @@ class _ArchiveConfirmDialog extends StatelessWidget {
                 Expanded(
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: PlumoraColors.destructive,
+                      backgroundColor: context.colors.destructive,
                     ),
                     onPressed: () => Navigator.of(context).pop(true),
                     child: const Text('Archiver'),
@@ -1905,7 +1913,7 @@ class _ErrorPanel extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   message,
-                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
