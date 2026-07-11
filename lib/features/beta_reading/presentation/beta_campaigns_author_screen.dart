@@ -115,21 +115,40 @@ class _BetaCampaignsAuthorScreenState
                         const SizedBox(height: 22),
                         _Header(book: book),
                         const SizedBox(height: 24),
-                        _CampaignForm(
-                          titleController: _titleController,
-                          instructionsController: _instructionsController,
-                          deadlineController: _deadlineController,
-                          inviteesController: _inviteesController,
-                          chapters: chapters,
-                          selectedChapterIds: _selectedChapterIds,
-                          readersAsync: readersAsync,
-                          selectedReaderIds: _selectedReaderIds,
-                          isSubmitting: _isSubmitting,
-                          error: _error,
-                          onToggleChapter: _toggleChapter,
-                          onToggleReader: _toggleReader,
-                          onSubmit: chapters.isEmpty ? null : _createCampaign,
-                        ),
+                        if (chapters.isEmpty)
+                          _StateCard(
+                            title:
+                                "Ajoute au moins un chapitre avant d'envoyer en bêta-test",
+                            subtitle:
+                                'Une campagne bêta doit partager au moins un '
+                                "chapitre avec du contenu — c'est ce que tes "
+                                'bêta-lecteurs liront. Écris ton premier '
+                                'chapitre, puis reviens ici pour lancer la '
+                                'campagne.',
+                            action: FilledButton.icon(
+                              onPressed: () => context.go(
+                                AppRoutes.chapterEditorPath(book.id),
+                              ),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              label: const Text('Écrire un chapitre'),
+                            ),
+                          )
+                        else
+                          _CampaignForm(
+                            titleController: _titleController,
+                            instructionsController: _instructionsController,
+                            deadlineController: _deadlineController,
+                            inviteesController: _inviteesController,
+                            chapters: chapters,
+                            selectedChapterIds: _selectedChapterIds,
+                            readersAsync: readersAsync,
+                            selectedReaderIds: _selectedReaderIds,
+                            isSubmitting: _isSubmitting,
+                            error: _error,
+                            onToggleChapter: _toggleChapter,
+                            onToggleReader: _toggleReader,
+                            onSubmit: _createCampaign,
+                          ),
                         const SizedBox(height: 26),
                         _CampaignList(
                           campaignsAsync: campaignsAsync,
@@ -370,8 +389,8 @@ class _Header extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PlumoraIconTile(
-            backgroundColor: PlumoraColors.info,
+          PlumoraIconTile(
+            backgroundColor: context.colors.info,
             child: Icon(Icons.groups_outlined, color: Colors.white),
           ),
           const SizedBox(width: 16),
@@ -382,15 +401,15 @@ class _Header extends StatelessWidget {
                 Text(
                   'Envoyer en bêta-test',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   book.title.isEmpty ? 'Livre sans titre' : book.title,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 16,
                   ),
                 ),
@@ -478,38 +497,32 @@ class _CampaignForm extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 10),
-          if (chapters.isEmpty)
-            const Text(
-              'Crée au moins un chapitre avant de lancer une bêta-lecture.',
-              style: TextStyle(color: PlumoraColors.textSecondary),
-            )
-          else
-            for (final chapter in chapters) ...[
-              CheckboxListTile(
-                value: selectedChapterIds.contains(chapter.id),
-                onChanged: isSubmitting
-                    ? null
-                    : (_) => onToggleChapter(chapter.id),
-                title: Text(
-                  chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
-                ),
-                subtitle: Text(
-                  chapter.order == 0 ? 'Chapitre' : 'Chapitre ${chapter.order}',
-                ),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
+          for (final chapter in chapters) ...[
+            CheckboxListTile(
+              value: selectedChapterIds.contains(chapter.id),
+              onChanged: isSubmitting
+                  ? null
+                  : (_) => onToggleChapter(chapter.id),
+              title: Text(
+                chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
               ),
-            ],
+              subtitle: Text(
+                chapter.order == 0 ? 'Chapitre' : 'Chapitre ${chapter.order}',
+              ),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+          ],
           const SizedBox(height: 18),
           const Text(
             'Inviter des bêta-lecteurs (optionnel)',
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             "Tout bêta-lecteur peut déjà rejoindre la campagne sans "
             "invitation — ceci n'envoie qu'une notification ciblée.",
-            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 10),
           readersAsync.when(
@@ -519,12 +532,12 @@ class _CampaignForm extends StatelessWidget {
             ),
             error: (error, _) => Text(
               AppError.messageFor(error),
-              style: const TextStyle(color: PlumoraColors.textSecondary),
+              style: TextStyle(color: context.colors.textSecondary),
             ),
             data: (readers) => readers.isEmpty
-                ? const Text(
+                ? Text(
                     'Aucun bêta-lecteur enregistré pour le moment.',
-                    style: TextStyle(color: PlumoraColors.textSecondary),
+                    style: TextStyle(color: context.colors.textSecondary),
                   )
                 : _ReaderPicker(
                     readers: readers,
@@ -576,8 +589,8 @@ class _CampaignForm extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               error!,
-              style: const TextStyle(
-                color: PlumoraColors.destructive,
+              style: TextStyle(
+                color: context.colors.destructive,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -748,14 +761,14 @@ class _CampaignList extends StatelessWidget {
                       backgroundColor:
                           campaign.status == BetaCampaignStatus.active
                           ? const Color(0xFFE8F0F5)
-                          : PlumoraColors.muted,
+                          : context.colors.muted,
                       child: Icon(
                         campaign.status == BetaCampaignStatus.active
                             ? Icons.groups_outlined
                             : Icons.lock_outline,
                         color: campaign.status == BetaCampaignStatus.active
-                            ? PlumoraColors.info
-                            : PlumoraColors.textSecondary,
+                            ? context.colors.info
+                            : context.colors.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -777,8 +790,8 @@ class _CampaignList extends StatelessWidget {
                             campaign.instructions?.isNotEmpty == true
                                 ? campaign.instructions!
                                 : 'Aucune consigne renseignée.',
-                            style: const TextStyle(
-                              color: PlumoraColors.textSecondary,
+                            style: TextStyle(
+                              color: context.colors.textSecondary,
                               height: 1.4,
                             ),
                           ),
@@ -791,8 +804,8 @@ class _CampaignList extends StatelessWidget {
                               if (campaign.deadline != null)
                                 PlumoraBadge(
                                   label: _dateLabel(campaign.deadline!),
-                                  backgroundColor: PlumoraColors.muted,
-                                  foregroundColor: PlumoraColors.textSecondary,
+                                  backgroundColor: context.colors.muted,
+                                  foregroundColor: context.colors.textSecondary,
                                   icon: Icons.schedule,
                                 ),
                             ],
@@ -837,7 +850,7 @@ class _CampaignList extends StatelessWidget {
                                       ? null
                                       : () => onCancel(campaign),
                                   style: TextButton.styleFrom(
-                                    foregroundColor: PlumoraColors.destructive,
+                                    foregroundColor: context.colors.destructive,
                                   ),
                                   child: Text(
                                     busyCampaignId == campaign.id
@@ -897,7 +910,7 @@ class _StateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],

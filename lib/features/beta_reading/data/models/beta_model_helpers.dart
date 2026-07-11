@@ -61,6 +61,20 @@ int? readBetaNullableInt(Map<String, dynamic> json, List<String> keys) {
   return null;
 }
 
+bool readBetaBool(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is bool) {
+      return value;
+    }
+    if (value != null) {
+      return value.toString().trim().toLowerCase() == 'true';
+    }
+  }
+
+  return false;
+}
+
 DateTime? readBetaDate(Map<String, dynamic> json, List<String> keys) {
   for (final key in keys) {
     final value = json[key];

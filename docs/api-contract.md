@@ -60,6 +60,21 @@ Persisted local cover URLs may be relative to the API base path, for example:
 `uploads/book-covers/{filename}`. The public image route is:
 GET `/uploads/book-covers/{filename}`.
 
+**`chapterCount` / `wordCount` (fixed 2026-07):** `BookResponse` now
+includes real `chapterCount` and `wordCount` fields, computed
+server-side from the book's actual chapters (`BookService.getChapterStats`),
+on every endpoint that returns a `BookResponse` — `my-books`, `{bookId}`,
+create, update, publish, archive. `GET /books/my-books` uses one grouped
+query for the whole list (no N+1). These field names (`chapterCount`,
+`wordCount`, plain camelCase) match what the Flutter client already
+parses (`book_model.dart`), so the "Mes histoires" list screen
+(`author_dashboard_screen.dart`), which has no other way to know a
+book's chapter/word totals, needed no client change — it was reading
+these exact field names all along, they just weren't populated before.
+The book detail screen also has an independent client-side fallback
+(computes from the live chapter list when loaded) that stays in place as
+a defensive belt-and-suspenders, not because it's still needed.
+
 ## Chapters
 
 POST `/books/{bookId}/chapters`
@@ -160,6 +175,14 @@ POST `/books/{bookId}/beta-campaigns` — role `AUTHOR`
   `authorId`, `authorUsername`, `title`, `instructions`, `deadline`, `status`,
   `createdAt`, `closedAt`. Every user with role `BETA_READER` (except the
   author) is sent a `BETA_CAMPAIGN_OPEN` notification when this succeeds.
+- **Book status side effect (fixed 2026-07):** creating a campaign now
+  transitions the book's own `status` to `IN_BETA_READING`
+  (`BookService.startBetaReading`). Verified end-to-end with the Flutter
+  app: "Mes histoires" already had the `IN_BETA_READING` status chip, the
+  "Bêta-test" filter tab, and the "Retours" action button fully wired
+  (`author_dashboard_screen.dart`) and already refetches `GET
+  /books/my-books` right after a successful campaign creation, so this
+  required no client changes.
 
 GET `/books/{bookId}/beta-campaigns` — role `AUTHOR`
 - Returns `BetaCampaignResponse[]` for that book (all statuses).
@@ -167,8 +190,10 @@ GET `/books/{bookId}/beta-campaigns` — role `AUTHOR`
 GET `/beta-campaigns` — role `BETA_READER`
 - **New endpoint.** No params. Returns `BetaCampaignResponse[]` filtered to
   `status == ACTIVE` only, ordered by `createdAt` descending. Same DTO shape
-  as above (includes `bookCoverUrl`/`authorUsername`) — no chapter-count or
-  per-user progress field exists on this DTO.
+  as above (includes `bookCoverUrl`/`authorUsername`) — no chapter-count
+  field exists on this DTO. **`engagedByMe`** (bool, added 2026-07): true if
+  the current beta-reader has either commented on or opened a shared chapter
+  of that campaign — computed server-side in one grouped query (no N+1).
 
 GET `/beta-campaigns/{campaignId}` — role `AUTHOR` or `BETA_READER`
 - Returns one `BetaCampaignResponse`.
@@ -178,6 +203,14 @@ PATCH `/beta-campaigns/{campaignId}/cancel` — role `AUTHOR`
 - No body. Sets `status` to `CLOSED`/`CANCELLED` and `closedAt` to now. Both
   require the campaign to currently be `ACTIVE`, else 400
   `"Only active beta-reading campaigns can be modified"`.
+- **Book status side effect (2026-07):** `close` moves the book's own
+  `status` to `IN_CORRECTION` (`BookService.completeBetaReading` — the
+  author is expected to act on the feedback before republishing); `cancel`
+  reverts it to `DRAFT` (`BookService.cancelBetaReading`). On the Flutter
+  side both land the book back in the "En cours" tab (already matches
+  `draft`/`inCorrection`) with the generic "Brouillon" chip and
+  "Chapitres"/"Écrire" actions — no distinct "En correction" chip exists
+  yet, that would be a cosmetic follow-up only, not a blocker.
 
 POST `/beta-campaigns/{campaignId}/invitations` — role `AUTHOR`
 - Body (`CreateBetaInvitationRequest`): `{ "betaReaderId": UUID }` — **required,
@@ -206,6 +239,15 @@ GET `/beta-campaigns/{campaignId}/chapters` — role `AUTHOR` or `BETA_READER`
 PUT `/beta-campaigns/{campaignId}/chapters` — role `AUTHOR`
 - Body (`UpdateSharedChaptersRequest`): `{ "chapterIds": UUID[] }` (required,
   each id required). Returns `BetaSharedChapterResponse[]`.
+
+POST `/beta-campaigns/{campaignId}/chapters/{chapterId}/views` — role
+`BETA_READER` — **new endpoint (2026-07)**
+- No body, no response body. Idempotent (safe to call repeatedly for the
+  same chapter). Refuses (400) if the chapter isn't shared on this campaign.
+  Records that the current beta-reader opened this chapter; feeds
+  `engagedByMe` on `GET /beta-campaigns` alongside comments. Client calls
+  this once per chapter view (cached client-side, not re-sent on repeat
+  navigation within the same app session).
 
 POST `/beta-comments` — role `BETA_READER`
 - Body (`CreateBetaCommentRequest`): `{ "campaignId": UUID, "chapterId": UUID,

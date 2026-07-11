@@ -8,7 +8,6 @@ import '../models/beta_invitation_model.dart';
 import '../models/beta_reader_summary_model.dart';
 import '../models/beta_shared_chapter_model.dart';
 import '../services/beta_reading_api_service.dart';
-import 'beta_seen_ids_storage.dart';
 
 final betaReadingApiServiceProvider = Provider<BetaReadingApiService>((ref) {
   return BetaReadingApiService(ref.watch(dioProvider));
@@ -29,73 +28,6 @@ final betaInvitationsProvider = FutureProvider<List<BetaInvitationModel>>((
 ) {
   return ref.watch(betaReadingRepositoryProvider).myInvitations();
 });
-
-final betaInvitationSeenStorageProvider = Provider<BetaSeenIdsStorage>((ref) {
-  return const BetaSeenIdsStorage('plumora_beta_invitations_seen');
-});
-
-final betaSeenInvitationIdsProvider = FutureProvider<Set<String>>((ref) {
-  return ref.watch(betaInvitationSeenStorageProvider).readSeenIds();
-});
-
-final betaCampaignSeenStorageProvider = Provider<BetaSeenIdsStorage>((ref) {
-  return const BetaSeenIdsStorage('plumora_beta_campaigns_seen');
-});
-
-final betaSeenCampaignIdsProvider = FutureProvider<Set<String>>((ref) {
-  return ref.watch(betaCampaignSeenStorageProvider).readSeenIds();
-});
-
-/// Nombre d'opportunites de beta-lecture pas encore vues : invitations
-/// personnelles en attente + campagnes ouvertes que n'importe quel
-/// beta-lecteur peut rejoindre sans invitation.
-final betaNewOpportunitiesCountProvider = Provider<int>((ref) {
-  final invitations =
-      ref.watch(betaInvitationsProvider).valueOrNull ??
-      const <BetaInvitationModel>[];
-  final seenInvitationIds =
-      ref.watch(betaSeenInvitationIdsProvider).valueOrNull ?? const <String>{};
-  final newInvitations = invitations
-      .where(
-        (invitation) =>
-            invitation.isPending && !seenInvitationIds.contains(invitation.id),
-      )
-      .length;
-
-  final campaigns =
-      ref.watch(betaOpenCampaignsProvider).valueOrNull ??
-      const <BetaCampaignModel>[];
-  final seenCampaignIds =
-      ref.watch(betaSeenCampaignIdsProvider).valueOrNull ?? const <String>{};
-  final newCampaigns = campaigns
-      .where((campaign) => !seenCampaignIds.contains(campaign.id))
-      .length;
-
-  return newInvitations + newCampaigns;
-});
-
-/// Marque les invitations en attente et les campagnes ouvertes comme vues
-/// (persiste localement) et rafraichit le compteur de nouvelles opportunites.
-Future<void> markBetaOpportunitiesSeen(WidgetRef ref) async {
-  final invitations =
-      ref.read(betaInvitationsProvider).valueOrNull ??
-      const <BetaInvitationModel>[];
-  final pendingIds = invitations
-      .where((invitation) => invitation.isPending)
-      .map((invitation) => invitation.id);
-
-  final campaigns =
-      ref.read(betaOpenCampaignsProvider).valueOrNull ??
-      const <BetaCampaignModel>[];
-  final campaignIds = campaigns.map((campaign) => campaign.id);
-
-  await Future.wait([
-    ref.read(betaInvitationSeenStorageProvider).markSeen(pendingIds),
-    ref.read(betaCampaignSeenStorageProvider).markSeen(campaignIds),
-  ]);
-  ref.invalidate(betaSeenInvitationIdsProvider);
-  ref.invalidate(betaSeenCampaignIdsProvider);
-}
 
 final betaCampaignsForBookProvider =
     FutureProvider.family<List<BetaCampaignModel>, String>((ref, bookId) {
@@ -254,6 +186,14 @@ class BetaReadingRepository {
 
   Future<List<BetaSharedChapterModel>> sharedChapters(String campaignId) {
     return _apiService.sharedChapters(campaignId);
+  }
+
+  Future<void> recordChapterView(String campaignId, String chapterId) async {
+    try {
+      await _apiService.recordChapterView(campaignId, chapterId);
+    } on DioException {
+      // Best-effort engagement tracking: a failed call must not block reading.
+    }
   }
 
   Future<BetaCommentModel> createComment(BetaCommentCreateRequest request) {

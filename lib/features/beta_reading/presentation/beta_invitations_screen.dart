@@ -11,6 +11,7 @@ import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/beta_campaign_model.dart';
 import '../data/models/beta_invitation_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
+import 'beta_engagement_providers.dart';
 
 class BetaInvitationsScreen extends ConsumerStatefulWidget {
   const BetaInvitationsScreen({
@@ -69,10 +70,8 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
               (campaign.authorUsername ?? '').toLowerCase().contains(query);
         }).toList();
 
-        final pendingInvitations = invitationsAsync.maybeWhen(
-          data: (invitations) =>
-              invitations.where((invitation) => invitation.isPending).toList(),
-          orElse: () => const <BetaInvitationModel>[],
+        final pendingInvitations = ref.watch(
+          betaActionablePendingInvitationsProvider,
         );
 
         return Column(
@@ -84,19 +83,19 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
                 onTap: () => context.go(AppRoutes.home),
               ),
             if (!widget.embedded) const SizedBox(height: 18),
-            const Text(
+            Text(
               'Beta-tests',
               style: TextStyle(
-                color: PlumoraColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontSize: 38,
                 fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Lisez des manuscrits avant publication et aidez les auteurs avec vos retours',
               style: TextStyle(
-                color: PlumoraColors.textSecondary,
+                color: context.colors.textSecondary,
                 fontSize: 15,
               ),
             ),
@@ -109,27 +108,27 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
               const SizedBox(height: 14),
               Text(
                 _error!,
-                style: const TextStyle(
-                  color: PlumoraColors.destructive,
+                style: TextStyle(
+                  color: context.colors.destructive,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
             const SizedBox(height: 26),
-            const Text(
+            Text(
               'Campagnes ouvertes',
               style: TextStyle(
-                color: PlumoraColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               "Tout beta-lecteur peut rejoindre l'une de ces campagnes et "
               'commenter directement, sans invitation.',
               style: TextStyle(
-                color: PlumoraColors.textSecondary,
+                color: context.colors.textSecondary,
                 fontSize: 13,
               ),
             ),
@@ -148,20 +147,20 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
               ],
             if (pendingInvitations.isNotEmpty) ...[
               const SizedBox(height: 26),
-              const Text(
+              Text(
                 'Mes invitations en attente',
                 style: TextStyle(
-                  color: PlumoraColors.textPrimary,
+                  color: context.colors.textPrimary,
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 "Une invitation ne conditionne plus l'acces a la campagne : "
                 "elle sert juste a signaler a l'auteur ta participation.",
                 style: TextStyle(
-                  color: PlumoraColors.textSecondary,
+                  color: context.colors.textSecondary,
                   fontSize: 13,
                 ),
               ),
@@ -207,6 +206,7 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
       final repository = ref.read(betaReadingRepositoryProvider);
       if (accept) {
         await repository.acceptInvitation(invitation.id);
+        await touchBetaCampaignActivity(ref, invitation.campaignId);
       } else {
         await repository.refuseInvitation(invitation.id);
       }
@@ -243,7 +243,7 @@ class _BetaStats extends StatelessWidget {
           FigmaStatCard(
             label: 'Invitations en attente',
             value: pendingInvitationsCount.toString(),
-            valueColor: PlumoraColors.accent,
+            valueColor: context.colors.accent,
           ),
         ];
         if (compact) {
@@ -301,8 +301,8 @@ class _OpenCampaignCard extends ConsumerWidget {
                   campaign.bookTitle.isEmpty
                       ? 'Manuscrit sans titre'
                       : campaign.bookTitle,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                   ),
@@ -310,8 +310,8 @@ class _OpenCampaignCard extends ConsumerWidget {
                 if (author.isNotEmpty)
                   Text(
                     'par $author',
-                    style: const TextStyle(
-                      color: PlumoraColors.textSecondary,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -320,7 +320,7 @@ class _OpenCampaignCard extends ConsumerWidget {
                   _MiniMetric(
                     icon: Icons.schedule,
                     label: 'Deadline : ${_shortDate(campaign.deadline!)}',
-                    color: PlumoraColors.accent,
+                    color: context.colors.accent,
                   ),
                 ],
                 const SizedBox(height: 14),
@@ -372,8 +372,8 @@ class _InvitationCard extends StatelessWidget {
                   invitation.bookTitle.isEmpty
                       ? 'Manuscrit sans titre'
                       : invitation.bookTitle,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
@@ -381,8 +381,8 @@ class _InvitationCard extends StatelessWidget {
                 if (author.isNotEmpty)
                   Text(
                     'par $author',
-                    style: const TextStyle(
-                      color: PlumoraColors.textSecondary,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -413,24 +413,21 @@ class _InvitationCard extends StatelessWidget {
 }
 
 class _MiniMetric extends StatelessWidget {
-  const _MiniMetric({
-    required this.icon,
-    required this.label,
-    this.color = PlumoraColors.textSecondary,
-  });
+  const _MiniMetric({required this.icon, required this.label, this.color});
 
   final IconData icon;
   final String label;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedColor = color ?? context.colors.textSecondary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color),
+        Icon(icon, size: 16, color: resolvedColor),
         const SizedBox(width: 5),
-        Text(label, style: TextStyle(color: color, fontSize: 13)),
+        Text(label, style: TextStyle(color: resolvedColor, fontSize: 13)),
       ],
     );
   }
@@ -444,7 +441,7 @@ class _TipsCard extends StatelessWidget {
     return FigmaCard(
       color: const Color(0xFFEFF6FF),
       borderColor: const Color(0xFFBFDBFE),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           FigmaGradientIcon(
@@ -460,7 +457,7 @@ class _TipsCard extends StatelessWidget {
                 Text(
                   'Conseils pour un bon beta-test',
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -468,7 +465,7 @@ class _TipsCard extends StatelessWidget {
                 Text(
                   "Soyez constructif et bienveillant, notez les incoherences, partagez ce que vous avez aime et respectez les delais fixes par l'auteur.",
                   style: TextStyle(
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     height: 1.4,
                   ),
                 ),
@@ -500,7 +497,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),

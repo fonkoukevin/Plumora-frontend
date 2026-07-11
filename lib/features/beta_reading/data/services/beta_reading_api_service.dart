@@ -234,6 +234,10 @@ class BetaReadingApiService {
       ..sort((a, b) => a.order.compareTo(b.order));
   }
 
+  Future<void> recordChapterView(String campaignId, String chapterId) {
+    return _dio.post('/beta-campaigns/$campaignId/chapters/$chapterId/views');
+  }
+
   Future<BetaCommentModel> createComment(
     BetaCommentCreateRequest request,
   ) async {

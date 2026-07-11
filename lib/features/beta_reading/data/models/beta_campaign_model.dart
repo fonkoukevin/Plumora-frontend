@@ -40,6 +40,7 @@ class BetaCampaignModel {
     this.deadline,
     this.createdAt,
     this.closedAt,
+    this.engagedByMe = false,
   });
 
   final String id;
@@ -54,6 +55,11 @@ class BetaCampaignModel {
   final DateTime? deadline;
   final DateTime? createdAt;
   final DateTime? closedAt;
+
+  /// True si l'utilisateur courant a deja commente ou ouvert un chapitre
+  /// partage de cette campagne, meme sans invitation acceptee. Calcule cote
+  /// serveur (voir `GET /beta-campaigns`).
+  final bool engagedByMe;
 
   factory BetaCampaignModel.fromJson(Object? value) {
     final json = readBetaMap(value);
@@ -106,6 +112,7 @@ class BetaCampaignModel {
       deadline: readBetaDate(json, ['deadline', 'dueDate', 'due_date']),
       createdAt: readBetaDate(json, ['createdAt', 'created_at']),
       closedAt: readBetaDate(json, ['closedAt', 'closed_at']),
+      engagedByMe: readBetaBool(json, ['engagedByMe', 'engaged_by_me']),
     );
   }
 }

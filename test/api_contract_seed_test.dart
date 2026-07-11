@@ -532,6 +532,7 @@ void main() {
       final sharedAfterUpdate = await beta.updateSharedChapters('campaign-1', [
         'chapter-1',
       ]);
+      await beta.recordChapterView('campaign-1', 'chapter-1');
       final acceptedInvitation = await beta.acceptInvitation('invitation-1');
       final refusedInvitation = await beta.refuseInvitation('invitation-1');
       final sharedChapters = await beta.sharedChapters('campaign-1');
@@ -556,6 +557,7 @@ void main() {
       expect(invitations.single.id, 'invitation-1');
       expect(invitations.single.coverUrl, createdBook.coverUrl);
       expect(openCampaigns.single.id, 'campaign-1');
+      expect(openCampaigns.single.engagedByMe, isTrue);
       expect(campaign.id, 'campaign-1');
       expect(campaign.coverUrl, createdBook.coverUrl);
       expect(campaigns.single.id, 'campaign-1');
@@ -668,6 +670,7 @@ void main() {
           'POST /beta-campaigns/campaign-1/invitations',
           'GET /beta-campaigns/campaign-1/invitations',
           'PUT /beta-campaigns/campaign-1/chapters',
+          'POST /beta-campaigns/campaign-1/chapters/chapter-1/views',
           'PATCH /beta-invitations/invitation-1/accept',
           'PATCH /beta-invitations/invitation-1/refuse',
           'GET /beta-campaigns/campaign-1/chapters',
@@ -942,6 +945,7 @@ Map<String, Object?> _seedResponses() {
     'status': 'ACTIVE',
     'instructions': 'Chercher les incohérences.',
     'deadline': '2026-06-12',
+    'engagedByMe': true,
   };
   final invitation = {
     'id': 'invitation-1',
@@ -1114,6 +1118,7 @@ Map<String, Object?> _seedResponses() {
     'PUT /beta-campaigns/campaign-1/chapters': {
       'chapters': [sharedChapter],
     },
+    'POST /beta-campaigns/campaign-1/chapters/chapter-1/views': _emptyResponse,
     'PATCH /beta-invitations/invitation-1/accept': {
       ...invitation,
       'status': 'ACCEPTED',
