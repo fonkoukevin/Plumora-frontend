@@ -12,6 +12,7 @@ import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
 import '../../book/presentation/widgets/book_status_badge.dart';
 import '../data/models/beta_campaign_model.dart';
+import '../data/models/beta_reader_summary_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
 
 class BetaCampaignsAuthorScreen extends ConsumerStatefulWidget {
@@ -31,6 +32,7 @@ class _BetaCampaignsAuthorScreenState
   final _deadlineController = TextEditingController();
   final _inviteesController = TextEditingController();
   final Set<String> _selectedChapterIds = {};
+  final Set<String> _selectedReaderIds = {};
   String? _initializedBookId;
   bool _isSubmitting = false;
   String? _busyCampaignId;
@@ -52,6 +54,7 @@ class _BetaCampaignsAuthorScreenState
     final campaignsAsync = ref.watch(
       betaCampaignsForBookProvider(widget.bookId),
     );
+    final readersAsync = ref.watch(betaReaderOptionsProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -112,18 +115,40 @@ class _BetaCampaignsAuthorScreenState
                         const SizedBox(height: 22),
                         _Header(book: book),
                         const SizedBox(height: 24),
-                        _CampaignForm(
-                          titleController: _titleController,
-                          instructionsController: _instructionsController,
-                          deadlineController: _deadlineController,
-                          inviteesController: _inviteesController,
-                          chapters: chapters,
-                          selectedChapterIds: _selectedChapterIds,
-                          isSubmitting: _isSubmitting,
-                          error: _error,
-                          onToggleChapter: _toggleChapter,
-                          onSubmit: chapters.isEmpty ? null : _createCampaign,
-                        ),
+                        if (chapters.isEmpty)
+                          _StateCard(
+                            title:
+                                "Ajoute au moins un chapitre avant d'envoyer en bêta-test",
+                            subtitle:
+                                'Une campagne bêta doit partager au moins un '
+                                "chapitre avec du contenu — c'est ce que tes "
+                                'bêta-lecteurs liront. Écris ton premier '
+                                'chapitre, puis reviens ici pour lancer la '
+                                'campagne.',
+                            action: FilledButton.icon(
+                              onPressed: () => context.go(
+                                AppRoutes.chapterEditorPath(book.id),
+                              ),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              label: const Text('Écrire un chapitre'),
+                            ),
+                          )
+                        else
+                          _CampaignForm(
+                            titleController: _titleController,
+                            instructionsController: _instructionsController,
+                            deadlineController: _deadlineController,
+                            inviteesController: _inviteesController,
+                            chapters: chapters,
+                            selectedChapterIds: _selectedChapterIds,
+                            readersAsync: readersAsync,
+                            selectedReaderIds: _selectedReaderIds,
+                            isSubmitting: _isSubmitting,
+                            error: _error,
+                            onToggleChapter: _toggleChapter,
+                            onToggleReader: _toggleReader,
+                            onSubmit: _createCampaign,
+                          ),
                         const SizedBox(height: 26),
                         _CampaignList(
                           campaignsAsync: campaignsAsync,
@@ -132,6 +157,7 @@ class _BetaCampaignsAuthorScreenState
                             betaCampaignsForBookProvider(widget.bookId),
                           ),
                           onClose: _closeCampaign,
+                          onCancel: _cancelCampaign,
                           onComments: (campaign) => context.go(
                             AppRoutes.authorBetaCommentsPath(book.id),
                           ),
@@ -165,6 +191,16 @@ class _BetaCampaignsAuthorScreenState
         _selectedChapterIds.remove(chapterId);
       } else {
         _selectedChapterIds.add(chapterId);
+      }
+    });
+  }
+
+  void _toggleReader(String readerId) {
+    setState(() {
+      if (_selectedReaderIds.contains(readerId)) {
+        _selectedReaderIds.remove(readerId);
+      } else {
+        _selectedReaderIds.add(readerId);
       }
     });
   }
@@ -203,13 +239,21 @@ class _BetaCampaignsAuthorScreenState
       for (final invitee in _readInvitees()) {
         await repository.createInvitation(campaign.id, invitee);
       }
+      final skipped = _readInvalidInvitees();
 
       ref.invalidate(betaCampaignsForBookProvider(widget.bookId));
       ref.invalidate(myBooksProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Campagne bêta créée.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              skipped.isEmpty
+                  ? 'Campagne bêta créée.'
+                  : 'Campagne bêta créée. Non invités (identifiant invalide) : '
+                        '${skipped.join(', ')}',
+            ),
+          ),
+        );
       }
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
@@ -239,18 +283,67 @@ class _BetaCampaignsAuthorScreenState
     }
   }
 
+  Future<void> _cancelCampaign(BetaCampaignModel campaign) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler cette campagne ?'),
+        content: const Text(
+          "Les bêta-lecteurs ne pourront plus lire ni commenter cette "
+          "campagne. Cette action n'est pas réversible.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Retour'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Annuler la campagne'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() => _busyCampaignId = campaign.id);
+    try {
+      await ref.read(betaReadingRepositoryProvider).cancelCampaign(campaign.id);
+      ref.invalidate(betaCampaignsForBookProvider(widget.bookId));
+      ref.invalidate(betaCampaignProvider(campaign.id));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busyCampaignId = null);
+      }
+    }
+  }
+
+  static final _uuidPattern = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
   List<BetaInvitationCreateRequest> _readInvitees() {
-    return _inviteesController.text
-        .split(RegExp(r'[,;\n]'))
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty)
-        .map((value) {
-          if (value.contains('@')) {
-            return BetaInvitationCreateRequest(email: value);
-          }
-          return BetaInvitationCreateRequest(betaReaderId: value);
-        })
+    final fromText = _parseInviteeTokens(
+      _inviteesController.text,
+    ).where(_uuidPattern.hasMatch);
+    final ids = {...fromText, ..._selectedReaderIds};
+    return ids
+        .map((value) => BetaInvitationCreateRequest(betaReaderId: value))
         .toList(growable: false);
+  }
+
+  List<String> _readInvalidInvitees() {
+    return _parseInviteeTokens(
+      _inviteesController.text,
+    ).where((value) => !_uuidPattern.hasMatch(value)).toList(growable: false);
   }
 
   DateTime? _parseDeadline(String rawValue) {
@@ -277,6 +370,14 @@ class _BetaCampaignsAuthorScreenState
   }
 }
 
+List<String> _parseInviteeTokens(String raw) {
+  return raw
+      .split(RegExp(r'[,;\n]'))
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toList(growable: false);
+}
+
 class _Header extends StatelessWidget {
   const _Header({required this.book});
 
@@ -288,8 +389,8 @@ class _Header extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PlumoraIconTile(
-            backgroundColor: PlumoraColors.info,
+          PlumoraIconTile(
+            backgroundColor: context.colors.info,
             child: Icon(Icons.groups_outlined, color: Colors.white),
           ),
           const SizedBox(width: 16),
@@ -300,15 +401,15 @@ class _Header extends StatelessWidget {
                 Text(
                   'Envoyer en bêta-test',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   book.title.isEmpty ? 'Livre sans titre' : book.title,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 16,
                   ),
                 ),
@@ -331,8 +432,11 @@ class _CampaignForm extends StatelessWidget {
     required this.inviteesController,
     required this.chapters,
     required this.selectedChapterIds,
+    required this.readersAsync,
+    required this.selectedReaderIds,
     required this.isSubmitting,
     required this.onToggleChapter,
+    required this.onToggleReader,
     required this.onSubmit,
     this.error,
   });
@@ -343,8 +447,11 @@ class _CampaignForm extends StatelessWidget {
   final TextEditingController inviteesController;
   final List<ChapterModel> chapters;
   final Set<String> selectedChapterIds;
+  final AsyncValue<List<BetaReaderSummaryModel>> readersAsync;
+  final Set<String> selectedReaderIds;
   final bool isSubmitting;
   final ValueChanged<String> onToggleChapter;
+  final ValueChanged<String> onToggleReader;
   final VoidCallback? onSubmit;
   final String? error;
 
@@ -390,47 +497,100 @@ class _CampaignForm extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 10),
-          if (chapters.isEmpty)
-            const Text(
-              'Crée au moins un chapitre avant de lancer une bêta-lecture.',
-              style: TextStyle(color: PlumoraColors.textSecondary),
-            )
-          else
-            for (final chapter in chapters) ...[
-              CheckboxListTile(
-                value: selectedChapterIds.contains(chapter.id),
-                onChanged: isSubmitting
-                    ? null
-                    : (_) => onToggleChapter(chapter.id),
-                title: Text(
-                  chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
-                ),
-                subtitle: Text(
-                  chapter.order == 0 ? 'Chapitre' : 'Chapitre ${chapter.order}',
-                ),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
+          for (final chapter in chapters) ...[
+            CheckboxListTile(
+              value: selectedChapterIds.contains(chapter.id),
+              onChanged: isSubmitting
+                  ? null
+                  : (_) => onToggleChapter(chapter.id),
+              title: Text(
+                chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
               ),
-            ],
-          const SizedBox(height: 14),
+              subtitle: Text(
+                chapter.order == 0 ? 'Chapitre' : 'Chapitre ${chapter.order}',
+              ),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+          ],
+          const SizedBox(height: 18),
+          const Text(
+            'Inviter des bêta-lecteurs (optionnel)',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Tout bêta-lecteur peut déjà rejoindre la campagne sans "
+            "invitation — ceci n'envoie qu'une notification ciblée.",
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 10),
+          readersAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(),
+            ),
+            error: (error, _) => Text(
+              AppError.messageFor(error),
+              style: TextStyle(color: context.colors.textSecondary),
+            ),
+            data: (readers) => readers.isEmpty
+                ? Text(
+                    'Aucun bêta-lecteur enregistré pour le moment.',
+                    style: TextStyle(color: context.colors.textSecondary),
+                  )
+                : _ReaderPicker(
+                    readers: readers,
+                    selectedIds: selectedReaderIds,
+                    onToggle: onToggleReader,
+                    enabled: !isSubmitting,
+                  ),
+          ),
+          const SizedBox(height: 10),
           TextField(
             controller: inviteesController,
             enabled: !isSubmitting,
             minLines: 2,
             maxLines: 4,
             decoration: const InputDecoration(
-              labelText: 'Invitations',
+              labelText: 'Ou saisir des identifiants directement',
               hintText:
-                  'IDs ou emails des bêta-lecteurs, séparés par des virgules',
+                  'Identifiants (UUID) des bêta-lecteurs, séparés par des '
+                  "virgules — utile si la personne n'apparaît pas dans la liste.",
               alignLabelWithHint: true,
             ),
+          ),
+          ListenableBuilder(
+            listenable: inviteesController,
+            builder: (context, _) {
+              final invitees = _parseInviteeTokens(inviteesController.text);
+              if (invitees.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final invitee in invitees)
+                      Chip(
+                        avatar: const Icon(Icons.person_outline, size: 16),
+                        label: Text(invitee),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+              );
+            },
           ),
           if (error != null) ...[
             const SizedBox(height: 14),
             Text(
               error!,
-              style: const TextStyle(
-                color: PlumoraColors.destructive,
+              style: TextStyle(
+                color: context.colors.destructive,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -455,12 +615,98 @@ class _CampaignForm extends StatelessWidget {
   }
 }
 
+class _ReaderPicker extends StatefulWidget {
+  const _ReaderPicker({
+    required this.readers,
+    required this.selectedIds,
+    required this.onToggle,
+    required this.enabled,
+  });
+
+  final List<BetaReaderSummaryModel> readers;
+  final Set<String> selectedIds;
+  final ValueChanged<String> onToggle;
+  final bool enabled;
+
+  @override
+  State<_ReaderPicker> createState() => _ReaderPickerState();
+}
+
+class _ReaderPickerState extends State<_ReaderPicker> {
+  TextEditingController? _fieldController;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.readers
+        .where((reader) => widget.selectedIds.contains(reader.id))
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Autocomplete<BetaReaderSummaryModel>(
+          optionsBuilder: (textEditingValue) {
+            if (!widget.enabled) {
+              return const Iterable<BetaReaderSummaryModel>.empty();
+            }
+            final query = textEditingValue.text.trim().toLowerCase();
+            return widget.readers.where((reader) {
+              if (widget.selectedIds.contains(reader.id)) {
+                return false;
+              }
+              return query.isEmpty ||
+                  reader.username.toLowerCase().contains(query);
+            });
+          },
+          displayStringForOption: (reader) => reader.username,
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            _fieldController = controller;
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              enabled: widget.enabled,
+              decoration: const InputDecoration(
+                labelText: 'Rechercher un bêta-lecteur',
+                hintText: 'Nom d\'utilisateur...',
+                prefixIcon: Icon(Icons.search),
+              ),
+            );
+          },
+          onSelected: (reader) {
+            widget.onToggle(reader.id);
+            _fieldController?.clear();
+          },
+        ),
+        if (selected.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final reader in selected)
+                Chip(
+                  avatar: const Icon(Icons.person, size: 16),
+                  label: Text(reader.username),
+                  visualDensity: VisualDensity.compact,
+                  onDeleted: widget.enabled
+                      ? () => widget.onToggle(reader.id)
+                      : null,
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _CampaignList extends StatelessWidget {
   const _CampaignList({
     required this.campaignsAsync,
     required this.busyCampaignId,
     required this.onRetry,
     required this.onClose,
+    required this.onCancel,
     required this.onComments,
   });
 
@@ -468,6 +714,7 @@ class _CampaignList extends StatelessWidget {
   final String? busyCampaignId;
   final VoidCallback onRetry;
   final ValueChanged<BetaCampaignModel> onClose;
+  final ValueChanged<BetaCampaignModel> onCancel;
   final ValueChanged<BetaCampaignModel> onComments;
 
   @override
@@ -512,16 +759,16 @@ class _CampaignList extends StatelessWidget {
                   children: [
                     PlumoraIconTile(
                       backgroundColor:
-                          campaign.status == BetaCampaignStatus.closed
-                          ? PlumoraColors.muted
-                          : const Color(0xFFE8F0F5),
+                          campaign.status == BetaCampaignStatus.active
+                          ? context.colors.info.withValues(alpha: 0.12)
+                          : context.colors.muted,
                       child: Icon(
-                        campaign.status == BetaCampaignStatus.closed
-                            ? Icons.lock_outline
-                            : Icons.groups_outlined,
-                        color: campaign.status == BetaCampaignStatus.closed
-                            ? PlumoraColors.textSecondary
-                            : PlumoraColors.info,
+                        campaign.status == BetaCampaignStatus.active
+                            ? Icons.groups_outlined
+                            : Icons.lock_outline,
+                        color: campaign.status == BetaCampaignStatus.active
+                            ? context.colors.info
+                            : context.colors.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -543,8 +790,8 @@ class _CampaignList extends StatelessWidget {
                             campaign.instructions?.isNotEmpty == true
                                 ? campaign.instructions!
                                 : 'Aucune consigne renseignée.',
-                            style: const TextStyle(
-                              color: PlumoraColors.textSecondary,
+                            style: TextStyle(
+                              color: context.colors.textSecondary,
                               height: 1.4,
                             ),
                           ),
@@ -553,12 +800,12 @@ class _CampaignList extends StatelessWidget {
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              PlumoraBadge(label: campaign.status.apiValue),
+                              PlumoraBadge(label: campaign.status.label),
                               if (campaign.deadline != null)
                                 PlumoraBadge(
                                   label: _dateLabel(campaign.deadline!),
-                                  backgroundColor: PlumoraColors.muted,
-                                  foregroundColor: PlumoraColors.textSecondary,
+                                  backgroundColor: context.colors.muted,
+                                  foregroundColor: context.colors.textSecondary,
                                   icon: Icons.schedule,
                                 ),
                             ],
@@ -586,7 +833,8 @@ class _CampaignList extends StatelessWidget {
                                 ),
                                 label: const Text('Voir les retours'),
                               ),
-                              if (campaign.status != BetaCampaignStatus.closed)
+                              if (campaign.status ==
+                                  BetaCampaignStatus.active) ...[
                                 TextButton(
                                   onPressed: busyCampaignId == campaign.id
                                       ? null
@@ -597,6 +845,20 @@ class _CampaignList extends StatelessWidget {
                                         : 'Fermer',
                                   ),
                                 ),
+                                TextButton(
+                                  onPressed: busyCampaignId == campaign.id
+                                      ? null
+                                      : () => onCancel(campaign),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: context.colors.destructive,
+                                  ),
+                                  child: Text(
+                                    busyCampaignId == campaign.id
+                                        ? 'Annulation...'
+                                        : 'Annuler',
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ],
@@ -646,10 +908,7 @@ class _StateCard extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
+          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),

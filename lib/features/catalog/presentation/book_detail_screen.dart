@@ -180,8 +180,8 @@ class _ActionColumn extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             favoriteError!,
-            style: const TextStyle(
-              color: PlumoraColors.destructive,
+            style: TextStyle(
+              color: context.colors.destructive,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -205,13 +205,20 @@ class _BookDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loadedReviews = reviewsAsync.valueOrNull;
+    final reviewCount = loadedReviews?.length ?? book.ratingCount;
+    final averageRating = loadedReviews != null && loadedReviews.isNotEmpty
+        ? loadedReviews.map((review) => review.rating).reduce((a, b) => a + b) /
+              loadedReviews.length
+        : book.rating;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           book.title.isEmpty ? 'Livre sans titre' : book.title,
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 40,
             fontWeight: FontWeight.w900,
           ),
@@ -219,8 +226,8 @@ class _BookDetails extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           'par ${book.authorName}',
-          style: const TextStyle(
-            color: PlumoraColors.textSecondary,
+          style: TextStyle(
+            color: context.colors.textSecondary,
             fontSize: 20,
           ),
         ),
@@ -243,8 +250,10 @@ class _BookDetails extends StatelessWidget {
           children: [
             _Metric(
               icon: Icons.star,
-              label: book.rating == 0 ? '-' : book.rating.toStringAsFixed(1),
-              sub: '(${book.ratingCount} avis)',
+              label: averageRating == 0
+                  ? '-'
+                  : averageRating.toStringAsFixed(1),
+              sub: '($reviewCount avis)',
             ),
             _Metric(
               icon: Icons.menu_book_outlined,
@@ -291,19 +300,19 @@ class _Metric extends StatelessWidget {
           icon,
           color: icon == Icons.star
               ? Colors.amber
-              : PlumoraColors.textSecondary,
+              : context.colors.textSecondary,
         ),
         const SizedBox(width: 7),
         Text(
           label,
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(width: 4),
-        Text(sub, style: const TextStyle(color: PlumoraColors.textSecondary)),
+        Text(sub, style: TextStyle(color: context.colors.textSecondary)),
       ],
     );
   }
@@ -332,10 +341,10 @@ class _SummaryCardState extends State<_SummaryCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Resume',
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
@@ -347,8 +356,8 @@ class _SummaryCardState extends State<_SummaryCard> {
             overflow: canCollapse && !_expanded
                 ? TextOverflow.ellipsis
                 : TextOverflow.visible,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               height: 1.5,
             ),
           ),
@@ -385,7 +394,7 @@ class _AuthorCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 32,
-            backgroundColor: PlumoraColors.primary,
+            backgroundColor: context.colors.primary,
             child: Text(
               initials.isEmpty ? 'P' : initials,
               style: const TextStyle(
@@ -399,10 +408,10 @@ class _AuthorCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   "A propos de l'auteur",
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
@@ -410,8 +419,8 @@ class _AuthorCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   book.authorName,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -420,7 +429,7 @@ class _AuthorCard extends StatelessWidget {
                   (book.authorBio ?? '').trim().isEmpty
                       ? 'Aucune biographie publique pour le moment.'
                       : book.authorBio!,
-                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 ),
               ],
             ),
@@ -442,30 +451,30 @@ class _ChaptersCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Chapitres',
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 14),
           if (book.chapters.isEmpty)
-            const Text(
+            Text(
               'Aucun chapitre lisible pour le moment.',
-              style: TextStyle(color: PlumoraColors.textSecondary),
+              style: TextStyle(color: context.colors.textSecondary),
             )
           else
             for (final chapter in book.chapters.take(5)) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
-                  backgroundColor: PlumoraColors.primary.withValues(alpha: 0.1),
+                  backgroundColor: context.colors.primary.withValues(alpha: 0.1),
                   child: Text(
                     chapter.order == 0 ? '-' : chapter.order.toString(),
-                    style: const TextStyle(
-                      color: PlumoraColors.primary,
+                    style: TextStyle(
+                      color: context.colors.primary,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -479,7 +488,7 @@ class _ChaptersCard extends StatelessWidget {
                   AppRoutes.readingPath(book.id, chapterId: chapter.id),
                 ),
               ),
-              const Divider(color: PlumoraColors.border),
+              Divider(color: context.colors.border),
             ],
         ],
       ),
@@ -506,11 +515,11 @@ class _ReviewsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Avis des lecteurs',
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
@@ -537,9 +546,9 @@ class _ReviewsCard extends StatelessWidget {
             ),
             data: (reviews) {
               if (reviews.isEmpty) {
-                return const Text(
+                return Text(
                   'Aucun avis pour ce livre pour le moment.',
-                  style: TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 );
               }
 
@@ -547,7 +556,7 @@ class _ReviewsCard extends StatelessWidget {
                 children: [
                   for (final review in reviews.take(4)) ...[
                     _Review(review: review),
-                    const Divider(color: PlumoraColors.border),
+                    Divider(color: context.colors.border),
                   ],
                   Align(
                     alignment: Alignment.centerLeft,
@@ -598,8 +607,8 @@ class _Review extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   _shortDate(review.createdAt!),
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -609,8 +618,8 @@ class _Review extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             review.comment,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               height: 1.4,
             ),
           ),
@@ -644,7 +653,7 @@ class _ErrorCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),

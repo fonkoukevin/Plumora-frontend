@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/plumora_colors.dart';
 import '../widgets/plumora_logo_mark.dart';
@@ -27,14 +28,14 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.discover,
     ),
     ShellDestination(
-      label: 'Ecrire',
+      label: 'Écrire',
       icon: Icons.draw_outlined,
       selectedIcon: Icons.draw,
       path: AppRoutes.write,
       useLogoMark: true,
     ),
     ShellDestination(
-      label: 'Bibliotheque',
+      label: 'Bibliothèque',
       icon: Icons.library_books_outlined,
       selectedIcon: Icons.library_books,
       path: AppRoutes.library,
@@ -61,13 +62,13 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.manuscripts,
     ),
     ShellDestination(
-      label: 'Editeur',
+      label: 'Éditeur',
       icon: Icons.edit_note_outlined,
       selectedIcon: Icons.edit_note,
       path: AppRoutes.editor,
     ),
     ShellDestination(
-      label: 'Beta-retours',
+      label: 'Bêta-retours',
       icon: Icons.forum_outlined,
       selectedIcon: Icons.forum,
       path: AppRoutes.betaFeedback,
@@ -79,7 +80,7 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.discover,
     ),
     ShellDestination(
-      label: 'Bibliotheque',
+      label: 'Bibliothèque',
       icon: Icons.library_books_outlined,
       selectedIcon: Icons.library_books,
       path: AppRoutes.library,
@@ -115,7 +116,7 @@ class _MobileShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.background,
+      backgroundColor: context.colors.background,
       body: Stack(
         children: [
           Positioned.fill(child: child),
@@ -147,8 +148,8 @@ class _MobileBottomBar extends StatelessWidget {
         child: Container(
           height: 70,
           decoration: BoxDecoration(
-            color: PlumoraColors.background.withValues(alpha: 0.95),
-            border: const Border(top: BorderSide(color: PlumoraColors.border)),
+            color: context.colors.background.withValues(alpha: 0.95),
+            border: Border(top: BorderSide(color: context.colors.border)),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -179,8 +180,8 @@ class _BottomNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected
-        ? PlumoraColors.primary
-        : PlumoraColors.textSecondary;
+        ? context.colors.primary
+        : context.colors.textSecondary;
 
     return InkWell(
       onTap: () => context.go(destination.path),
@@ -215,8 +216,8 @@ class _BottomNavItem extends StatelessWidget {
                       child: Container(
                         width: 4,
                         height: 4,
-                        decoration: const BoxDecoration(
-                          color: PlumoraColors.primary,
+                        decoration: BoxDecoration(
+                          color: context.colors.primary,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -253,14 +254,14 @@ class _DesktopShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.background,
+      backgroundColor: context.colors.background,
       body: Row(
         children: [
           Container(
             width: 264,
-            decoration: const BoxDecoration(
-              color: PlumoraColors.background,
-              border: Border(right: BorderSide(color: PlumoraColors.border)),
+            decoration: BoxDecoration(
+              color: context.colors.sidebar,
+              border: Border(right: BorderSide(color: context.colors.border)),
             ),
             child: SafeArea(
               child: Padding(
@@ -292,15 +293,14 @@ class _SidebarLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        PlumoraLogoMark(size: 30, color: PlumoraColors.primary),
-        SizedBox(width: 10),
+        PlumoraLogoMark(size: 30, color: context.colors.primary),
+        const SizedBox(width: 10),
         Text(
           'Plumora',
-          style: TextStyle(
-            color: PlumoraColors.textPrimary,
-            fontFamily: 'Playfair Display',
+          style: GoogleFonts.playfairDisplay(
+            color: context.colors.textPrimary,
             fontSize: 24,
             fontWeight: FontWeight.w800,
           ),
@@ -318,7 +318,9 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? PlumoraColors.primary : PlumoraColors.textPrimary;
+    final color = selected
+        ? context.colors.primary
+        : context.colors.sidebarForeground;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -329,9 +331,7 @@ class _SidebarItem extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: selected
-                ? PlumoraColors.primary.withValues(alpha: 0.10)
-                : Colors.transparent,
+            color: selected ? context.colors.cards : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(

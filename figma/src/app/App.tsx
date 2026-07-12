@@ -25,6 +25,9 @@ import { MukemeRecommendationPage } from './screens/MukemeRecommendationPage';
 import { MukemeResultsPage } from './screens/MukemeResultsPage';
 import { BookDetailPage } from './screens/BookDetailPage';
 import { BookReviewPage } from './screens/BookReviewPage';
+import { MyBookDetailPage } from './screens/MyBookDetailPage';
+import { STORIES } from './data/stories';
+
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('landing');
@@ -87,6 +90,12 @@ export default function App() {
         return <BookDetailPage onNavigate={handleNavigate} />;
       case 'book-review':
         return <BookReviewPage onNavigate={handleNavigate} />;
+      case 'my-book-detail-1':
+        return <MyBookDetailPage book={STORIES[0]} onNavigate={handleNavigate} />;
+      case 'my-book-detail-2':
+        return <MyBookDetailPage book={STORIES[1]} onNavigate={handleNavigate} />;
+      case 'my-book-detail-3':
+        return <MyBookDetailPage book={STORIES[2]} onNavigate={handleNavigate} />;
       default:
         return <LandingPage onNavigate={handleNavigate} />;
     }

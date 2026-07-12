@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/login_request.dart';
 import '../../data/models/register_request.dart';
+import '../../data/models/update_profile_request.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'auth_cache_invalidator.dart';
 
@@ -19,6 +20,17 @@ class AuthController extends AsyncNotifier<AuthSession> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() {
       return ref.read(authRepositoryProvider).login(request);
+    });
+    if (state.hasValue) {
+      invalidateUserScopedCaches(ref);
+    }
+  }
+
+  Future<void> loginWithGoogle() async {
+    invalidateUserScopedCaches(ref);
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() {
+      return ref.read(authRepositoryProvider).loginWithGoogle();
     });
     if (state.hasValue) {
       invalidateUserScopedCaches(ref);
@@ -46,6 +58,19 @@ class AuthController extends AsyncNotifier<AuthSession> {
           .read(authRepositoryProvider)
           .updateRoles(roleNames);
       return currentSession.copyWith(roles: roles);
+    });
+  }
+
+  Future<void> updateProfile(UpdateProfileRequest request) async {
+    final currentSession =
+        state.valueOrNull ?? const AuthSession.unauthenticated();
+
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final user = await ref
+          .read(authRepositoryProvider)
+          .updateProfile(request);
+      return currentSession.copyWith(user: user);
     });
   }
 

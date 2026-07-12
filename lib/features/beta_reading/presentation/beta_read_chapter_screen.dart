@@ -6,10 +6,25 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../data/models/beta_campaign_model.dart';
 import '../data/models/beta_comment_model.dart';
 import '../data/models/beta_shared_chapter_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
+import 'beta_engagement_providers.dart';
 import 'create_beta_comment_bottom_sheet.dart';
+
+/// Enregistre cote serveur qu'un chapitre partage a ete ouvert, meme sans
+/// commentaire, pour qu'il apparaisse dans la Bibliotheque Beta. Riverpod
+/// cache ce FutureProvider.family par (campaignId, chapterId) : il ne
+/// declenche l'appel qu'une seule fois par chapitre pour la duree de vie de
+/// l'app, l'endpoint etant lui-meme idempotent cote serveur.
+final _chapterViewRecorderProvider =
+    FutureProvider.family<void, (String, String)>((ref, ids) {
+      final (campaignId, chapterId) = ids;
+      return ref
+          .watch(betaReadingRepositoryProvider)
+          .recordChapterView(campaignId, chapterId);
+    });
 
 class BetaReadChapterScreen extends ConsumerWidget {
   const BetaReadChapterScreen({
@@ -31,10 +46,15 @@ class BetaReadChapterScreen extends ConsumerWidget {
     final commentsAsync = ref.watch(
       betaCommentsForCampaignProvider(campaignId),
     );
+    final campaignAsync = ref.watch(betaCampaignProvider(campaignId));
+    final canComment = campaignAsync.maybeWhen(
+      data: (campaign) => campaign.status == BetaCampaignStatus.active,
+      orElse: () => true,
+    );
 
     return chaptersAsync.when(
-      loading: () => const Scaffold(
-        backgroundColor: PlumoraColors.background,
+      loading: () => Scaffold(
+        backgroundColor: context.colors.background,
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => _ErrorScaffold(
@@ -63,11 +83,24 @@ class BetaReadChapterScreen extends ConsumerWidget {
         final chapter = sorted[index];
         final effectiveBookId =
             (chapter.bookId.isEmpty ? bookId : chapter.bookId) ?? '';
+        // Fires the (cached) view-recording call, then refetches open
+        // campaigns once it actually completes for the first time so
+        // `engagedByMe` -- and therefore the Bibliotheque Beta list -- picks
+        // up this newly-opened chapter without needing a full app reload.
+        ref.listen<AsyncValue<void>>(
+          _chapterViewRecorderProvider((campaignId, chapter.id)),
+          (previous, next) {
+            if (next is AsyncData<void> && previous is! AsyncData<void>) {
+              ref.invalidate(betaOpenCampaignsProvider);
+              touchBetaCampaignActivity(ref, campaignId);
+            }
+          },
+        );
 
         return Scaffold(
-          backgroundColor: PlumoraColors.background,
+          backgroundColor: context.colors.background,
           appBar: AppBar(
-            backgroundColor: PlumoraColors.cards,
+            backgroundColor: context.colors.cards,
             leading: IconButton(
               onPressed: () => context.go(
                 AppRoutes.betaChaptersPath(
@@ -90,8 +123,8 @@ class BetaReadChapterScreen extends ConsumerWidget {
                       : chapter.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -102,8 +135,14 @@ class BetaReadChapterScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: FilledButton.icon(
-                  onPressed: () =>
-                      _openCommentSheet(context, ref, chapter, effectiveBookId),
+                  onPressed: canComment
+                      ? () => _openCommentSheet(
+                          context,
+                          ref,
+                          chapter,
+                          effectiveBookId,
+                        )
+                      : null,
                   icon: const Icon(Icons.chat_bubble_outline, size: 18),
                   label: const Text('Commenter'),
                 ),
@@ -124,11 +163,44 @@ class BetaReadChapterScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _ChapterText(chapter: chapter),
+                          _ChapterText(
+                            chapter: chapter,
+                            annotatedText: commentsAsync.maybeWhen(
+                              data: (comments) => comments
+                                  .where(
+                                    (comment) =>
+                                        comment.chapterId == chapter.id,
+                                  )
+                                  .map((comment) => comment.selectedText)
+                                  .whereType<String>()
+                                  .where((text) => text.trim().isNotEmpty)
+                                  .toSet(),
+                              orElse: () => const <String>{},
+                            ),
+                            onParagraphTap: canComment
+                                ? (paragraph) => _openCommentSheet(
+                                    context,
+                                    ref,
+                                    chapter,
+                                    effectiveBookId,
+                                    defaultSelectedText: paragraph,
+                                  )
+                                : (
+                                    _,
+                                  ) => ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Cette campagne est close, impossible '
+                                        "d'ajouter un commentaire.",
+                                      ),
+                                    ),
+                                  ),
+                          ),
                           const SizedBox(height: 26),
                           _CommentsBlock(
                             commentsAsync: commentsAsync,
                             chapterId: chapter.id,
+                            campaignId: campaignId,
                             onRetry: () => ref.invalidate(
                               betaCommentsForCampaignProvider(campaignId),
                             ),
@@ -140,7 +212,7 @@ class BetaReadChapterScreen extends ConsumerWidget {
                 ),
               ),
               Container(
-                color: PlumoraColors.cards,
+                color: context.colors.cards,
                 padding: const EdgeInsets.all(16),
                 child: SafeArea(
                   top: false,
@@ -148,9 +220,7 @@ class BetaReadChapterScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Chapitre ${index + 1} sur ${sorted.length}',
-                        style: const TextStyle(
-                          color: PlumoraColors.textSecondary,
-                        ),
+                        style: TextStyle(color: context.colors.textSecondary),
                       ),
                       const Spacer(),
                       OutlinedButton(
@@ -195,12 +265,11 @@ class BetaReadChapterScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     BetaSharedChapterModel chapter,
-    String effectiveBookId,
-  ) async {
-    final text = chapter.content.trim();
-    final selectedText = text.length <= 180
-        ? text
-        : '${text.substring(0, 180)}...';
+    String effectiveBookId, {
+    String? defaultSelectedText,
+  }) async {
+    final selectedText = defaultSelectedText ?? _fallbackSelectedText(chapter);
+    final positionStart = chapter.content.indexOf(selectedText);
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -210,19 +279,38 @@ class BetaReadChapterScreen extends ConsumerWidget {
         campaignId: campaignId,
         chapterId: chapter.id,
         defaultSelectedText: selectedText,
+        defaultPositionStart: positionStart < 0 ? null : positionStart,
+        defaultPositionEnd: positionStart < 0
+            ? null
+            : positionStart + selectedText.length,
       ),
     );
     if (created == true) {
       ref.invalidate(betaCommentsForCampaignProvider(campaignId));
       ref.invalidate(betaSharedChaptersProvider(campaignId));
+      // A first comment on this campaign can flip `engagedByMe` server-side ;
+      // refetch so the Bibliotheque Beta list and badges pick it up.
+      ref.invalidate(betaOpenCampaignsProvider);
+      touchBetaCampaignActivity(ref, campaignId);
     }
+  }
+
+  static String _fallbackSelectedText(BetaSharedChapterModel chapter) {
+    final text = chapter.content.trim();
+    return text.length <= 180 ? text : '${text.substring(0, 180)}...';
   }
 }
 
 class _ChapterText extends StatelessWidget {
-  const _ChapterText({required this.chapter});
+  const _ChapterText({
+    required this.chapter,
+    required this.annotatedText,
+    required this.onParagraphTap,
+  });
 
   final BetaSharedChapterModel chapter;
+  final Set<String> annotatedText;
+  final ValueChanged<String> onParagraphTap;
 
   @override
   Widget build(BuildContext context) {
@@ -232,23 +320,25 @@ class _ChapterText extends StatelessWidget {
         .where((part) => part.isNotEmpty)
         .toList();
 
+    var badgeNumber = 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           chapter.title.isEmpty ? 'Chapitre' : chapter.title,
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 30,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 24),
         if (paragraphs.isEmpty)
-          const Text(
+          Text(
             'Ce chapitre ne contient pas encore de texte.',
             style: TextStyle(
-              color: PlumoraColors.textSecondary,
+              color: context.colors.textSecondary,
               fontSize: 18,
               height: 1.7,
             ),
@@ -257,15 +347,89 @@ class _ChapterText extends StatelessWidget {
           for (final paragraph in paragraphs)
             Padding(
               padding: const EdgeInsets.only(bottom: 22),
-              child: Text(
-                paragraph,
-                style: const TextStyle(
-                  color: PlumoraColors.textPrimary,
-                  fontSize: 18,
-                  height: 1.7,
-                ),
+              child: _AnnotatableParagraph(
+                text: paragraph,
+                badgeNumber: annotatedText.contains(paragraph)
+                    ? ++badgeNumber
+                    : null,
+                onTap: () => onParagraphTap(paragraph),
               ),
             ),
+      ],
+    );
+  }
+}
+
+class _AnnotatableParagraph extends StatelessWidget {
+  const _AnnotatableParagraph({
+    required this.text,
+    required this.badgeNumber,
+    required this.onTap,
+  });
+
+  final String text;
+  final int? badgeNumber;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final annotated = badgeNumber != null;
+    final paragraph = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: annotated
+            ? const EdgeInsets.fromLTRB(14, 10, 14, 10)
+            : EdgeInsets.zero,
+        decoration: annotated
+            ? BoxDecoration(
+                color: context.colors.warning.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border(
+                  left: BorderSide(color: context.colors.warning, width: 4),
+                ),
+              )
+            : null,
+        child: Text(
+          text,
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontSize: 18,
+            height: 1.7,
+          ),
+        ),
+      ),
+    );
+
+    if (!annotated) {
+      return paragraph;
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        paragraph,
+        Positioned(
+          right: -8,
+          top: -8,
+          child: Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: context.colors.warning,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$badgeNumber',
+              style: TextStyle(
+                color: context.colors.onAccent,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -275,11 +439,13 @@ class _CommentsBlock extends StatelessWidget {
   const _CommentsBlock({
     required this.commentsAsync,
     required this.chapterId,
+    required this.campaignId,
     required this.onRetry,
   });
 
   final AsyncValue<List<BetaCommentModel>> commentsAsync;
   final String chapterId;
+  final String campaignId;
   final VoidCallback onRetry;
 
   @override
@@ -288,10 +454,10 @@ class _CommentsBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Mes retours sur ce chapitre',
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w900,
             ),
@@ -309,7 +475,7 @@ class _CommentsBlock extends StatelessWidget {
               children: [
                 Text(
                   AppError.messageFor(error),
-                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 ),
                 const SizedBox(height: 10),
                 TextButton(onPressed: onRetry, child: const Text('Reessayer')),
@@ -320,17 +486,17 @@ class _CommentsBlock extends StatelessWidget {
                   .where((comment) => comment.chapterId == chapterId)
                   .toList();
               if (chapterComments.isEmpty) {
-                return const Text(
+                return Text(
                   'Aucun retour ajoute pour ce chapitre.',
-                  style: TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 );
               }
 
               return Column(
                 children: [
                   for (final comment in chapterComments) ...[
-                    _CommentTile(comment: comment),
-                    const Divider(color: PlumoraColors.border),
+                    _CommentTile(comment: comment, campaignId: campaignId),
+                    Divider(color: context.colors.border),
                   ],
                 ],
               );
@@ -342,32 +508,63 @@ class _CommentsBlock extends StatelessWidget {
   }
 }
 
-class _CommentTile extends StatelessWidget {
-  const _CommentTile({required this.comment});
+class _CommentTile extends ConsumerStatefulWidget {
+  const _CommentTile({required this.comment, required this.campaignId});
 
   final BetaCommentModel comment;
+  final String campaignId;
+
+  @override
+  ConsumerState<_CommentTile> createState() => _CommentTileState();
+}
+
+class _CommentTileState extends ConsumerState<_CommentTile> {
+  bool _isDeleting = false;
 
   @override
   Widget build(BuildContext context) {
+    final comment = widget.comment;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FigmaBadge(label: comment.type.label),
-              FigmaBadge(label: comment.status.apiValue),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FigmaBadge(label: comment.type.label),
+                    FigmaBadge(label: comment.status.apiValue),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: _isDeleting ? null : _delete,
+                icon: _isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        Icons.delete_outline,
+                        size: 20,
+                        color: context.colors.destructive,
+                      ),
+                tooltip: 'Supprimer ce commentaire',
+              ),
             ],
           ),
           if ((comment.selectedText ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
               comment.selectedText!,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -377,6 +574,47 @@ class _CommentTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer ce commentaire ?'),
+        content: const Text("Cette action n'est pas réversible."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() => _isDeleting = true);
+    try {
+      await ref
+          .read(betaReadingRepositoryProvider)
+          .deleteComment(widget.comment.id);
+      ref.invalidate(betaCommentsForCampaignProvider(widget.campaignId));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
+    }
   }
 }
 
@@ -394,7 +632,7 @@ class _ErrorScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.background,
+      backgroundColor: context.colors.background,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -413,7 +651,7 @@ class _ErrorScaffold extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   message,
-                  style: const TextStyle(color: PlumoraColors.textSecondary),
+                  style: TextStyle(color: context.colors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(

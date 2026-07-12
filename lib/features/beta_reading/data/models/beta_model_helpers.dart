@@ -43,6 +43,38 @@ int readBetaInt(Map<String, dynamic> json, List<String> keys) {
   return 0;
 }
 
+int? readBetaNullableInt(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    final parsed = int.tryParse(value?.toString() ?? '');
+    if (parsed != null) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+bool readBetaBool(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is bool) {
+      return value;
+    }
+    if (value != null) {
+      return value.toString().trim().toLowerCase() == 'true';
+    }
+  }
+
+  return false;
+}
+
 DateTime? readBetaDate(Map<String, dynamic> json, List<String> keys) {
   for (final key in keys) {
     final value = json[key];

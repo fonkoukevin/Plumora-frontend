@@ -6,11 +6,14 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../beta_reading/data/models/beta_comment_model.dart';
+import '../../beta_reading/data/repositories/beta_reading_repository.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
 import '../../book/presentation/widgets/book_status_badge.dart';
+import '../data/writing_cache_invalidator.dart';
 
 class PublishBookScreen extends ConsumerStatefulWidget {
   const PublishBookScreen({required this.bookId, super.key});
@@ -29,6 +32,9 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
   Widget build(BuildContext context) {
     final bookAsync = ref.watch(authorBookProvider(widget.bookId));
     final chaptersAsync = ref.watch(bookChaptersProvider(widget.bookId));
+    final betaCommentsAsync = ref.watch(
+      betaCommentsForBookProvider(widget.bookId),
+    );
 
     return FigmaScreen(
       maxWidth: 840,
@@ -42,18 +48,18 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
                 context.go(AppRoutes.authorBookDetailPath(widget.bookId)),
           ),
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'Preparer la publication',
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 36,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'La publication est directe dans le catalogue Plumora.',
-            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 15),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 15),
           ),
           const SizedBox(height: 24),
           bookAsync.when(
@@ -82,6 +88,7 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
               data: (chapters) => _PublishContent(
                 book: book,
                 chapters: chapters,
+                betaCommentsAsync: betaCommentsAsync,
                 isPublishing: _isPublishing,
                 error: _error,
                 onPublish: _publish,
@@ -107,6 +114,7 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
       ref.invalidate(authorBookProvider(published.id));
       ref.invalidate(myBooksProvider);
       ref.invalidate(bookChaptersProvider(widget.bookId));
+      invalidateBookPublicationCaches(ref, published.id);
       if (mounted) {
         context.go(AppRoutes.authorBookDetailPath(published.id));
       }
@@ -124,6 +132,7 @@ class _PublishContent extends StatelessWidget {
   const _PublishContent({
     required this.book,
     required this.chapters,
+    required this.betaCommentsAsync,
     required this.isPublishing,
     required this.onPublish,
     this.error,
@@ -131,12 +140,22 @@ class _PublishContent extends StatelessWidget {
 
   final BookModel book;
   final List<ChapterModel> chapters;
+  final AsyncValue<List<BetaCommentModel>> betaCommentsAsync;
   final bool isPublishing;
   final VoidCallback onPublish;
   final String? error;
 
   @override
   Widget build(BuildContext context) {
+    final betaFeedbackResolved = betaCommentsAsync.maybeWhen(
+      data: (comments) => comments.every(
+        (comment) =>
+            comment.status == BetaCommentStatus.resolved ||
+            comment.status == BetaCommentStatus.ignored,
+      ),
+      orElse: () => false,
+    );
+
     final checklist = [
       _CheckItem('Titre renseigne', book.title.trim().isNotEmpty),
       _CheckItem('Resume renseigne', book.description.trim().isNotEmpty),
@@ -150,11 +169,20 @@ class _PublishContent extends StatelessWidget {
         chapters.isNotEmpty &&
             chapters.every((chapter) => chapter.content.trim().isNotEmpty),
       ),
+      _CheckItem(
+        'Retours beta traites (optionnel)',
+        betaFeedbackResolved,
+        required: false,
+      ),
       _CheckItem('Livre non archive', !book.isArchived),
     ];
     final completed = checklist.where((item) => item.done).length;
     final progress = completed / checklist.length;
-    final canPublish = checklist.every((item) => item.done) && book.canPublish;
+    final canPublish =
+        checklist
+            .where((item) => item.required)
+            .every((item) => item.done) &&
+        book.canPublish;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,8 +199,8 @@ class _PublishContent extends StatelessWidget {
                       children: [
                         Text(
                           book.title.isEmpty ? 'Livre sans titre' : book.title,
-                          style: const TextStyle(
-                            color: PlumoraColors.textPrimary,
+                          style: TextStyle(
+                            color: context.colors.textPrimary,
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
                           ),
@@ -180,8 +208,8 @@ class _PublishContent extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           book.status.shortFrenchLabel,
-                          style: const TextStyle(
-                            color: PlumoraColors.textSecondary,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
                           ),
                         ),
                       ],
@@ -189,8 +217,8 @@ class _PublishContent extends StatelessWidget {
                   ),
                   Text(
                     '${(progress * 100).round()}%',
-                    style: const TextStyle(
-                      color: PlumoraColors.primary,
+                    style: TextStyle(
+                      color: context.colors.primary,
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
                     ),
@@ -207,10 +235,10 @@ class _PublishContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Checklist de publication',
                 style: TextStyle(
-                  color: PlumoraColors.textPrimary,
+                  color: context.colors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                 ),
@@ -221,8 +249,8 @@ class _PublishContent extends StatelessWidget {
                   padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
                     color: item.done
-                        ? PlumoraColors.success.withValues(alpha: 0.08)
-                        : PlumoraColors.muted.withValues(alpha: 0.55),
+                        ? context.colors.success.withValues(alpha: 0.08)
+                        : context.colors.muted.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -232,8 +260,8 @@ class _PublishContent extends StatelessWidget {
                             ? Icons.check_circle
                             : Icons.radio_button_unchecked,
                         color: item.done
-                            ? PlumoraColors.success
-                            : PlumoraColors.textSecondary,
+                            ? context.colors.success
+                            : context.colors.textSecondary,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -241,8 +269,8 @@ class _PublishContent extends StatelessWidget {
                           item.label,
                           style: TextStyle(
                             color: item.done
-                                ? PlumoraColors.textPrimary
-                                : PlumoraColors.textSecondary,
+                                ? context.colors.textPrimary
+                                : context.colors.textSecondary,
                             fontWeight: item.done
                                 ? FontWeight.w800
                                 : FontWeight.w600,
@@ -259,12 +287,12 @@ class _PublishContent extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         FigmaCard(
-          color: PlumoraColors.primary.withValues(alpha: 0.06),
-          borderColor: PlumoraColors.primary.withValues(alpha: 0.18),
-          child: const Row(
+          color: context.colors.primary.withValues(alpha: 0.06),
+          borderColor: context.colors.primary.withValues(alpha: 0.18),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.info_outline, color: PlumoraColors.primary),
+              Icon(Icons.info_outline, color: context.colors.primary),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -279,8 +307,8 @@ class _PublishContent extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             error!,
-            style: const TextStyle(
-              color: PlumoraColors.destructive,
+            style: TextStyle(
+              color: context.colors.destructive,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -318,10 +346,11 @@ class _PublishContent extends StatelessWidget {
 }
 
 class _CheckItem {
-  const _CheckItem(this.label, this.done);
+  const _CheckItem(this.label, this.done, {this.required = true});
 
   final String label;
   final bool done;
+  final bool required;
 }
 
 class _ErrorPanel extends StatelessWidget {
@@ -343,7 +372,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
