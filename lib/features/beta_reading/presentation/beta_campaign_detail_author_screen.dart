@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../data/models/beta_campaign_model.dart';
 import '../data/models/beta_comment_model.dart';
@@ -62,9 +63,10 @@ class _BetaCampaignDetailAuthorScreenState
               constraints: const BoxConstraints(maxWidth: 980),
               child: campaignAsync.when(
                 loading: () => const _LoadingCard(),
-                error: (error, _) => _StateCard(
+                error: (error, _) => FigmaEmptyState(
+                  icon: Icons.search_off,
                   title: 'Campagne introuvable',
-                  subtitle: AppError.messageFor(error),
+                  message: AppError.messageFor(error),
                   action: FilledButton(
                     onPressed: () =>
                         ref.invalidate(betaCampaignProvider(widget.campaignId)),
@@ -306,9 +308,10 @@ class _AsyncInvitations extends StatelessWidget {
   Widget build(BuildContext context) {
     return invitationsAsync.when(
       loading: () => const _LoadingCard(),
-      error: (error, _) => _StateCard(
+      error: (error, _) => FigmaEmptyState(
+        icon: Icons.error_outline,
         title: 'Invitations indisponibles',
-        subtitle: AppError.messageFor(error),
+        message: AppError.messageFor(error),
         action: FilledButton(
           onPressed: onRetry,
           child: const Text('Réessayer'),
@@ -339,25 +342,55 @@ class _AsyncInvitations extends StatelessWidget {
               )
             else
               for (final invitation in invitations) ...[
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    Icons.person_outline,
-                    color: context.colors.primary,
-                  ),
-                  title: Text(
-                    invitation.betaReaderName?.trim().isNotEmpty == true
-                        ? invitation.betaReaderName!
-                        : 'Bêta-lecteur',
-                  ),
-                  trailing: PlumoraBadge(
-                    label: _invitationStatusLabel(invitation.status),
-                  ),
-                ),
-                const Divider(height: 18),
+                _InvitationRow(invitation: invitation),
+                if (invitation != invitations.last) const SizedBox(height: 10),
               ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InvitationRow extends StatelessWidget {
+  const _InvitationRow({required this.invitation});
+
+  final BetaInvitationModel invitation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colors.muted.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          PlumoraIconTile(
+            size: 38,
+            radius: 10,
+            backgroundColor: context.colors.primary.withValues(alpha: 0.12),
+            child: Icon(
+              Icons.person_outline,
+              color: context.colors.primary,
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              invitation.betaReaderName?.trim().isNotEmpty == true
+                  ? invitation.betaReaderName!
+                  : 'Bêta-lecteur',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(width: 10),
+          PlumoraBadge(label: _invitationStatusLabel(invitation.status)),
+        ],
       ),
     );
   }
@@ -382,9 +415,10 @@ class _AsyncChapters extends StatelessWidget {
   Widget build(BuildContext context) {
     return chaptersAsync.when(
       loading: () => const _LoadingCard(),
-      error: (error, _) => _StateCard(
+      error: (error, _) => FigmaEmptyState(
+        icon: Icons.error_outline,
         title: 'Chapitres partagés indisponibles',
-        subtitle: AppError.messageFor(error),
+        message: AppError.messageFor(error),
         action: FilledButton(
           onPressed: onRetry,
           child: const Text('Réessayer'),
@@ -406,20 +440,8 @@ class _AsyncChapters extends StatelessWidget {
               )
             else
               for (final chapter in chapters) ...[
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: context.colors.secondary,
-                    foregroundColor: context.colors.primary,
-                    child: Text(chapter.order == 0 ? '-' : '${chapter.order}'),
-                  ),
-                  title: Text(
-                    chapter.title.isEmpty
-                        ? 'Chapitre sans titre'
-                        : chapter.title,
-                  ),
-                  subtitle: Text('${chapter.content.length} caractères'),
-                ),
+                _ChapterRow(chapter: chapter),
+                if (chapter != chapters.last) const SizedBox(height: 10),
               ],
           ],
         ),
@@ -438,9 +460,10 @@ class _AsyncComments extends StatelessWidget {
   Widget build(BuildContext context) {
     return commentsAsync.when(
       loading: () => const _LoadingCard(),
-      error: (error, _) => _StateCard(
+      error: (error, _) => FigmaEmptyState(
+        icon: Icons.error_outline,
         title: 'Retours indisponibles',
-        subtitle: AppError.messageFor(error),
+        message: AppError.messageFor(error),
         action: FilledButton(
           onPressed: onRetry,
           child: const Text('Réessayer'),
@@ -462,19 +485,117 @@ class _AsyncComments extends StatelessWidget {
               )
             else
               for (final comment in comments) ...[
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    Icons.forum_outlined,
-                    color: context.colors.primary,
-                  ),
-                  title: Text(comment.content),
-                  subtitle: Text(comment.type.label),
-                ),
-                const Divider(height: 18),
+                _CommentRow(comment: comment),
+                if (comment != comments.last) const SizedBox(height: 10),
               ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ChapterRow extends StatelessWidget {
+  const _ChapterRow({required this.chapter});
+
+  final BetaSharedChapterModel chapter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colors.muted.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          PlumoraIconTile(
+            size: 38,
+            radius: 10,
+            backgroundColor: context.colors.secondary,
+            child: Text(
+              chapter.order == 0 ? '-' : '${chapter.order}',
+              style: TextStyle(
+                color: context.colors.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  chapter.title.isEmpty
+                      ? 'Chapitre sans titre'
+                      : chapter.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${chapter.content.length} caractères',
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CommentRow extends StatelessWidget {
+  const _CommentRow({required this.comment});
+
+  final BetaCommentModel comment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colors.muted.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PlumoraIconTile(
+            size: 38,
+            radius: 10,
+            backgroundColor: context.colors.primary.withValues(alpha: 0.12),
+            child: Icon(
+              Icons.forum_outlined,
+              color: context.colors.primary,
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(comment.content, style: const TextStyle(height: 1.4)),
+                const SizedBox(height: 4),
+                Text(
+                  comment.type.label,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -489,35 +610,6 @@ class _LoadingCard extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(48),
         child: CircularProgressIndicator(),
-      ),
-    );
-  }
-}
-
-class _StateCard extends StatelessWidget {
-  const _StateCard({required this.title, required this.subtitle, this.action});
-
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
-          if (action != null) ...[const SizedBox(height: 16), action!],
-        ],
       ),
     );
   }
