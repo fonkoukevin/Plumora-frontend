@@ -12,6 +12,14 @@ abstract final class PlumoraTheme {
   static ThemeData _buildTheme(PlumoraColors colors) {
     final isDark = colors == PlumoraColors.dark;
     final brightness = isDark ? Brightness.dark : Brightness.light;
+    // Brightened on dark surfaces only: a literal `colors.border` is nearly
+    // invisible against the near-black dark background/cards, so every
+    // outline/divider/input border in this theme reads from this derived
+    // value instead of the raw token (which stays untouched for anything
+    // relying on the exact dark-palette color, e.g. PlumoraColors.dark tests).
+    final effectiveBorder = isDark
+        ? Color.lerp(colors.border, Colors.white, 0.18)!
+        : colors.border;
 
     final colorScheme =
         ColorScheme(
@@ -41,8 +49,8 @@ abstract final class PlumoraTheme {
           surfaceContainerHigh: colors.muted,
           surfaceContainerHighest: colors.muted,
           onSurfaceVariant: colors.textSecondary,
-          outline: colors.border,
-          outlineVariant: colors.border,
+          outline: effectiveBorder,
+          outlineVariant: effectiveBorder,
           shadow: Colors.black,
           scrim: Colors.black,
           inverseSurface: colors.textPrimary,
@@ -70,7 +78,7 @@ abstract final class PlumoraTheme {
       ),
       scaffoldBackgroundColor: colors.background,
       canvasColor: colors.background,
-      dividerColor: colors.border,
+      dividerColor: effectiveBorder,
       shadowColor: Colors.black.withValues(alpha: isDark ? 0.28 : 0.10),
       splashColor: colors.primary.withValues(alpha: 0.08),
       hoverColor: colors.muted.withValues(alpha: 0.72),
@@ -105,7 +113,7 @@ abstract final class PlumoraTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: colors.border),
+          side: BorderSide(color: effectiveBorder),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -128,8 +136,12 @@ abstract final class PlumoraTheme {
           overlayColor: WidgetStatePropertyAll(
             colors.onPrimary.withValues(alpha: 0.08),
           ),
-          elevation: const WidgetStatePropertyAll(1),
-          shadowColor: const WidgetStatePropertyAll(Color(0x1A000000)),
+          elevation: WidgetStatePropertyAll(isDark ? 4 : 1),
+          shadowColor: WidgetStatePropertyAll(
+            isDark
+                ? colors.primary.withValues(alpha: 0.45)
+                : const Color(0x1A000000),
+          ),
           minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -167,7 +179,7 @@ abstract final class PlumoraTheme {
           minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
           side: WidgetStateProperty.resolveWith((states) {
             final color = states.contains(WidgetState.disabled)
-                ? colors.border
+                ? effectiveBorder
                 : colors.primary;
             return BorderSide(color: color, width: 2);
           }),
@@ -218,7 +230,7 @@ abstract final class PlumoraTheme {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: colors.border),
+          borderSide: BorderSide(color: effectiveBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
@@ -255,13 +267,13 @@ abstract final class PlumoraTheme {
           color: colorScheme.primary,
         ),
       ),
-      dividerTheme: DividerThemeData(color: colors.border, thickness: 1),
+      dividerTheme: DividerThemeData(color: effectiveBorder, thickness: 1),
       dialogTheme: DialogThemeData(
         backgroundColor: colors.cards,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: colors.border),
+          side: BorderSide(color: effectiveBorder),
         ),
         titleTextStyle: GoogleFonts.nunito(
           color: colors.textPrimary,
@@ -288,7 +300,7 @@ abstract final class PlumoraTheme {
         textStyle: TextStyle(color: colors.textPrimary),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: colors.border),
+          side: BorderSide(color: effectiveBorder),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -298,13 +310,13 @@ abstract final class PlumoraTheme {
         actionTextColor: colors.primary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: colors.border),
+          side: BorderSide(color: effectiveBorder),
         ),
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
           color: colors.cards,
-          border: Border.all(color: colors.border),
+          border: Border.all(color: effectiveBorder),
           borderRadius: BorderRadius.circular(8),
         ),
         textStyle: TextStyle(color: colors.textPrimary, fontSize: 12),
@@ -325,14 +337,14 @@ abstract final class PlumoraTheme {
               : Colors.transparent;
         }),
         checkColor: WidgetStatePropertyAll(colors.onPrimary),
-        side: BorderSide(color: colors.border, width: 1.5),
+        side: BorderSide(color: effectiveBorder, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
           return states.contains(WidgetState.selected)
               ? colors.primary
-              : colors.border;
+              : effectiveBorder;
         }),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
@@ -344,7 +356,7 @@ abstract final class PlumoraTheme {
         backgroundColor: colors.muted,
         selectedColor: colors.primary,
         disabledColor: colors.muted.withValues(alpha: 0.55),
-        side: BorderSide(color: colors.border),
+        side: BorderSide(color: effectiveBorder),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         labelStyle: TextStyle(color: colors.textSecondary),
         secondaryLabelStyle: TextStyle(color: colors.onPrimary),
