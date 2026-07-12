@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../data/models/notification_model.dart';
 import '../data/repositories/notification_repository.dart';
@@ -62,11 +64,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           children: [
                             Text(
                               'Notifications',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: PlumoraColors.textPrimary,
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                              style: GoogleFonts.playfairDisplay(
+                                color: context.colors.textPrimary,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                height: 1.1,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             unreadCountAsync.maybeWhen(
@@ -74,14 +77,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 count == 0
                                     ? 'Tout est lu'
                                     : '$count notification${count > 1 ? 's' : ''} non lue${count > 1 ? 's' : ''}',
-                                style: const TextStyle(
-                                  color: PlumoraColors.textSecondary,
+                                style: TextStyle(
+                                  color: context.colors.textSecondary,
                                 ),
                               ),
-                              orElse: () => const Text(
+                              orElse: () => Text(
                                 'Activité Plumora récente',
                                 style: TextStyle(
-                                  color: PlumoraColors.textSecondary,
+                                  color: context.colors.textSecondary,
                                 ),
                               ),
                             ),
@@ -111,9 +114,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         child: CircularProgressIndicator(),
                       ),
                     ),
-                    error: (error, _) => _StateCard(
+                    error: (error, _) => FigmaEmptyState(
+                      icon: Icons.error_outline,
                       title: 'Notifications indisponibles',
-                      subtitle: AppError.messageFor(error),
+                      message: AppError.messageFor(error),
                       action: FilledButton(
                         onPressed: () {
                           ref.invalidate(myNotificationsProvider);
@@ -124,9 +128,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     ),
                     data: (notifications) {
                       if (notifications.isEmpty) {
-                        return const _StateCard(
+                        return const FigmaEmptyState(
+                          icon: Icons.notifications_none_outlined,
                           title: 'Aucune notification',
-                          subtitle:
+                          message:
                               'Les invitations, retours bêta et publications apparaîtront ici.',
                         );
                       }
@@ -208,9 +213,9 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _typeColor(notification.type);
+    final color = _typeColor(context, notification.type);
     return PlumoraCard(
-      leftAccent: notification.isRead ? PlumoraColors.border : color,
+      leftAccent: notification.isRead ? context.colors.border : color,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -240,10 +245,12 @@ class _NotificationCard extends StatelessWidget {
                       ),
                     ),
                     if (!notification.isRead)
-                      const PlumoraBadge(
+                      PlumoraBadge(
                         label: 'Nouveau',
-                        backgroundColor: Color(0xFFE6EFE4),
-                        foregroundColor: PlumoraColors.success,
+                        backgroundColor: context.colors.success.withValues(
+                          alpha: 0.12,
+                        ),
+                        foregroundColor: context.colors.success,
                       ),
                   ],
                 ),
@@ -252,16 +259,16 @@ class _NotificationCard extends StatelessWidget {
                   notification.message.isEmpty
                       ? 'Nouvelle activité sur Plumora.'
                       : notification.message,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     height: 1.45,
                   ),
                 ),
                 const SizedBox(height: 9),
                 Text(
                   _dateLabel(notification.createdAt),
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -275,35 +282,6 @@ class _NotificationCard extends StatelessWidget {
               child: Text(busy ? '...' : 'Lire'),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _StateCard extends StatelessWidget {
-  const _StateCard({required this.title, required this.subtitle, this.action});
-
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
-          if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),
     );
@@ -328,22 +306,22 @@ IconData _typeIcon(String type) {
   return Icons.notifications_none_outlined;
 }
 
-Color _typeColor(String type) {
+Color _typeColor(BuildContext context, String type) {
   final normalized = type.trim().toUpperCase();
   if (normalized.contains('BETA')) {
-    return PlumoraColors.info;
+    return context.colors.info;
   }
   if (normalized.contains('BOOK') || normalized.contains('PUBLICATION')) {
-    return PlumoraColors.primary;
+    return context.colors.primary;
   }
   if (normalized.contains('REVIEW')) {
-    return PlumoraColors.mukemeAccent;
+    return context.colors.plumoAccent;
   }
   if (normalized.contains('FAVORITE')) {
-    return PlumoraColors.destructive;
+    return context.colors.destructive;
   }
 
-  return PlumoraColors.textSecondary;
+  return context.colors.textSecondary;
 }
 
 String _dateLabel(DateTime? date) {

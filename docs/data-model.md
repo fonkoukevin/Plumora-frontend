@@ -8,12 +8,17 @@
 - lastname VARCHAR(80) NOT NULL
 - username VARCHAR(50) UNIQUE NOT NULL
 - email VARCHAR(150) UNIQUE NOT NULL
-- password_hash VARCHAR(255) NOT NULL
+- password_hash VARCHAR(255) NULLABLE
 - avatar_url VARCHAR(500)
 - bio TEXT
 - is_active BOOLEAN DEFAULT TRUE
 - created_at TIMESTAMP NOT NULL
 - updated_at TIMESTAMP
+
+NOTE (Google Sign-In, see `POST /auth/google` in docs/api-contract.md):
+accounts created from a verified Google identity have no password, so
+`password_hash` must be nullable (not NOT NULL as previously specified).
+Not yet implemented backend-side as of this note.
 
 ### roles
 - id_role UUID PK

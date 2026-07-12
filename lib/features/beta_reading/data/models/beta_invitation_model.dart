@@ -32,6 +32,7 @@ class BetaInvitationModel {
     required this.bookTitle,
     required this.authorName,
     required this.status,
+    this.betaReaderName,
     this.campaign,
     this.coverUrl,
     this.deadline,
@@ -48,6 +49,7 @@ class BetaInvitationModel {
   final String bookTitle;
   final String authorName;
   final BetaInvitationStatus status;
+  final String? betaReaderName;
   final BetaCampaignModel? campaign;
   final String? coverUrl;
   final DateTime? deadline;
@@ -62,6 +64,9 @@ class BetaInvitationModel {
   bool get isAccepted => status == BetaInvitationStatus.accepted;
 
   bool get isRefused => status == BetaInvitationStatus.refused;
+
+  bool get isFinished =>
+      isAccepted && chaptersAvailable > 0 && chaptersRead >= chaptersAvailable;
 
   factory BetaInvitationModel.fromJson(Object? value) {
     final json = readBetaMap(value);
@@ -93,16 +98,27 @@ class BetaInvitationModel {
           campaign?.bookTitle ??
           readBetaString(book, ['title', 'name']),
       authorName:
-          readBetaNullableString(json, ['authorName', 'author_name']) ??
+          readBetaNullableString(json, [
+            'authorUsername',
+            'authorName',
+            'author_name',
+          ]) ??
+          campaign?.authorUsername ??
           readBetaNullableString(author, ['fullName', 'name', 'displayName']) ??
           [
             readBetaNullableString(author, ['firstName', 'first_name']),
             readBetaNullableString(author, ['lastName', 'last_name']),
           ].whereType<String>().join(' ').trim(),
       status: BetaInvitationStatus.fromApi(json['status']),
+      betaReaderName: readBetaNullableString(json, [
+        'betaReaderUsername',
+        'betaReaderName',
+        'reader_name',
+      ]),
       campaign: campaign,
       coverUrl:
           readBetaNullableString(json, [
+            'bookCoverUrl',
             'coverUrl',
             'cover_url',
             'coverImageUrl',
@@ -138,7 +154,12 @@ class BetaInvitationModel {
         'commentsCount',
         'betaCommentsCount',
       ]),
-      createdAt: readBetaDate(json, ['createdAt', 'created_at']),
+      createdAt: readBetaDate(json, [
+        'createdAt',
+        'created_at',
+        'invitedAt',
+        'invited_at',
+      ]),
       respondedAt: readBetaDate(json, ['respondedAt', 'responded_at']),
     );
   }
@@ -165,6 +186,7 @@ class BetaInvitationModel {
       bookTitle: bookTitle ?? this.bookTitle,
       authorName: authorName ?? this.authorName,
       status: status ?? this.status,
+      betaReaderName: betaReaderName,
       campaign: campaign ?? this.campaign,
       coverUrl: coverUrl ?? this.coverUrl,
       deadline: deadline ?? this.deadline,

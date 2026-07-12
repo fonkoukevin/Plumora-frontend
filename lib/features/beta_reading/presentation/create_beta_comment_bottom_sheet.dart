@@ -13,6 +13,8 @@ class CreateBetaCommentBottomSheet extends ConsumerStatefulWidget {
     required this.campaignId,
     required this.chapterId,
     required this.defaultSelectedText,
+    this.defaultPositionStart,
+    this.defaultPositionEnd,
     super.key,
   });
 
@@ -20,6 +22,8 @@ class CreateBetaCommentBottomSheet extends ConsumerStatefulWidget {
   final String campaignId;
   final String chapterId;
   final String defaultSelectedText;
+  final int? defaultPositionStart;
+  final int? defaultPositionEnd;
 
   @override
   ConsumerState<CreateBetaCommentBottomSheet> createState() =>
@@ -34,13 +38,7 @@ class _CreateBetaCommentBottomSheetState
   bool _isSubmitting = false;
   String? _error;
 
-  static const _types = [
-    BetaCommentType.incoherence,
-    BetaCommentType.rhythm,
-    BetaCommentType.typo,
-    BetaCommentType.dialogue,
-    BetaCommentType.confusing,
-  ];
+  static const _types = BetaCommentType.values;
 
   @override
   void initState() {
@@ -76,12 +74,14 @@ class _CreateBetaCommentBottomSheetState
               children: [
                 Row(
                   children: [
-                    const PlumoraIconTile(
-                      backgroundColor: Color(0xFFEAF3FF),
+                    PlumoraIconTile(
+                      backgroundColor: context.colors.info.withValues(
+                        alpha: 0.12,
+                      ),
                       size: 44,
                       child: Icon(
                         Icons.chat_bubble_outline,
-                        color: PlumoraColors.info,
+                        color: context.colors.info,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -159,8 +159,8 @@ class _CreateBetaCommentBottomSheetState
                   const SizedBox(height: 12),
                   Text(
                     _error!,
-                    style: const TextStyle(
-                      color: PlumoraColors.destructive,
+                    style: TextStyle(
+                      color: context.colors.destructive,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -220,6 +220,10 @@ class _CreateBetaCommentBottomSheetState
       _error = null;
     });
 
+    final selectedTextUnedited =
+        _selectedTextController.text.trim() ==
+        widget.defaultSelectedText.trim();
+
     try {
       await ref
           .read(betaReadingRepositoryProvider)
@@ -231,6 +235,12 @@ class _CreateBetaCommentBottomSheetState
               type: type,
               content: comment,
               selectedText: _selectedTextController.text,
+              positionStart: selectedTextUnedited
+                  ? widget.defaultPositionStart
+                  : null,
+              positionEnd: selectedTextUnedited
+                  ? widget.defaultPositionEnd
+                  : null,
             ),
           );
       ref.invalidate(betaSharedChaptersProvider(widget.campaignId));
@@ -263,7 +273,7 @@ class _TypeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _typeColor(type);
+    final color = _typeColor(context, type);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -271,10 +281,10 @@ class _TypeButton extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.1) : Colors.white,
+          color: selected ? color.withValues(alpha: 0.1) : context.colors.cards,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? color : PlumoraColors.border,
+            color: selected ? color : context.colors.border,
             width: selected ? 2 : 1,
           ),
         ),
@@ -287,7 +297,8 @@ class _TypeButton extends StatelessWidget {
                 type.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
+                  color: context.colors.textPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -302,26 +313,24 @@ class _TypeButton extends StatelessWidget {
 
 IconData _typeIcon(BetaCommentType type) {
   return switch (type) {
-    BetaCommentType.incoherence => Icons.error_outline,
-    BetaCommentType.rhythm => Icons.schedule,
-    BetaCommentType.typo => Icons.visibility_outlined,
-    BetaCommentType.dialogue => Icons.forum_outlined,
-    BetaCommentType.confusing => Icons.bolt_outlined,
-    BetaCommentType.style => Icons.auto_fix_high_outlined,
+    BetaCommentType.plot => Icons.auto_stories_outlined,
     BetaCommentType.character => Icons.person_outline,
+    BetaCommentType.style => Icons.auto_fix_high_outlined,
+    BetaCommentType.pacing => Icons.schedule,
+    BetaCommentType.continuity => Icons.sync_problem_outlined,
+    BetaCommentType.typo => Icons.spellcheck,
     BetaCommentType.other => Icons.chat_bubble_outline,
   };
 }
 
-Color _typeColor(BetaCommentType type) {
+Color _typeColor(BuildContext context, BetaCommentType type) {
   return switch (type) {
-    BetaCommentType.incoherence => const Color(0xFFB42318),
-    BetaCommentType.rhythm => const Color(0xFFA4683E),
-    BetaCommentType.typo => PlumoraColors.info,
-    BetaCommentType.dialogue => const Color(0xFF7C3AED),
-    BetaCommentType.confusing => const Color(0xFFC69200),
-    BetaCommentType.style => const Color(0xFF8B5CF6),
+    BetaCommentType.plot => const Color(0xFFB42318),
     BetaCommentType.character => const Color(0xFF2563EB),
-    BetaCommentType.other => PlumoraColors.textSecondary,
+    BetaCommentType.style => const Color(0xFF8B5CF6),
+    BetaCommentType.pacing => const Color(0xFFC69200),
+    BetaCommentType.continuity => const Color(0xFFA4683E),
+    BetaCommentType.typo => context.colors.info,
+    BetaCommentType.other => context.colors.textSecondary,
   };
 }

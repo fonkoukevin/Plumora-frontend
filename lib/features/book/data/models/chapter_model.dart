@@ -80,10 +80,12 @@ class ChapterUpsertRequest {
   final int? order;
 
   Map<String, dynamic> toJson() {
+    final normalizedOrder = order ?? 1;
     return {
       'title': title.trim(),
       'content': content,
-      if (order != null) 'order': order,
+      'chapterOrder': normalizedOrder,
+      'order': normalizedOrder,
     };
   }
 }

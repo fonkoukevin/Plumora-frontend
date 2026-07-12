@@ -56,12 +56,12 @@ class AiWritingSuggestionRequest {
 
   Map<String, dynamic> toJson() {
     return {
-      'selectedText': selectedText.trim(),
-      'actionType': actionType.apiValue,
+      'selected_text': selectedText.trim(),
+      'action_type': actionType.apiValue,
       if (chapterId != null && chapterId!.trim().isNotEmpty)
-        'chapterId': chapterId!.trim(),
+        'chapter_id': chapterId!.trim(),
       if (contextText != null && contextText!.trim().isNotEmpty)
-        'contextText': contextText!.trim(),
+        'context_text': contextText!.trim(),
     };
   }
 }
@@ -143,13 +143,12 @@ class AiRecommendationRequest {
 
   Map<String, dynamic> toJson() {
     return {
-      'queryText': queryText.trim(),
-      'query': queryText.trim(),
+      'query_text': queryText.trim(),
       if (mood != null && mood!.trim().isNotEmpty) 'mood': mood!.trim(),
       if (preferredDuration != null && preferredDuration!.trim().isNotEmpty)
-        'preferredDuration': preferredDuration!.trim(),
+        'preferred_duration': preferredDuration!.trim(),
       if (preferredGenre != null && preferredGenre!.trim().isNotEmpty)
-        'preferredGenre': preferredGenre!.trim(),
+        'preferred_genre': preferredGenre!.trim(),
     };
   }
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../../catalog/data/models/catalog_book_model.dart';
@@ -24,7 +25,7 @@ class MyFavoritesScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         PlumoraCard(
-          borderColor: const Color(0xFFF1C8C8),
+          borderColor: context.colors.destructive.withValues(alpha: 0.35),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -36,19 +37,19 @@ class MyFavoritesScreen extends ConsumerWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'Mes Favoris',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Les livres que vous avez adorés et que vous voulez retrouver facilement.',
                       style: TextStyle(
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                         height: 1.45,
                       ),
                     ),
@@ -66,9 +67,10 @@ class MyFavoritesScreen extends ConsumerWidget {
               child: CircularProgressIndicator(),
             ),
           ),
-          error: (error, _) => _StateCard(
+          error: (error, _) => FigmaEmptyState(
+            icon: Icons.error_outline,
             title: 'Favoris indisponibles',
-            subtitle: AppError.messageFor(error),
+            message: AppError.messageFor(error),
             action: FilledButton(
               onPressed: () => ref.invalidate(myFavoritesProvider),
               child: const Text('Réessayer'),
@@ -83,11 +85,14 @@ class MyFavoritesScreen extends ConsumerWidget {
                 .toList(growable: false);
 
             if (filteredFavorites.isEmpty) {
-              return _StateCard(
+              return FigmaEmptyState(
+                icon: normalizedQuery.isEmpty
+                    ? Icons.favorite_border
+                    : Icons.search_off,
                 title: normalizedQuery.isEmpty
                     ? 'Aucun favori'
                     : 'Aucun résultat',
-                subtitle: normalizedQuery.isEmpty
+                message: normalizedQuery.isEmpty
                     ? 'Ajoute des livres depuis leur fiche pour les retrouver ici.'
                     : 'Aucun favori ne correspond à cette recherche.',
               );
@@ -205,8 +210,8 @@ class _FavoriteCard extends ConsumerWidget {
                   book.authorName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 11,
                   ),
                 ),
@@ -227,32 +232,6 @@ class _FavoriteCard extends ConsumerWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StateCard extends StatelessWidget {
-  const _StateCard({required this.title, required this.subtitle, this.action});
-
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
-          if (action != null) ...[const SizedBox(height: 14), action!],
         ],
       ),
     );

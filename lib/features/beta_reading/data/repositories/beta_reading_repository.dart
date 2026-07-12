@@ -5,6 +5,7 @@ import '../../../../core/network/dio_provider.dart';
 import '../models/beta_campaign_model.dart';
 import '../models/beta_comment_model.dart';
 import '../models/beta_invitation_model.dart';
+import '../models/beta_reader_summary_model.dart';
 import '../models/beta_shared_chapter_model.dart';
 import '../services/beta_reading_api_service.dart';
 
@@ -14,6 +15,12 @@ final betaReadingApiServiceProvider = Provider<BetaReadingApiService>((ref) {
 
 final betaReadingRepositoryProvider = Provider<BetaReadingRepository>((ref) {
   return BetaReadingRepository(ref.watch(betaReadingApiServiceProvider));
+});
+
+final betaReaderOptionsProvider = FutureProvider<List<BetaReaderSummaryModel>>((
+  ref,
+) {
+  return ref.watch(betaReadingRepositoryProvider).betaReaders();
 });
 
 final betaInvitationsProvider = FutureProvider<List<BetaInvitationModel>>((
@@ -26,6 +33,12 @@ final betaCampaignsForBookProvider =
     FutureProvider.family<List<BetaCampaignModel>, String>((ref, bookId) {
       return ref.watch(betaReadingRepositoryProvider).campaignsForBook(bookId);
     });
+
+final betaOpenCampaignsProvider = FutureProvider<List<BetaCampaignModel>>((
+  ref,
+) {
+  return ref.watch(betaReadingRepositoryProvider).openCampaigns();
+});
 
 final betaCampaignProvider = FutureProvider.family<BetaCampaignModel, String>((
   ref,
@@ -56,10 +69,29 @@ final betaCommentsForCampaignProvider =
           .commentsForCampaign(campaignId);
     });
 
+final betaCampaignInvitationsProvider =
+    FutureProvider.family<List<BetaInvitationModel>, String>((ref, campaignId) {
+      return ref
+          .watch(betaReadingRepositoryProvider)
+          .invitationsForCampaign(campaignId);
+    });
+
 class BetaReadingRepository {
   const BetaReadingRepository(this._apiService);
 
   final BetaReadingApiService _apiService;
+
+  Future<List<BetaReaderSummaryModel>> betaReaders() async {
+    try {
+      return await _apiService.betaReaders();
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        return <BetaReaderSummaryModel>[];
+      }
+
+      rethrow;
+    }
+  }
 
   Future<List<BetaInvitationModel>> myInvitations() async {
     try {
@@ -100,12 +132,42 @@ class BetaReadingRepository {
     }
   }
 
+  Future<List<BetaCampaignModel>> openCampaigns() async {
+    try {
+      return await _apiService.openCampaigns();
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        return <BetaCampaignModel>[];
+      }
+
+      rethrow;
+    }
+  }
+
   Future<BetaCampaignModel> campaignById(String campaignId) {
     return _apiService.campaignById(campaignId);
   }
 
   Future<BetaCampaignModel> closeCampaign(String campaignId) {
     return _apiService.closeCampaign(campaignId);
+  }
+
+  Future<BetaCampaignModel> cancelCampaign(String campaignId) {
+    return _apiService.cancelCampaign(campaignId);
+  }
+
+  Future<List<BetaInvitationModel>> invitationsForCampaign(
+    String campaignId,
+  ) async {
+    try {
+      return await _apiService.invitationsForCampaign(campaignId);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        return <BetaInvitationModel>[];
+      }
+
+      rethrow;
+    }
   }
 
   Future<BetaInvitationModel> createInvitation(
@@ -124,6 +186,14 @@ class BetaReadingRepository {
 
   Future<List<BetaSharedChapterModel>> sharedChapters(String campaignId) {
     return _apiService.sharedChapters(campaignId);
+  }
+
+  Future<void> recordChapterView(String campaignId, String chapterId) async {
+    try {
+      await _apiService.recordChapterView(campaignId, chapterId);
+    } on DioException {
+      // Best-effort engagement tracking: a failed call must not block reading.
+    }
   }
 
   Future<BetaCommentModel> createComment(BetaCommentCreateRequest request) {
@@ -159,5 +229,9 @@ class BetaReadingRepository {
     BetaCommentStatus status,
   ) {
     return _apiService.updateCommentStatus(commentId, status);
+  }
+
+  Future<void> deleteComment(String commentId) {
+    return _apiService.deleteComment(commentId);
   }
 }
