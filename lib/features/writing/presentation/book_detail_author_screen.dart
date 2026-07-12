@@ -20,9 +20,6 @@ const _detailAccent = Color(0xFF7C5CFF);
 const _detailAccentLight = Color(0xFF9B80FF);
 const _detailGold = Color(0xFFD6B25E);
 const _detailGreen = Color(0xFF3FBF7F);
-const _detailSurface = Color(0xFFFFFEFC);
-const _detailMuted = Color(0xFFF1EEE8);
-const _detailBorder = Color(0xFFE9E1D8);
 
 enum _DetailTab { overview, chapters, stats, settings }
 
@@ -138,7 +135,7 @@ class _BookDetailBody extends StatelessWidget {
           padding: EdgeInsets.only(bottom: bottomPadding),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 768),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -244,7 +241,7 @@ class _BookHero extends ConsumerWidget {
         : book.wordCount;
     final doneChapters = _completedChapterCount(book, chapters, chapterTotal);
     final modified = _shortModified(book.updatedAt ?? book.createdAt);
-    final status = _statusStyle(book.status);
+    final status = _statusStyle(context, book.status);
     final visibility = _visibilityStyle(book.visibility);
 
     return Padding(
@@ -275,8 +272,8 @@ class _BookHero extends ConsumerWidget {
                       width: 30,
                       height: 30,
                       decoration: BoxDecoration(
-                        color: _detailSurface,
-                        border: Border.all(color: _detailBorder),
+                        color: context.colors.cards,
+                        border: Border.all(color: context.colors.border),
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: const [
                           BoxShadow(
@@ -387,8 +384,8 @@ class _MiniStatCard extends StatelessWidget {
       height: 58,
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 6),
       decoration: BoxDecoration(
-        color: _detailSurface,
-        border: Border.all(color: _detailBorder),
+        color: context.colors.cards,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -513,8 +510,8 @@ class _ActionTile extends StatelessWidget {
                     end: Alignment.bottomRight,
                   )
                 : null,
-            color: selected ? null : _detailSurface,
-            border: selected ? null : Border.all(color: _detailBorder),
+            color: selected ? null : context.colors.cards,
+            border: selected ? null : Border.all(color: context.colors.border),
             borderRadius: BorderRadius.circular(12),
             boxShadow: selected
                 ? [
@@ -610,7 +607,9 @@ class _DetailTabButton extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: selected ? context.colors.primary : context.colors.textPrimary,
+            color: selected
+                ? context.colors.primary
+                : context.colors.textPrimary,
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
@@ -699,7 +698,7 @@ class _OverviewTab extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 16),
-          _MukemeHint(book: book),
+          _PlumoHint(book: book),
         ],
       ),
     );
@@ -725,8 +724,8 @@ class _DetailSectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _detailSurface,
-        border: Border.all(color: _detailBorder),
+        color: context.colors.cards,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -779,7 +778,7 @@ class _TagPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: _detailMuted,
+        color: context.colors.muted,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -794,8 +793,8 @@ class _TagPill extends StatelessWidget {
   }
 }
 
-class _MukemeHint extends StatelessWidget {
-  const _MukemeHint({required this.book});
+class _PlumoHint extends StatelessWidget {
+  const _PlumoHint({required this.book});
 
   final BookModel book;
 
@@ -804,13 +803,13 @@ class _MukemeHint extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.go(AppRoutes.mukemeWritingPath()),
+        onTap: () => context.go(AppRoutes.plumoWritingPath()),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: _detailAccent.withValues(alpha: 0.05),
-            border: Border.all(color: _detailBorder),
+            border: Border.all(color: context.colors.border),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -838,7 +837,7 @@ class _MukemeHint extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Idées de Mukeme pour ce livre',
+                      'Idées de Plumo pour ce livre',
                       style: TextStyle(
                         color: context.colors.textPrimary,
                         fontSize: 12,
@@ -964,8 +963,8 @@ class _ChapterRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: _detailSurface,
-            border: Border.all(color: _detailBorder),
+            color: context.colors.cards,
+            border: Border.all(color: context.colors.border),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -1090,7 +1089,7 @@ class _AddChapterCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: _detailBorder, width: 1.4),
+          border: Border.all(color: context.colors.border, width: 1.4),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -1247,8 +1246,8 @@ class _StatsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _detailSurface,
-        border: Border.all(color: _detailBorder),
+        color: context.colors.cards,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1285,10 +1284,7 @@ class _StatsCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             sub,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 9,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 9),
           ),
         ],
       ),
@@ -1452,7 +1448,9 @@ class _VisibilityRow extends StatelessWidget {
         Icon(
           icon,
           size: 17,
-          color: selected ? context.colors.primary : context.colors.textSecondary,
+          color: selected
+              ? context.colors.primary
+              : context.colors.textSecondary,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1493,8 +1491,8 @@ class _QuickLinkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _detailSurface,
-        border: Border.all(color: _detailBorder),
+        color: context.colors.cards,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1583,7 +1581,7 @@ class _DangerCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _detailSurface,
+        color: context.colors.cards,
         border: Border.all(
           color: context.colors.destructive.withValues(alpha: 0.22),
         ),
@@ -1689,7 +1687,7 @@ class _VisibilityChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: _detailMuted,
+        color: context.colors.muted,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -1852,7 +1850,10 @@ class _ArchiveConfirmDialog extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'Ce livre sera retiré de tes histoires actives.',
-              style: TextStyle(color: context.colors.textSecondary, height: 1.4),
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 20),
             Row(
@@ -1953,37 +1954,37 @@ class _VisibilityStyle {
   final IconData icon;
 }
 
-_StatusStyle _statusStyle(BookStatus status) {
+_StatusStyle _statusStyle(BuildContext context, BookStatus status) {
   return switch (status) {
-    BookStatus.inBetaReading => const _StatusStyle(
+    BookStatus.inBetaReading => _StatusStyle(
       label: 'Bêta-test',
-      background: Color(0xFFF1EAFE),
-      foreground: _detailAccent,
+      background: context.colors.primary.withValues(alpha: 0.12),
+      foreground: context.colors.primary,
     ),
-    BookStatus.published => const _StatusStyle(
+    BookStatus.published => _StatusStyle(
       label: 'Publié',
-      background: Color(0xFFE2F8EC),
-      foreground: _detailGreen,
+      background: context.colors.success.withValues(alpha: 0.12),
+      foreground: context.colors.success,
     ),
-    BookStatus.archived => const _StatusStyle(
+    BookStatus.archived => _StatusStyle(
       label: 'Archivé',
-      background: Color(0xFFF0EEF1),
-      foreground: Color(0xFF8F8895),
+      background: context.colors.muted,
+      foreground: context.colors.textSecondary,
     ),
-    BookStatus.inCorrection => const _StatusStyle(
+    BookStatus.inCorrection => _StatusStyle(
       label: 'Correction',
-      background: Color(0xFFF1EAFE),
-      foreground: _detailAccent,
+      background: context.colors.primary.withValues(alpha: 0.12),
+      foreground: context.colors.primary,
     ),
-    BookStatus.readyToPublish => const _StatusStyle(
+    BookStatus.readyToPublish => _StatusStyle(
       label: 'Prêt',
-      background: Color(0xFFE2F8EC),
-      foreground: _detailGreen,
+      background: context.colors.success.withValues(alpha: 0.12),
+      foreground: context.colors.success,
     ),
-    _ => const _StatusStyle(
+    _ => _StatusStyle(
       label: 'Brouillon',
-      background: Color(0xFFF0EEF1),
-      foreground: Color(0xFFA8A8B3),
+      background: context.colors.textSecondary.withValues(alpha: 0.15),
+      foreground: context.colors.textSecondary,
     ),
   };
 }

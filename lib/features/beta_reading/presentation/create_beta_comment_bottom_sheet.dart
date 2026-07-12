@@ -75,7 +75,9 @@ class _CreateBetaCommentBottomSheetState
                 Row(
                   children: [
                     PlumoraIconTile(
-                      backgroundColor: Color(0xFFEAF3FF),
+                      backgroundColor: context.colors.info.withValues(
+                        alpha: 0.12,
+                      ),
                       size: 44,
                       child: Icon(
                         Icons.chat_bubble_outline,
@@ -279,7 +281,7 @@ class _TypeButton extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.1) : Colors.white,
+          color: selected ? color.withValues(alpha: 0.1) : context.colors.cards,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? color : context.colors.border,
@@ -295,7 +297,8 @@ class _TypeButton extends StatelessWidget {
                 type.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
+                  color: context.colors.textPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),

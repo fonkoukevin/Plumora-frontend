@@ -15,9 +15,6 @@ const _writeAccent = Color(0xFF7C5CFF);
 const _writeAccentLight = Color(0xFF9B80FF);
 const _writeGold = Color(0xFFD6B25E);
 const _writeGreen = Color(0xFF3FBF7F);
-const _writeSurface = Color(0xFFFFFEFC);
-const _writeMutedPill = Color(0xFFF1EEE8);
-const _writeBorder = Color(0xFFE9E1D8);
 
 const _writeTabs = ['Toutes', 'En cours', 'Bêta-test', 'Publiées'];
 
@@ -88,8 +85,8 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     return RefreshIndicator(
       onRefresh: () => ref.refresh(myBooksProvider.future),
       child: FigmaScreen(
-        maxWidth: 420,
-        padding: const EdgeInsets.fromLTRB(13, 10, 13, 88),
+        maxWidth: 896,
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 88),
         physics: const AlwaysScrollableScrollPhysics(),
         child: booksAsync.when(
           loading: () => const Center(
@@ -214,10 +211,10 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                 _WriteCta(
                   icon: Icons.auto_awesome,
                   iconColors: const [_writeAccent, _writeAccentLight],
-                  title: "Mukeme — Votre assistant d'écriture IA",
+                  title: "Plumo — Votre assistant d'écriture IA",
                   subtitle: 'Reformulez, améliorez le style, générez des idées',
                   borderColor: _writeAccent,
-                  onTap: () => context.go(AppRoutes.mukemeWritingPath()),
+                  onTap: () => context.go(AppRoutes.plumoWritingPath()),
                 ),
                 const SizedBox(height: 12),
                 _WriteCta(
@@ -256,8 +253,8 @@ class _StatTile extends StatelessWidget {
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
       decoration: BoxDecoration(
-        color: _writeSurface,
-        border: Border.all(color: _writeBorder),
+        color: context.colors.cards,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -338,7 +335,7 @@ class _FilterTab extends StatelessWidget {
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: selected ? null : _writeMutedPill,
+          color: selected ? null : context.colors.muted,
           borderRadius: BorderRadius.circular(999),
           boxShadow: selected
               ? [
@@ -490,8 +487,8 @@ class _StoryCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: _writeSurface,
-        border: Border.all(color: _writeBorder),
+        color: context.colors.cards,
+        border: Border.all(color: context.colors.border),
         borderRadius: BorderRadius.circular(14),
       ),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 13),
@@ -620,7 +617,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = _statusStyle(status);
+    final style = _statusStyle(context, status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -667,27 +664,27 @@ class _StatusStyle {
   final Color foreground;
 }
 
-_StatusStyle _statusStyle(BookStatus status) {
+_StatusStyle _statusStyle(BuildContext context, BookStatus status) {
   return switch (status) {
-    BookStatus.inBetaReading => const _StatusStyle(
+    BookStatus.inBetaReading => _StatusStyle(
       label: 'Bêta-test',
-      background: Color(0xFFF1EAFE),
-      foreground: _writeAccent,
+      background: context.colors.primary.withValues(alpha: 0.12),
+      foreground: context.colors.primary,
     ),
-    BookStatus.published => const _StatusStyle(
+    BookStatus.published => _StatusStyle(
       label: 'Publié',
-      background: Color(0xFFE2F8EC),
-      foreground: _writeGreen,
+      background: context.colors.success.withValues(alpha: 0.12),
+      foreground: context.colors.success,
     ),
-    BookStatus.archived => const _StatusStyle(
+    BookStatus.archived => _StatusStyle(
       label: 'Archivé',
-      background: Color(0xFFF0EEF1),
-      foreground: Color(0xFF8F8895),
+      background: context.colors.muted,
+      foreground: context.colors.textSecondary,
     ),
-    _ => const _StatusStyle(
+    _ => _StatusStyle(
       label: 'Brouillon',
-      background: Color(0xFFF0EEF1),
-      foreground: Color(0xFFA8A8B3),
+      background: context.colors.textSecondary.withValues(alpha: 0.15),
+      foreground: context.colors.textSecondary,
     ),
   };
 }
@@ -906,8 +903,8 @@ class _OutlineMiniButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: _writeSurface,
-            border: Border.all(color: _writeBorder),
+            color: context.colors.cards,
+            border: Border.all(color: context.colors.border),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Row(
@@ -1124,7 +1121,10 @@ class _ArchiveConfirmDialog extends StatelessWidget {
             Text(
               'Ce livre sera archivé et retiré de tes histoires actives. '
               'Tu pourras toujours le retrouver et le republier plus tard.',
-              style: TextStyle(color: context.colors.textSecondary, height: 1.4),
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 20),
             Row(
@@ -1171,10 +1171,7 @@ class _ErrorPanel extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],

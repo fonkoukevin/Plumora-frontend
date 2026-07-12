@@ -134,12 +134,27 @@ POST `/books/{bookId}/reading-progress`
 PUT `/books/{bookId}/reading-progress`
 PATCH `/books/{bookId}/reading-progress/finish`
 
+`ReadingProgressResponse` is a flat DTO (`bookId`, `bookTitle`,
+`bookCoverUrl`, ...) — no nested `book` object. The cover field is named
+`bookCoverUrl`, not `coverUrl`; the Flutter client's
+`ReadingProgressModel` must alias it or the "Lectures" tab silently
+renders the gradient placeholder instead of the real cover (fixed
+2026-07, was missing the alias).
+
 ## Favorites
 
 POST `/books/{bookId}/favorites`
 DELETE `/books/{bookId}/favorites`
 GET `/favorites/my`
 GET `/books/{bookId}/favorites/status`
+
+`GET /favorites/my` returns a flat `FavoriteResponse[]` (`id`, `bookId`,
+`bookTitle`, `bookCoverUrl`, `authorUsername`, `createdAt`) — no nested
+`book` object either. Same `bookCoverUrl` naming as reading progress;
+the Flutter client flattens this into a `CatalogBookModel`, so
+`CatalogBookModel`'s cover alias list must also include `bookCoverUrl`
+(fixed 2026-07, was missing the alias — the "Favoris" tab showed the
+gradient placeholder for every book).
 
 ## Reviews
 
@@ -291,13 +306,100 @@ DELETE `/beta-comments/{commentId}` — role `BETA_READER`
 
 ## AI
 
-POST `/ai/writing/suggestions`
-PATCH `/ai/writing/suggestions/{suggestionId}/accept`
-PATCH `/ai/writing/suggestions/{suggestionId}/modify`
-PATCH `/ai/writing/suggestions/{suggestionId}/ignore`
+Verified 2026-07 against the backend source (`plumora-api`). Two distinct,
+coexisting surfaces share the `/ai` prefix — a persisted one (history kept
+server-side) and a stateless one branded **"Plumo IA"** (each call stands
+alone, nothing is stored). JSON is snake_case wherever the backend record
+uses `@JsonProperty`; unannotated single-word fields (`text`, `language`,
+`tone`, `title`, `reason`, `score`, `provider`, `model`...) are plain
+camelCase — same casing either way for those.
 
-POST `/ai/recommendations/books`
-GET `/ai/recommendations/my-requests`
+### Persisted (Mukeme-era) writing suggestions and recommendations
+
+POST `/ai/writing/suggestions` — role `AUTHOR`
+- Body: `{ "chapter_id": UUID (required), "selected_text": string (required,
+  ≤5000), "context_text"?: string (≤10000), "action_type": <enum> (required)
+  }`. `AiWritingActionType`: `REFORMULATE`, `IMPROVE_STYLE`,
+  `FIX_REPETITIONS`, `MAKE_MORE_EMOTIONAL`, `MAKE_DIALOGUE_NATURAL`.
+GET `/ai/writing/requests` — role `AUTHOR`
+GET `/ai/writing/requests/{requestId}` — role `AUTHOR`
+PATCH `/ai/writing/suggestions/{suggestionId}/accept` — role `AUTHOR`, no body
+PATCH `/ai/writing/suggestions/{suggestionId}/modify` — role `AUTHOR`
+- **No request body param on the backend side** — this only flips `status`
+  to `MODIFIED`; it does not persist an edited suggestion text. Any body the
+  client sends here is ignored server-side.
+PATCH `/ai/writing/suggestions/{suggestionId}/ignore` — role `AUTHOR`, no body
+
+POST `/ai/recommendations/books` — role `READER`
+- Body: `{ "query_text": string (required, ≤2000), "mood"?: string (≤40),
+  "preferred_duration"?: string (≤30), "preferred_genre"?: string (≤80) }`.
+  Response includes `recommendations: RecommendedBookResponse[]` — each item
+  is flat: `book_id`, `title`, `coverUrl`, `match_score`, `reasons: string[]`,
+  `rank_position`. **No author/genre/rating/read-count field** on this DTO.
+GET `/ai/recommendations/my-requests` — role `READER`
+GET `/ai/recommendations/requests/{requestId}` — role `READER`
+
+### Plumo IA (stateless, Gemini-backed)
+
+The Flutter app never calls Gemini directly — every request goes through
+these Plumora API endpoints, which hold the Gemini key server-side (falls
+back to a deterministic mock provider unless `AI_PROVIDER=gemini` is set,
+so these work with no Gemini key configured). Each call is independent; the
+backend keeps no suggestion history for these six endpoints, unlike the
+Mukeme-era ones above. All six share an in-memory rate limit: 20 requests /
+5 minutes per user, reset on server restart.
+
+POST `/ai/writing/rewrite` — role `AUTHOR`
+POST `/ai/writing/summarize` — role `AUTHOR`
+POST `/ai/writing/continue` — role `AUTHOR`
+- Body (`AiTextGenerationRequest`, all three endpoints): `{ "text": string
+  (required, ≤20000), "language"?: string (≤10), "tone"?: string (≤50),
+  "instruction"?: string (≤2000), "manuscript_id"?: UUID, "chapter_id"?: UUID
+  }`. `manuscript_id`/`chapter_id` are optional — these three can be called
+  with no book context at all.
+- Response (`AiTextGenerationResponse`): `{ "suggestion", "explanation",
+  "warnings": string[], "provider", "model", "generated_at" }`.
+
+POST `/ai/writing/titles` — role `AUTHOR`
+- Same request body shape as rewrite/summarize/continue.
+- Response (`AiTitleSuggestionResponse`): `{ "titles": string[],
+  "explanation", "warnings": string[], "provider", "model", "generated_at"
+  }`.
+
+POST `/ai/beta-reading/analyze` — role `AUTHOR`
+- Author-facing only (not beta-reader-facing): lets an author have Plumo
+  pre-analyze their own manuscript/chapter before sending it to real beta
+  readers. Requires ownership of the `chapter_id`/`manuscript_id` passed in,
+  else 403 (`AiUnauthorizedAccessException`).
+- Body (`AiBetaReadingAnalysisRequest`): `{ "text": string (required,
+  ≤20000), "language"?: string (≤10), "genre"?: string (≤80),
+  "expected_feedback_level"?: string (≤30), "manuscript_id"?: UUID,
+  "chapter_id"?: UUID }`.
+- Response (`AiBetaReadingAnalysisResponse`): `{ "global_feedback",
+  "strengths": string[], "weaknesses": string[], "clarity_score": int (0-10),
+  "rhythm_score": int, "coherence_score": int, "character_score": int,
+  "suggestions": string[], "warnings": string[], "provider", "model",
+  "generated_at" }`.
+
+POST `/ai/books/recommend` — role `READER`
+- Body (`AiBookRecommendationRequest`): `{ "user_preferences"?: string
+  (≤1000), "favorite_genres"?: string[] (each ≤80), "reading_history_ids"?:
+  UUID[] (excluded from candidates, not used for scoring), "language"?:
+  string (≤10), "limit"?: int (1-20, default 10) }`.
+- Response (`AiBookRecommendationResponse`): `{ "recommendations":
+  AiBookRecommendationItem[], "provider", "model", "generated_at" }`. Each
+  item is flat: `{ "book_id", "title", "reason", "score" }` — no cover/author,
+  the client re-fetches those via `GET /catalog/books/{bookId}` per item.
+- Gemini is instructed to only rank existing Plumora books, never invent
+  ones; the client still defensively drops any recommendation whose
+  `book_id` the catalog can't resolve rather than render a broken card.
+
+Error mapping relevant to all Plumo IA endpoints (`GlobalExceptionHandler`):
+403 for `AiUnauthorizedAccessException`/`AccessDeniedException`; 400 for
+input-too-large/usage-limit/validation failures; 503 for
+`AiConfigurationException`/`AiProviderUnavailableException`/
+`AiInvalidResponseException` (Gemini misconfigured, unreachable, or returned
+unparseable JSON).
 
 ## Notifications
 

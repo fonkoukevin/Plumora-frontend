@@ -6,8 +6,8 @@ import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/role_selection_screen.dart';
-import '../../features/ai/presentation/mukeme_recommendation_screen.dart';
-import '../../features/ai/presentation/mukeme_writing_screen.dart';
+import '../../features/ai/presentation/plumo_recommendation_screen.dart';
+import '../../features/ai/presentation/plumo_writing_screen.dart';
 import '../../features/beta_reading/presentation/author_beta_comments_screen.dart';
 import '../../features/beta_reading/presentation/beta_campaign_detail_author_screen.dart';
 import '../../features/beta_reading/presentation/beta_campaigns_author_screen.dart';
@@ -23,6 +23,7 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/presentation/landing_screen.dart';
 import '../../features/notification/presentation/notifications_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
+import '../../features/profile/presentation/preferences_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/reading/presentation/library_screen.dart';
 import '../../features/reading/presentation/my_favorites_screen.dart';
@@ -90,6 +91,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'edit-profile',
         builder: (context, state) => const EditProfileScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.preferences,
+        name: 'preferences',
+        builder: (context, state) => const PreferencesScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) {
           return MainShell(location: state.uri.path, child: child);
@@ -144,14 +150,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
-            path: AppRoutes.mukemeRecommendation,
-            name: 'mukeme-recommendation',
-            builder: (context, state) => const MukemeRecommendationScreen(),
+            path: AppRoutes.plumoRecommendation,
+            name: 'plumo-recommendation',
+            builder: (context, state) => const PlumoRecommendationScreen(),
           ),
           GoRoute(
-            path: AppRoutes.mukemeWriting,
-            name: 'mukeme-writing',
-            builder: (context, state) => MukemeWritingScreen(
+            path: AppRoutes.plumoWriting,
+            name: 'plumo-writing',
+            builder: (context, state) => PlumoWritingScreen(
               chapterId: state.uri.queryParameters['chapterId'],
             ),
           ),
@@ -379,8 +385,8 @@ abstract final class AppRoutes {
   static const String catalogSearch = '/discover/search';
   static const String catalogBookDetail = '/catalog/books/:bookId';
   static const String reading = '/books/:bookId/read';
-  static const String mukemeRecommendation = '/mukeme/recommendation';
-  static const String mukemeWriting = '/mukeme/writing';
+  static const String plumoRecommendation = '/plumo/recommendation';
+  static const String plumoWriting = '/plumo/writing';
   static const String write = '/write';
   static const String manuscripts = '/manuscripts';
   static const String editor = '/editor';
@@ -404,6 +410,7 @@ abstract final class AppRoutes {
   static const String libraryReviews = '/library/reviews';
   static const String profile = '/profile';
   static const String editProfile = '/profile/edit';
+  static const String preferences = '/profile/preferences';
   static const String notifications = '/notifications';
 
   static String authorBookDetailPath(String bookId) {
@@ -517,13 +524,13 @@ abstract final class AppRoutes {
     return '/books/$encoded/publish';
   }
 
-  static String mukemeWritingPath({String? chapterId}) {
+  static String plumoWritingPath({String? chapterId}) {
     final normalizedChapterId = chapterId?.trim();
     if (normalizedChapterId == null || normalizedChapterId.isEmpty) {
-      return mukemeWriting;
+      return plumoWriting;
     }
 
-    return '$mukemeWriting?chapterId=${Uri.encodeQueryComponent(normalizedChapterId)}';
+    return '$plumoWriting?chapterId=${Uri.encodeQueryComponent(normalizedChapterId)}';
   }
 
   static String authorChapterDetailPath(String chapterId, {String? bookId}) {

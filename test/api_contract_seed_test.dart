@@ -52,8 +52,8 @@ void main() {
           AppRoutes.publicDomainBookDetail,
           AppRoutes.catalogSearch,
           AppRoutes.catalogBookDetail,
-          AppRoutes.mukemeRecommendation,
-          AppRoutes.mukemeWriting,
+          AppRoutes.plumoRecommendation,
+          AppRoutes.plumoWriting,
           AppRoutes.write,
           AppRoutes.manuscripts,
           AppRoutes.editor,
@@ -115,8 +115,8 @@ void main() {
         '/chapters/chapter-1/author?bookId=book-1',
       );
       expect(
-        AppRoutes.mukemeWritingPath(chapterId: 'chapter-1'),
-        '/mukeme/writing?chapterId=chapter-1',
+        AppRoutes.plumoWritingPath(chapterId: 'chapter-1'),
+        '/plumo/writing?chapterId=chapter-1',
       );
       expect(
         AppRoutes.authorBetaCommentsPath('book-1'),

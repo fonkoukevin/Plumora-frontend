@@ -24,7 +24,7 @@ class MyFavoritesScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         PlumoraCard(
-          borderColor: const Color(0xFFF1C8C8),
+          borderColor: context.colors.destructive.withValues(alpha: 0.35),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -248,10 +248,7 @@ class _StateCard extends StatelessWidget {
         children: [
           Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
           if (action != null) ...[const SizedBox(height: 14), action!],
         ],
       ),

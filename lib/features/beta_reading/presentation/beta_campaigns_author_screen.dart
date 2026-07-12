@@ -760,7 +760,7 @@ class _CampaignList extends StatelessWidget {
                     PlumoraIconTile(
                       backgroundColor:
                           campaign.status == BetaCampaignStatus.active
-                          ? const Color(0xFFE8F0F5)
+                          ? context.colors.info.withValues(alpha: 0.12)
                           : context.colors.muted,
                       child: Icon(
                         campaign.status == BetaCampaignStatus.active
@@ -908,10 +908,7 @@ class _StateCard extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),

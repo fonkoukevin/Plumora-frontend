@@ -38,7 +38,7 @@ class _PlumoraCardState extends State<PlumoraCard> {
   Widget build(BuildContext context) {
     final hasHover = widget.onTap != null && _hovered;
     final card = AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
+      duration: const Duration(milliseconds: 200),
       width: double.infinity,
       clipBehavior: widget.clip || widget.leftAccent != null
           ? Clip.antiAlias
@@ -50,10 +50,8 @@ class _PlumoraCardState extends State<PlumoraCard> {
         boxShadow: widget.shadow
             ? [
                 BoxShadow(
-                  color: hasHover
-                      ? const Color(0x18000000)
-                      : const Color(0x0D000000),
-                  blurRadius: hasHover ? 8 : 2,
+                  color: const Color(0x1A000000),
+                  blurRadius: hasHover ? 8 : 3,
                   offset: Offset(0, hasHover ? 4 : 1),
                 ),
               ]
@@ -137,7 +135,7 @@ class PlumoraIconTile extends StatelessWidget {
 class PlumoraBadge extends StatelessWidget {
   const PlumoraBadge({
     required this.label,
-    this.backgroundColor = const Color(0xFFEADFCF),
+    this.backgroundColor,
     this.foregroundColor,
     this.icon,
     this.maxWidth,
@@ -145,7 +143,7 @@ class PlumoraBadge extends StatelessWidget {
   });
 
   final String label;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final Color? foregroundColor;
   final IconData? icon;
   final double? maxWidth;
@@ -153,10 +151,12 @@ class PlumoraBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedForegroundColor = foregroundColor ?? context.colors.primary;
+    final resolvedBackgroundColor =
+        backgroundColor ?? context.colors.primary.withValues(alpha: 0.12);
     final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: resolvedBackgroundColor,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(

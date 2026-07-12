@@ -7,24 +7,39 @@ final themeModeStorageProvider = Provider<ThemeModeStorage>((ref) {
   return const ThemeModeStorage();
 });
 
+final initialThemeModeProvider = Provider<ThemeMode>((ref) {
+  return ThemeMode.light;
+});
+
 final themeModeControllerProvider =
     NotifierProvider<ThemeModeController, ThemeMode>(ThemeModeController.new);
 
 class ThemeModeController extends Notifier<ThemeMode> {
-  @override
-  ThemeMode build() {
-    _restore();
-    return ThemeMode.light;
-  }
+  bool _saving = false;
 
-  Future<void> _restore() async {
-    final saved = await ref.read(themeModeStorageProvider).readThemeMode();
-    state = saved;
-  }
+  @override
+  ThemeMode build() => ref.watch(initialThemeModeProvider);
 
   Future<void> toggle() async {
     final next = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    state = next;
-    await ref.read(themeModeStorageProvider).saveThemeMode(next);
+    await setMode(next);
+  }
+
+  Future<void> setMode(ThemeMode mode) async {
+    if (_saving || state == mode) {
+      return;
+    }
+
+    _saving = true;
+    final previous = state;
+    state = mode;
+    try {
+      await ref.read(themeModeStorageProvider).saveThemeMode(mode);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    } finally {
+      _saving = false;
+    }
   }
 }

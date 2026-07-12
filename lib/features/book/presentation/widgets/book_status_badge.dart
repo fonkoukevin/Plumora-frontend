@@ -126,7 +126,7 @@ extension BookStatusUi on BookStatus {
       case BookStatus.readyToPublish:
         return context.colors.success;
       case BookStatus.published:
-        return context.colors.mukemeAccent;
+        return context.colors.plumoAccent;
       case BookStatus.archived:
         return context.colors.textSecondary;
       case BookStatus.unknown:

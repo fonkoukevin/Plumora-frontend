@@ -439,17 +439,17 @@ class _TipsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FigmaCard(
-      color: const Color(0xFFEFF6FF),
-      borderColor: const Color(0xFFBFDBFE),
+      color: context.colors.info.withValues(alpha: 0.08),
+      borderColor: context.colors.info.withValues(alpha: 0.30),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FigmaGradientIcon(
+          const FigmaGradientIcon(
             icon: Icons.info_outline,
             size: 46,
-            colors: [Colors.blue, Color(0xFF2563EB)],
+            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
           ),
-          SizedBox(width: 14),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,10 +495,7 @@ class _ErrorPanel extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],

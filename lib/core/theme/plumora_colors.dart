@@ -16,7 +16,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     required this.cards,
     required this.textPrimary,
     required this.textSecondary,
-    required this.mukemeAccent,
+    required this.plumoAccent,
     required this.secondary,
     required this.muted,
     required this.border,
@@ -30,6 +30,21 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     required this.appOutside,
     required this.darkBackground,
     required this.darkSurface,
+    required this.onPrimary,
+    required this.onSecondary,
+    required this.onAccent,
+    required this.onDestructive,
+    required this.inputBackground,
+    required this.switchBackground,
+    required this.ring,
+    required this.sidebar,
+    required this.sidebarForeground,
+    required this.brandPrimary,
+    required this.brandPrimaryLight,
+    required this.brandNavy,
+    required this.brandNavyLight,
+    required this.brandGold,
+    required this.brandGoldLight,
   });
 
   final Color primary;
@@ -39,7 +54,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
   final Color cards;
   final Color textPrimary;
   final Color textSecondary;
-  final Color mukemeAccent;
+  final Color plumoAccent;
   final Color secondary;
   final Color muted;
   final Color border;
@@ -53,6 +68,21 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
   final Color appOutside;
   final Color darkBackground;
   final Color darkSurface;
+  final Color onPrimary;
+  final Color onSecondary;
+  final Color onAccent;
+  final Color onDestructive;
+  final Color inputBackground;
+  final Color switchBackground;
+  final Color ring;
+  final Color sidebar;
+  final Color sidebarForeground;
+  final Color brandPrimary;
+  final Color brandPrimaryLight;
+  final Color brandNavy;
+  final Color brandNavyLight;
+  final Color brandGold;
+  final Color brandGoldLight;
 
   static const PlumoraColors light = PlumoraColors(
     primary: Color(0xFF4B2E83),
@@ -62,7 +92,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     cards: Color(0xFFFFFFFF),
     textPrimary: Color(0xFF1F1F1F),
     textSecondary: Color(0xFF6B6B6B),
-    mukemeAccent: Color(0xFF6B44B8),
+    plumoAccent: Color(0xFF6B44B8),
     secondary: Color(0xFF16213E),
     muted: Color(0xFFF0EDE6),
     border: Color(0xFFE5E2DA),
@@ -76,6 +106,21 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     appOutside: Color(0xFFF3F3F3),
     darkBackground: Color(0xFF111111),
     darkSurface: Color(0xFF1F1F1F),
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFFFFFFFF),
+    onAccent: Color(0xFFFFFFFF),
+    onDestructive: Color(0xFFFFFFFF),
+    inputBackground: Color(0xFFFFFFFF),
+    switchBackground: Color(0xFFE5E2DA),
+    ring: Color(0xFF4B2E83),
+    sidebar: Color(0xFFF8F7F3),
+    sidebarForeground: Color(0xFF1F1F1F),
+    brandPrimary: Color(0xFF4B2E83),
+    brandPrimaryLight: Color(0xFF6B44B8),
+    brandNavy: Color(0xFF16213E),
+    brandNavyLight: Color(0xFF1E3A5F),
+    brandGold: Color(0xFFC9A227),
+    brandGoldLight: Color(0xFFE0B830),
   );
 
   /// Matches the "figma_sombre" mockup's `theme.css` `:root` tokens exactly.
@@ -87,7 +132,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     cards: Color(0xFF1F2633),
     textPrimary: Color(0xFFF4F1EA),
     textSecondary: Color(0xFFA8A8B3),
-    mukemeAccent: Color(0xFF7C5CFF),
+    plumoAccent: Color(0xFF7C5CFF),
     secondary: Color(0xFF161B22),
     muted: Color(0xFF1A2030),
     border: Color(0xFF2A3142),
@@ -101,6 +146,21 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     appOutside: Color(0xFF05070B),
     darkBackground: Color(0xFF111111),
     darkSurface: Color(0xFF1F2633),
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFFF4F1EA),
+    onAccent: Color(0xFF0E1117),
+    onDestructive: Color(0xFFFFFFFF),
+    inputBackground: Color(0xFF1F2633),
+    switchBackground: Color(0xFF2A3142),
+    ring: Color(0xFF7C5CFF),
+    sidebar: Color(0xFF161B22),
+    sidebarForeground: Color(0xFFF4F1EA),
+    brandPrimary: Color(0xFF4B2E83),
+    brandPrimaryLight: Color(0xFF6B44B8),
+    brandNavy: Color(0xFF16213E),
+    brandNavyLight: Color(0xFF1E3A5F),
+    brandGold: Color(0xFFC9A227),
+    brandGoldLight: Color(0xFFE0B830),
   );
 
   @override
@@ -112,7 +172,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     Color? cards,
     Color? textPrimary,
     Color? textSecondary,
-    Color? mukemeAccent,
+    Color? plumoAccent,
     Color? secondary,
     Color? muted,
     Color? border,
@@ -126,6 +186,21 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     Color? appOutside,
     Color? darkBackground,
     Color? darkSurface,
+    Color? onPrimary,
+    Color? onSecondary,
+    Color? onAccent,
+    Color? onDestructive,
+    Color? inputBackground,
+    Color? switchBackground,
+    Color? ring,
+    Color? sidebar,
+    Color? sidebarForeground,
+    Color? brandPrimary,
+    Color? brandPrimaryLight,
+    Color? brandNavy,
+    Color? brandNavyLight,
+    Color? brandGold,
+    Color? brandGoldLight,
   }) {
     return PlumoraColors(
       primary: primary ?? this.primary,
@@ -135,7 +210,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
       cards: cards ?? this.cards,
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
-      mukemeAccent: mukemeAccent ?? this.mukemeAccent,
+      plumoAccent: plumoAccent ?? this.plumoAccent,
       secondary: secondary ?? this.secondary,
       muted: muted ?? this.muted,
       border: border ?? this.border,
@@ -149,6 +224,21 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
       appOutside: appOutside ?? this.appOutside,
       darkBackground: darkBackground ?? this.darkBackground,
       darkSurface: darkSurface ?? this.darkSurface,
+      onPrimary: onPrimary ?? this.onPrimary,
+      onSecondary: onSecondary ?? this.onSecondary,
+      onAccent: onAccent ?? this.onAccent,
+      onDestructive: onDestructive ?? this.onDestructive,
+      inputBackground: inputBackground ?? this.inputBackground,
+      switchBackground: switchBackground ?? this.switchBackground,
+      ring: ring ?? this.ring,
+      sidebar: sidebar ?? this.sidebar,
+      sidebarForeground: sidebarForeground ?? this.sidebarForeground,
+      brandPrimary: brandPrimary ?? this.brandPrimary,
+      brandPrimaryLight: brandPrimaryLight ?? this.brandPrimaryLight,
+      brandNavy: brandNavy ?? this.brandNavy,
+      brandNavyLight: brandNavyLight ?? this.brandNavyLight,
+      brandGold: brandGold ?? this.brandGold,
+      brandGoldLight: brandGoldLight ?? this.brandGoldLight,
     );
   }
 
@@ -166,7 +256,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
       cards: Color.lerp(cards, other.cards, t)!,
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
-      mukemeAccent: Color.lerp(mukemeAccent, other.mukemeAccent, t)!,
+      plumoAccent: Color.lerp(plumoAccent, other.plumoAccent, t)!,
       secondary: Color.lerp(secondary, other.secondary, t)!,
       muted: Color.lerp(muted, other.muted, t)!,
       border: Color.lerp(border, other.border, t)!,
@@ -180,11 +270,48 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
       appOutside: Color.lerp(appOutside, other.appOutside, t)!,
       darkBackground: Color.lerp(darkBackground, other.darkBackground, t)!,
       darkSurface: Color.lerp(darkSurface, other.darkSurface, t)!,
+      onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
+      onSecondary: Color.lerp(onSecondary, other.onSecondary, t)!,
+      onAccent: Color.lerp(onAccent, other.onAccent, t)!,
+      onDestructive: Color.lerp(onDestructive, other.onDestructive, t)!,
+      inputBackground: Color.lerp(inputBackground, other.inputBackground, t)!,
+      switchBackground: Color.lerp(
+        switchBackground,
+        other.switchBackground,
+        t,
+      )!,
+      ring: Color.lerp(ring, other.ring, t)!,
+      sidebar: Color.lerp(sidebar, other.sidebar, t)!,
+      sidebarForeground: Color.lerp(
+        sidebarForeground,
+        other.sidebarForeground,
+        t,
+      )!,
+      brandPrimary: Color.lerp(brandPrimary, other.brandPrimary, t)!,
+      brandPrimaryLight: Color.lerp(
+        brandPrimaryLight,
+        other.brandPrimaryLight,
+        t,
+      )!,
+      brandNavy: Color.lerp(brandNavy, other.brandNavy, t)!,
+      brandNavyLight: Color.lerp(brandNavyLight, other.brandNavyLight, t)!,
+      brandGold: Color.lerp(brandGold, other.brandGold, t)!,
+      brandGoldLight: Color.lerp(brandGoldLight, other.brandGoldLight, t)!,
     );
   }
 }
 
 extension PlumoraColorsContext on BuildContext {
-  PlumoraColors get colors =>
-      Theme.of(this).extension<PlumoraColors>() ?? PlumoraColors.light;
+  PlumoraColors get colors {
+    final theme = Theme.of(this);
+    final colors = theme.extension<PlumoraColors>();
+    assert(
+      colors != null,
+      'PlumoraColors doit être ajouté aux extensions du ThemeData.',
+    );
+    return colors ??
+        (theme.brightness == Brightness.dark
+            ? PlumoraColors.dark
+            : PlumoraColors.light);
+  }
 }

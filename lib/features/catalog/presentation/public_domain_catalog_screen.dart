@@ -506,7 +506,7 @@ class _ExternalBookCard extends StatelessWidget {
                       label: book.imported ? 'Importe' : 'Domaine public',
                       backgroundColor: book.imported
                           ? context.colors.success.withValues(alpha: 0.14)
-                          : const Color(0xFFEADFCF),
+                          : context.colors.primary.withValues(alpha: 0.12),
                       foregroundColor: book.imported
                           ? context.colors.success
                           : context.colors.primary,
@@ -572,10 +572,7 @@ class _StateCard extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),

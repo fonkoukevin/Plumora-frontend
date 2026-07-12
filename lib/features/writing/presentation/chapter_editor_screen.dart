@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +8,9 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../ai/data/models/plumo_ai_models.dart';
+import '../../ai/data/plumo_ai_error.dart';
+import '../../ai/data/repositories/plumo_ai_repository.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_repository.dart';
@@ -36,7 +40,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
   bool _isNewChapter = false;
   bool _isSaving = false;
   bool _readMode = false;
-  bool _showMukeme = false;
+  bool _showPlumo = false;
   bool _hasUnsavedChanges = false;
   String? _error;
 
@@ -98,7 +102,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
                     error: _error,
                     isNewChapter: _isNewChapter,
                     readMode: _readMode,
-                    showMukeme: _showMukeme,
+                    showPlumo: _showPlumo,
                     hasUnsavedChanges: _hasUnsavedChanges,
                     onSelect: _selectChapter,
                     onNew: () => _startNew(sorted),
@@ -106,8 +110,8 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
                     onChanged: _markDirty,
                     onReadModeChanged: (value) =>
                         setState(() => _readMode = value),
-                    onMukemeChanged: (value) =>
-                        setState(() => _showMukeme = value),
+                    onPlumoChanged: (value) =>
+                        setState(() => _showPlumo = value),
                   );
                 }
 
@@ -121,7 +125,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
                   error: _error,
                   isNewChapter: _isNewChapter,
                   readMode: _readMode,
-                  showMukeme: _showMukeme,
+                  showPlumo: _showPlumo,
                   hasUnsavedChanges: _hasUnsavedChanges,
                   onSelect: _selectChapter,
                   onNew: () => _startNew(sorted),
@@ -129,8 +133,8 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
                   onChanged: _markDirty,
                   onReadModeChanged: (value) =>
                       setState(() => _readMode = value),
-                  onMukemeChanged: (value) =>
-                      setState(() => _showMukeme = value),
+                  onPlumoChanged: (value) =>
+                      setState(() => _showPlumo = value),
                 );
               },
             );
@@ -202,7 +206,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
       _hydratedChapterId = chapter.id;
       _isNewChapter = false;
       _readMode = false;
-      _showMukeme = false;
+      _showPlumo = false;
       _hasUnsavedChanges = false;
       _error = null;
       _titleController.text = chapter.title;
@@ -222,7 +226,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
       _hydratedChapterId = '__new__';
       _isNewChapter = true;
       _readMode = false;
-      _showMukeme = false;
+      _showPlumo = false;
       _hasUnsavedChanges = true;
       _error = null;
       _titleController.text = 'Chapitre $nextOrder';
@@ -426,10 +430,10 @@ class _DesktopEditor extends StatelessWidget {
     required this.onSave,
     required this.onChanged,
     required this.readMode,
-    required this.showMukeme,
+    required this.showPlumo,
     required this.hasUnsavedChanges,
     required this.onReadModeChanged,
-    required this.onMukemeChanged,
+    required this.onPlumoChanged,
     this.error,
   });
 
@@ -445,10 +449,10 @@ class _DesktopEditor extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback onChanged;
   final bool readMode;
-  final bool showMukeme;
+  final bool showPlumo;
   final bool hasUnsavedChanges;
   final ValueChanged<bool> onReadModeChanged;
-  final ValueChanged<bool> onMukemeChanged;
+  final ValueChanged<bool> onPlumoChanged;
   final String? error;
 
   @override
@@ -474,7 +478,7 @@ class _DesktopEditor extends StatelessWidget {
             isSaving: isSaving,
             isNewChapter: isNewChapter,
             readMode: readMode,
-            showMukeme: showMukeme,
+            showPlumo: showPlumo,
             hasUnsavedChanges: hasUnsavedChanges,
             error: error,
             onSelect: onSelect,
@@ -482,7 +486,7 @@ class _DesktopEditor extends StatelessWidget {
             onSave: onSave,
             onChanged: onChanged,
             onReadModeChanged: onReadModeChanged,
-            onMukemeChanged: onMukemeChanged,
+            onPlumoChanged: onPlumoChanged,
           ),
         ),
       ],
@@ -504,10 +508,10 @@ class _MobileEditor extends StatelessWidget {
     required this.onSave,
     required this.onChanged,
     required this.readMode,
-    required this.showMukeme,
+    required this.showPlumo,
     required this.hasUnsavedChanges,
     required this.onReadModeChanged,
-    required this.onMukemeChanged,
+    required this.onPlumoChanged,
     this.error,
   });
 
@@ -523,10 +527,10 @@ class _MobileEditor extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback onChanged;
   final bool readMode;
-  final bool showMukeme;
+  final bool showPlumo;
   final bool hasUnsavedChanges;
   final ValueChanged<bool> onReadModeChanged;
-  final ValueChanged<bool> onMukemeChanged;
+  final ValueChanged<bool> onPlumoChanged;
   final String? error;
 
   @override
@@ -540,7 +544,7 @@ class _MobileEditor extends StatelessWidget {
       isSaving: isSaving,
       isNewChapter: isNewChapter,
       readMode: readMode,
-      showMukeme: showMukeme,
+      showPlumo: showPlumo,
       hasUnsavedChanges: hasUnsavedChanges,
       error: error,
       onSelect: onSelect,
@@ -548,7 +552,7 @@ class _MobileEditor extends StatelessWidget {
       onSave: onSave,
       onChanged: onChanged,
       onReadModeChanged: onReadModeChanged,
-      onMukemeChanged: onMukemeChanged,
+      onPlumoChanged: onPlumoChanged,
     );
   }
 }
@@ -825,14 +829,14 @@ class _FigmaEditorPane extends StatelessWidget {
     required this.isSaving,
     required this.isNewChapter,
     required this.readMode,
-    required this.showMukeme,
+    required this.showPlumo,
     required this.hasUnsavedChanges,
     required this.onSelect,
     required this.onNew,
     required this.onSave,
     required this.onChanged,
     required this.onReadModeChanged,
-    required this.onMukemeChanged,
+    required this.onPlumoChanged,
     this.error,
   });
 
@@ -844,14 +848,14 @@ class _FigmaEditorPane extends StatelessWidget {
   final bool isSaving;
   final bool isNewChapter;
   final bool readMode;
-  final bool showMukeme;
+  final bool showPlumo;
   final bool hasUnsavedChanges;
   final ValueChanged<ChapterModel> onSelect;
   final VoidCallback onNew;
   final VoidCallback onSave;
   final VoidCallback onChanged;
   final ValueChanged<bool> onReadModeChanged;
-  final ValueChanged<bool> onMukemeChanged;
+  final ValueChanged<bool> onPlumoChanged;
   final String? error;
 
   @override
@@ -882,15 +886,19 @@ class _FigmaEditorPane extends StatelessWidget {
       children: [
         _FigmaEditorToolbar(
           readMode: readMode,
-          showMukeme: showMukeme,
+          showPlumo: showPlumo,
           isSaving: isSaving,
           hasUnsavedChanges: hasUnsavedChanges || isNewChapter,
           onReadModeChanged: onReadModeChanged,
-          onMukemeChanged: onMukemeChanged,
+          onPlumoChanged: onPlumoChanged,
           onSave: onSave,
         ),
-        if (showMukeme && !readMode)
-          _FigmaMukemeDesktopPanel(onClose: () => onMukemeChanged(false)),
+        if (showPlumo && !readMode)
+          _FigmaPlumoDesktopPanel(
+            onClose: () => onPlumoChanged(false),
+            contentController: contentController,
+            titleController: titleController,
+          ),
         if (error != null) _FigmaEditorErrorBar(error!),
         Expanded(
           child: SingleChildScrollView(
@@ -1003,14 +1011,14 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
     required this.isSaving,
     required this.isNewChapter,
     required this.readMode,
-    required this.showMukeme,
+    required this.showPlumo,
     required this.hasUnsavedChanges,
     required this.onSelect,
     required this.onNew,
     required this.onSave,
     required this.onChanged,
     required this.onReadModeChanged,
-    required this.onMukemeChanged,
+    required this.onPlumoChanged,
     this.error,
   });
 
@@ -1022,14 +1030,14 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
   final bool isSaving;
   final bool isNewChapter;
   final bool readMode;
-  final bool showMukeme;
+  final bool showPlumo;
   final bool hasUnsavedChanges;
   final ValueChanged<ChapterModel> onSelect;
   final VoidCallback onNew;
   final VoidCallback onSave;
   final VoidCallback onChanged;
   final ValueChanged<bool> onReadModeChanged;
-  final ValueChanged<bool> onMukemeChanged;
+  final ValueChanged<bool> onPlumoChanged;
   final String? error;
 
   @override
@@ -1209,11 +1217,15 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
           readTime: readTime,
           saved: saved,
         ),
-        if (showMukeme)
-          _FigmaMobileMukemePanel(onClose: () => onMukemeChanged(false))
+        if (showPlumo)
+          _FigmaMobilePlumoPanel(
+            onClose: () => onPlumoChanged(false),
+            contentController: contentController,
+            titleController: titleController,
+          )
         else
           _FigmaBottomChapterToolbar(
-            onMukeme: () => onMukemeChanged(true),
+            onPlumo: () => onPlumoChanged(true),
             onReadMode: () => onReadModeChanged(!readMode),
             readMode: readMode,
           ),
@@ -1470,12 +1482,12 @@ class _FigmaMobileFooterStats extends StatelessWidget {
 
 class _FigmaBottomChapterToolbar extends StatelessWidget {
   const _FigmaBottomChapterToolbar({
-    required this.onMukeme,
+    required this.onPlumo,
     required this.onReadMode,
     required this.readMode,
   });
 
-  final VoidCallback onMukeme;
+  final VoidCallback onPlumo;
   final VoidCallback onReadMode;
   final bool readMode;
 
@@ -1498,7 +1510,7 @@ class _FigmaBottomChapterToolbar extends StatelessWidget {
             tooltip: readMode ? 'Écrire' : 'Lire',
           ),
           const SizedBox(width: 8),
-          Expanded(child: _FigmaMukemeButton(active: false, onTap: onMukeme)),
+          Expanded(child: _FigmaPlumoButton(active: false, onTap: onPlumo)),
         ],
       ),
     );
@@ -1515,14 +1527,14 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
     required this.isSaving,
     required this.isNewChapter,
     required this.readMode,
-    required this.showMukeme,
+    required this.showPlumo,
     required this.hasUnsavedChanges,
     required this.onSelect,
     required this.onNew,
     required this.onSave,
     required this.onChanged,
     required this.onReadModeChanged,
-    required this.onMukemeChanged,
+    required this.onPlumoChanged,
     this.error,
     super.key,
   });
@@ -1535,14 +1547,14 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
   final bool isSaving;
   final bool isNewChapter;
   final bool readMode;
-  final bool showMukeme;
+  final bool showPlumo;
   final bool hasUnsavedChanges;
   final ValueChanged<ChapterModel> onSelect;
   final VoidCallback onNew;
   final VoidCallback onSave;
   final VoidCallback onChanged;
   final ValueChanged<bool> onReadModeChanged;
-  final ValueChanged<bool> onMukemeChanged;
+  final ValueChanged<bool> onPlumoChanged;
   final String? error;
 
   @override
@@ -1696,10 +1708,14 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
           onSelect: onSelect,
           onNew: onNew,
         ),
-        if (showMukeme)
-          _FigmaMobileMukemePanel(onClose: () => onMukemeChanged(false))
+        if (showPlumo)
+          _FigmaMobilePlumoPanel(
+            onClose: () => onPlumoChanged(false),
+            contentController: contentController,
+            titleController: titleController,
+          )
         else if (!readMode)
-          _FigmaMobileWritingToolbar(onMukeme: () => onMukemeChanged(true)),
+          _FigmaMobileWritingToolbar(onPlumo: () => onPlumoChanged(true)),
       ],
     );
   }
@@ -1724,20 +1740,20 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
 class _FigmaEditorToolbar extends StatelessWidget {
   const _FigmaEditorToolbar({
     required this.readMode,
-    required this.showMukeme,
+    required this.showPlumo,
     required this.isSaving,
     required this.hasUnsavedChanges,
     required this.onReadModeChanged,
-    required this.onMukemeChanged,
+    required this.onPlumoChanged,
     required this.onSave,
   });
 
   final bool readMode;
-  final bool showMukeme;
+  final bool showPlumo;
   final bool isSaving;
   final bool hasUnsavedChanges;
   final ValueChanged<bool> onReadModeChanged;
-  final ValueChanged<bool> onMukemeChanged;
+  final ValueChanged<bool> onPlumoChanged;
   final VoidCallback onSave;
 
   @override
@@ -1802,9 +1818,9 @@ class _FigmaEditorToolbar extends StatelessWidget {
           ),
           if (!readMode) ...[
             const SizedBox(width: 8),
-            _FigmaMukemeButton(
-              active: showMukeme,
-              onTap: () => onMukemeChanged(!showMukeme),
+            _FigmaPlumoButton(
+              active: showPlumo,
+              onTap: () => onPlumoChanged(!showPlumo),
             ),
             const SizedBox(width: 8),
             _FigmaSaveButton(
@@ -1819,10 +1835,25 @@ class _FigmaEditorToolbar extends StatelessWidget {
   }
 }
 
-class _FigmaMukemeDesktopPanel extends StatelessWidget {
-  const _FigmaMukemeDesktopPanel({required this.onClose});
+class _FigmaPlumoDesktopPanel extends ConsumerStatefulWidget {
+  const _FigmaPlumoDesktopPanel({
+    required this.onClose,
+    required this.contentController,
+    required this.titleController,
+  });
 
   final VoidCallback onClose;
+  final TextEditingController contentController;
+  final TextEditingController titleController;
+
+  @override
+  ConsumerState<_FigmaPlumoDesktopPanel> createState() =>
+      _FigmaPlumoDesktopPanelState();
+}
+
+class _FigmaPlumoDesktopPanelState
+    extends ConsumerState<_FigmaPlumoDesktopPanel> {
+  _PlumoQuickAction? _pendingAction;
 
   @override
   Widget build(BuildContext context) {
@@ -1838,23 +1869,20 @@ class _FigmaMukemeDesktopPanel extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Sélectionnez du texte puis demandez à Mukeme.',
+              'Sélectionne du texte (ou laisse tout le chapitre) puis demande à Plumo.',
               style: TextStyle(
                 color: context.colors.textSecondary,
                 fontSize: 12,
               ),
             ),
           ),
-          for (final action in const [
-            'Reformuler',
-            'Améliorer le style',
-            'Développer',
-            'Résumer',
-          ])
+          for (final action in _PlumoQuickAction.values)
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: OutlinedButton(
-                onPressed: () {},
+                onPressed: _pendingAction == null
+                    ? () => _run(action)
+                    : null,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -1865,17 +1893,37 @@ class _FigmaMukemeDesktopPanel extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                child: Text(action),
+                child: _pendingAction == action
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(action.label),
               ),
             ),
           IconButton(
-            onPressed: onClose,
+            onPressed: widget.onClose,
             icon: const Icon(Icons.close, size: 18),
             color: context.colors.textSecondary,
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _run(_PlumoQuickAction action) async {
+    setState(() => _pendingAction = action);
+    await _runPlumoQuickAction(
+      context: context,
+      ref: ref,
+      action: action,
+      contentController: widget.contentController,
+      titleController: widget.titleController,
+    );
+    if (mounted) {
+      setState(() => _pendingAction = null);
+    }
   }
 }
 
@@ -2140,8 +2188,8 @@ class _FigmaToolbarSeparator extends StatelessWidget {
   }
 }
 
-class _FigmaMukemeButton extends StatelessWidget {
-  const _FigmaMukemeButton({required this.active, required this.onTap});
+class _FigmaPlumoButton extends StatelessWidget {
+  const _FigmaPlumoButton({required this.active, required this.onTap});
 
   final bool active;
   final VoidCallback onTap;
@@ -2151,7 +2199,7 @@ class _FigmaMukemeButton extends StatelessWidget {
     return TextButton.icon(
       onPressed: onTap,
       icon: const Icon(Icons.auto_awesome, size: 16),
-      label: const Text('Mukeme'),
+      label: const Text('Plumo'),
       style: TextButton.styleFrom(
         foregroundColor: _writeAccent,
         backgroundColor: _writeAccent.withValues(alpha: active ? 0.18 : 0.12),
@@ -3046,9 +3094,9 @@ class _FigmaMobileJumpButton extends StatelessWidget {
 }
 
 class _FigmaMobileWritingToolbar extends StatelessWidget {
-  const _FigmaMobileWritingToolbar({required this.onMukeme});
+  const _FigmaMobileWritingToolbar({required this.onPlumo});
 
-  final VoidCallback onMukeme;
+  final VoidCallback onPlumo;
 
   @override
   Widget build(BuildContext context) {
@@ -3092,9 +3140,9 @@ class _FigmaMobileWritingToolbar extends StatelessWidget {
               ),
             ),
             TextButton.icon(
-              onPressed: onMukeme,
+              onPressed: onPlumo,
               icon: const Icon(Icons.auto_awesome, size: 16),
-              label: const Text('Mukeme'),
+              label: const Text('Plumo'),
               style: TextButton.styleFrom(
                 foregroundColor: _writeAccent,
                 backgroundColor: _writeAccent.withValues(alpha: 0.12),
@@ -3142,10 +3190,25 @@ class _FigmaMobileToolbarIcon extends StatelessWidget {
   }
 }
 
-class _FigmaMobileMukemePanel extends StatelessWidget {
-  const _FigmaMobileMukemePanel({required this.onClose});
+class _FigmaMobilePlumoPanel extends ConsumerStatefulWidget {
+  const _FigmaMobilePlumoPanel({
+    required this.onClose,
+    required this.contentController,
+    required this.titleController,
+  });
 
   final VoidCallback onClose;
+  final TextEditingController contentController;
+  final TextEditingController titleController;
+
+  @override
+  ConsumerState<_FigmaMobilePlumoPanel> createState() =>
+      _FigmaMobilePlumoPanelState();
+}
+
+class _FigmaMobilePlumoPanelState
+    extends ConsumerState<_FigmaMobilePlumoPanel> {
+  _PlumoQuickAction? _pendingAction;
 
   @override
   Widget build(BuildContext context) {
@@ -3166,7 +3229,7 @@ class _FigmaMobileMukemePanel extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Mukeme',
+                    'Plumo',
                     style: TextStyle(
                       color: context.colors.textPrimary,
                       fontSize: 14,
@@ -3175,7 +3238,7 @@ class _FigmaMobileMukemePanel extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  onPressed: onClose,
+                  onPressed: widget.onClose,
                   icon: const Icon(Icons.close, size: 20),
                   color: context.colors.textSecondary,
                 ),
@@ -3186,17 +3249,478 @@ class _FigmaMobileMukemePanel extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final action in const [
-                  'Reformuler',
-                  'Améliorer le style',
-                  'Développer',
-                  'Corriger',
-                ])
-                  OutlinedButton(onPressed: () {}, child: Text(action)),
+                for (final action in _PlumoQuickAction.values)
+                  OutlinedButton(
+                    onPressed: _pendingAction == null
+                        ? () => _run(action)
+                        : null,
+                    child: _pendingAction == action
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(action.label),
+                  ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _run(_PlumoQuickAction action) async {
+    setState(() => _pendingAction = action);
+    await _runPlumoQuickAction(
+      context: context,
+      ref: ref,
+      action: action,
+      contentController: widget.contentController,
+      titleController: widget.titleController,
+    );
+    if (mounted) {
+      setState(() => _pendingAction = null);
+    }
+  }
+}
+
+enum _PlumoQuickAction {
+  rewrite('Reformuler', Icons.autorenew),
+  improveStyle('Améliorer le style', Icons.auto_fix_high),
+  summarize('Résumer', Icons.short_text),
+  continueStory("Continuer l'histoire", Icons.fast_forward),
+  titles('Proposer des titres', Icons.title);
+
+  const _PlumoQuickAction(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
+}
+
+class _PlumoQuickResult {
+  const _PlumoQuickResult({
+    this.suggestion,
+    this.titles = const [],
+    this.explanation = '',
+    this.warnings = const [],
+  });
+
+  final String? suggestion;
+  final List<String> titles;
+  final String explanation;
+  final List<String> warnings;
+}
+
+/// Runs a quick Plumo IA action on the current selection (or the whole
+/// chapter when nothing is selected) and shows the result in a bottom sheet.
+/// Never touches [contentController]/[titleController] itself -- only the
+/// sheet's Remplacer/Inserer/Utiliser buttons do, and only once the user taps
+/// them, per the "never auto-apply" rule.
+Future<void> _runPlumoQuickAction({
+  required BuildContext context,
+  required WidgetRef ref,
+  required _PlumoQuickAction action,
+  required TextEditingController contentController,
+  required TextEditingController titleController,
+}) async {
+  final selection = contentController.selection;
+  final hasSelection = selection.isValid && !selection.isCollapsed;
+  final sourceText = (hasSelection
+          ? selection.textInside(contentController.text)
+          : contentController.text)
+      .trim();
+
+  if (sourceText.isEmpty) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Écris ou sélectionne un passage avant de demander à Plumo.",
+          ),
+        ),
+      );
+    }
+    return;
+  }
+
+  final repository = ref.read(plumoAiRepositoryProvider);
+  final request = AiWritingRequest(
+    text: sourceText,
+    instruction: action == _PlumoQuickAction.improveStyle
+        ? "Améliore le style d'écriture sans changer le sens ni les événements."
+        : null,
+  );
+
+  Future<_PlumoQuickResult> load() async {
+    switch (action) {
+      case _PlumoQuickAction.rewrite:
+      case _PlumoQuickAction.improveStyle:
+        final result = await repository.rewriteText(request);
+        return _PlumoQuickResult(
+          suggestion: result.suggestion,
+          explanation: result.explanation,
+          warnings: result.warnings,
+        );
+      case _PlumoQuickAction.summarize:
+        final result = await repository.summarizeText(request);
+        return _PlumoQuickResult(
+          suggestion: result.suggestion,
+          explanation: result.explanation,
+          warnings: result.warnings,
+        );
+      case _PlumoQuickAction.continueStory:
+        final result = await repository.continueText(request);
+        return _PlumoQuickResult(
+          suggestion: result.suggestion,
+          explanation: result.explanation,
+          warnings: result.warnings,
+        );
+      case _PlumoQuickAction.titles:
+        final result = await repository.suggestTitles(request);
+        return _PlumoQuickResult(
+          titles: result.titles,
+          explanation: result.explanation,
+          warnings: result.warnings,
+        );
+    }
+  }
+
+  final resultFuture = load();
+  if (!context.mounted) {
+    return;
+  }
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => _PlumoResultSheet(
+      action: action,
+      future: resultFuture,
+      onReplace: (text) {
+        final start = hasSelection ? selection.start : 0;
+        final end = hasSelection
+            ? selection.end
+            : contentController.text.length;
+        final newText = contentController.text.replaceRange(start, end, text);
+        contentController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: start + text.length),
+        );
+      },
+      onInsertAfter: (text) {
+        final insertAt = hasSelection
+            ? selection.end
+            : contentController.text.length;
+        final separator = insertAt == 0 ? '' : '\n\n';
+        final newText = contentController.text.replaceRange(
+          insertAt,
+          insertAt,
+          '$separator$text',
+        );
+        contentController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(
+            offset: insertAt + separator.length + text.length,
+          ),
+        );
+      },
+      onUseAsTitle: (text) => titleController.text = text,
+    ),
+  );
+}
+
+class _PlumoResultSheet extends StatelessWidget {
+  const _PlumoResultSheet({
+    required this.action,
+    required this.future,
+    required this.onReplace,
+    required this.onInsertAfter,
+    required this.onUseAsTitle,
+  });
+
+  final _PlumoQuickAction action;
+  final Future<_PlumoQuickResult> future;
+  final ValueChanged<String> onReplace;
+  final ValueChanged<String> onInsertAfter;
+  final ValueChanged<String> onUseAsTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: context.colors.cards,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(20),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: FutureBuilder<_PlumoQuickResult>(
+            future: future,
+            builder: (context, snapshot) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: context.colors.border,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      const _FigmaGradientIconBox(
+                        icon: Icons.auto_awesome,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          action.label,
+                          style: TextStyle(
+                            color: context.colors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close, size: 18),
+                        color: context.colors.textSecondary,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: _buildBody(context, snapshot),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    AsyncSnapshot<_PlumoQuickResult> snapshot,
+  ) {
+    if (snapshot.connectionState != ConnectionState.done) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 42),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (snapshot.hasError) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text(
+          plumoAiErrorMessage(snapshot.error!),
+          style: TextStyle(color: context.colors.destructive),
+        ),
+      );
+    }
+
+    final result = snapshot.data!;
+    if (action == _PlumoQuickAction.titles) {
+      if (result.titles.isEmpty) {
+        return Text(
+          "Plumo n'a proposé aucun titre.",
+          style: TextStyle(color: context.colors.textSecondary),
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final title in result.titles) ...[
+            _PlumoTitleTile(
+              title: title,
+              onUseAsTitle: () {
+                onUseAsTitle(title);
+                Navigator.of(context).pop();
+              },
+              onCopy: () => _copy(context, title),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (result.explanation.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              result.explanation,
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
+    final suggestion = result.suggestion ?? '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: context.colors.primary.withValues(alpha: 0.06),
+            border: Border.all(
+              color: context.colors.primary.withValues(alpha: 0.3),
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            suggestion.isEmpty
+                ? "Plumo n'a renvoyé aucune suggestion."
+                : suggestion,
+            style: const TextStyle(height: 1.45, fontWeight: FontWeight.w600),
+          ),
+        ),
+        if (result.explanation.trim().isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            result.explanation,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ],
+        if (result.warnings.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          for (final warning in result.warnings)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 15,
+                    color: context.colors.accent,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      warning,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+        if (suggestion.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () {
+                    onReplace(suggestion);
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.find_replace, size: 18),
+                  label: const Text('Remplacer'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    onInsertAfter(suggestion);
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.playlist_add, size: 18),
+                  label: const Text('Insérer'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: () => _copy(context, suggestion),
+              icon: const Icon(Icons.copy_outlined, size: 18),
+              label: const Text('Copier'),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _copy(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copié dans le presse-papiers.')),
+    );
+  }
+}
+
+class _PlumoTitleTile extends StatelessWidget {
+  const _PlumoTitleTile({
+    required this.title,
+    required this.onUseAsTitle,
+    required this.onCopy,
+  });
+
+  final String title;
+  final VoidCallback onUseAsTitle;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.colors.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: context.colors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onCopy,
+            icon: const Icon(Icons.copy_outlined, size: 18),
+            tooltip: 'Copier',
+          ),
+          TextButton(onPressed: onUseAsTitle, child: const Text('Utiliser')),
+        ],
       ),
     );
   }

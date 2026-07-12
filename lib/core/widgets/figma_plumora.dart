@@ -73,7 +73,7 @@ class FigmaCard extends StatelessWidget {
     final resolvedBorderColor = borderColor ?? context.colors.border;
     final radiusValue = BorderRadius.circular(radius);
     final decorated = AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
+      duration: const Duration(milliseconds: 200),
       width: double.infinity,
       clipBehavior: clip ? Clip.antiAlias : Clip.none,
       decoration: BoxDecoration(
@@ -84,9 +84,9 @@ class FigmaCard extends StatelessWidget {
         boxShadow: shadow
             ? const [
                 BoxShadow(
-                  color: Color(0x10000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
+                  color: Color(0x1A000000),
+                  blurRadius: 3,
+                  offset: Offset(0, 1),
                 ),
               ]
             : null,
@@ -179,7 +179,10 @@ class FigmaBrandMark extends StatelessWidget {
             color: gradient ? null : context.colors.primary,
             gradient: gradient
                 ? LinearGradient(
-                    colors: [context.colors.primary, context.colors.primaryLight],
+                    colors: [
+                      context.colors.primary,
+                      context.colors.primaryLight,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
@@ -231,7 +234,8 @@ class FigmaBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: backgroundColor ?? context.colors.primary.withValues(alpha: 0.12),
+        color:
+            backgroundColor ?? context.colors.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -723,10 +727,7 @@ class FigmaEmptyState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
           ),
         ],
       ),

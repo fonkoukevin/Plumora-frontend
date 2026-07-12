@@ -11,17 +11,17 @@ import '../../book/data/repositories/chapter_repository.dart';
 import '../data/models/ai_models.dart';
 import '../data/repositories/ai_repository.dart';
 
-class MukemeWritingScreen extends ConsumerStatefulWidget {
-  const MukemeWritingScreen({this.chapterId, super.key});
+class PlumoWritingScreen extends ConsumerStatefulWidget {
+  const PlumoWritingScreen({this.chapterId, super.key});
 
   final String? chapterId;
 
   @override
-  ConsumerState<MukemeWritingScreen> createState() =>
-      _MukemeWritingScreenState();
+  ConsumerState<PlumoWritingScreen> createState() =>
+      _PlumoWritingScreenState();
 }
 
-class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
+class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
   final _selectedTextController = TextEditingController();
   final _contextController = TextEditingController();
   AiWritingActionType? _selectedAction;
@@ -86,7 +86,7 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Mukeme',
+                      'Plumo',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
@@ -111,7 +111,7 @@ class _MukemeWritingScreenState extends ConsumerState<MukemeWritingScreen> {
             child: Column(
               children: [
                 Text(
-                  'Ameliore ton texte avec Mukeme',
+                  'Ameliore ton texte avec Plumo',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.colors.textPrimary,
@@ -372,8 +372,8 @@ class _ActionColumn extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         FigmaCard(
-          color: const Color(0xFFEFF6FF),
-          borderColor: const Color(0xFFBFDBFE),
+          color: context.colors.info.withValues(alpha: 0.08),
+          borderColor: context.colors.info.withValues(alpha: 0.30),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -381,7 +381,7 @@ class _ActionColumn extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  "Mukeme est une aide a l'ecriture : chaque suggestion peut etre acceptee, modifiee ou ignoree.",
+                  "Plumo est une aide a l'ecriture : chaque suggestion peut etre acceptee, modifiee ou ignoree.",
                   style: TextStyle(
                     color: context.colors.textSecondary,
                     height: 1.4,
@@ -459,7 +459,7 @@ class _SuggestionColumn extends StatelessWidget {
               Icon(Icons.auto_awesome, color: context.colors.primary),
               SizedBox(width: 8),
               Text(
-                'Suggestion de Mukeme',
+                'Suggestion de Plumo',
                 style: TextStyle(
                   color: context.colors.textPrimary,
                   fontWeight: FontWeight.w900,
@@ -617,7 +617,7 @@ class _ScaffoldError extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Mukeme indisponible',
+                  'Plumo indisponible',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 8),

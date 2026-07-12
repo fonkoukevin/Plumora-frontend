@@ -10,9 +10,6 @@ import '../../catalog/data/models/catalog_book_model.dart';
 import '../data/models/reading_progress_model.dart';
 import '../data/repositories/reading_repository.dart';
 
-const Color _readerPaper = Color(0xFFFFFEFA);
-const Color _readerInk = Color(0xFF15120E);
-const Color _readerMuted = Color(0xFF625A50);
 const List<String> _readerFontFallback = [
   'Georgia',
   'Times New Roman',
@@ -96,13 +93,11 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         final progress = (safeIndex + 1) / chapters.length;
 
         return Scaffold(
-          backgroundColor: _readerPaper,
+          backgroundColor: context.colors.background,
           appBar: AppBar(
             backgroundColor: context.colors.cards,
             surfaceTintColor: Colors.transparent,
-            shape: Border(
-              bottom: BorderSide(color: context.colors.border),
-            ),
+            shape: Border(bottom: BorderSide(color: context.colors.border)),
             leading: IconButton(
               onPressed: () => context.go(AppRoutes.library),
               icon: const Icon(Icons.arrow_back),
@@ -144,7 +139,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
             children: [
               Expanded(
                 child: ColoredBox(
-                  color: _readerPaper,
+                  color: context.colors.background,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final compact = constraints.maxWidth < 520;
@@ -174,9 +169,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
               Container(
                 decoration: BoxDecoration(
                   color: context.colors.cards,
-                  border: Border(
-                    top: BorderSide(color: context.colors.border),
-                  ),
+                  border: Border(top: BorderSide(color: context.colors.border)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
@@ -384,7 +377,7 @@ class _ReaderText extends StatelessWidget {
             child: Text(
               chapter.title,
               textAlign: TextAlign.center,
-              style: _readerHeadingStyle(compact),
+              style: _readerHeadingStyle(context, compact),
             ),
           ),
           const SizedBox(height: 30),
@@ -422,7 +415,7 @@ class _ReaderBlockView extends StatelessWidget {
             child: Text(
               block.text,
               textAlign: TextAlign.center,
-              style: _readerHeadingStyle(compact),
+              style: _readerHeadingStyle(context, compact),
             ),
           ),
         );
@@ -432,7 +425,7 @@ class _ReaderBlockView extends StatelessWidget {
           child: Text(
             block.text,
             textAlign: block.center ? TextAlign.center : TextAlign.left,
-            style: _readerMetadataStyle(compact),
+            style: _readerMetadataStyle(context, compact),
           ),
         );
       case _ReaderBlockType.preformatted:
@@ -440,7 +433,10 @@ class _ReaderBlockView extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 20),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Text(block.text, style: _readerPreformattedStyle(compact)),
+            child: Text(
+              block.text,
+              style: _readerPreformattedStyle(context, compact),
+            ),
           ),
         );
       case _ReaderBlockType.separator:
@@ -467,7 +463,7 @@ class _ReaderBlockView extends StatelessWidget {
           child: Text(
             block.text,
             textAlign: TextAlign.left,
-            style: _readerParagraphStyle(compact),
+            style: _readerParagraphStyle(context, compact),
           ),
         );
     }
@@ -575,9 +571,9 @@ class _ReaderBlock {
 
 enum _ReaderBlockType { heading, metadata, paragraph, preformatted, separator }
 
-TextStyle _readerHeadingStyle(bool compact) {
+TextStyle _readerHeadingStyle(BuildContext context, bool compact) {
   return TextStyle(
-    color: _readerInk,
+    color: context.colors.textPrimary,
     fontFamily: 'Georgia',
     fontFamilyFallback: _readerFontFallback,
     fontSize: compact ? 24 : 28,
@@ -587,9 +583,9 @@ TextStyle _readerHeadingStyle(bool compact) {
   );
 }
 
-TextStyle _readerParagraphStyle(bool compact) {
+TextStyle _readerParagraphStyle(BuildContext context, bool compact) {
   return TextStyle(
-    color: _readerInk,
+    color: context.colors.textPrimary,
     fontFamily: 'Georgia',
     fontFamilyFallback: _readerFontFallback,
     fontSize: compact ? 18 : 19,
@@ -599,9 +595,9 @@ TextStyle _readerParagraphStyle(bool compact) {
   );
 }
 
-TextStyle _readerMetadataStyle(bool compact) {
+TextStyle _readerMetadataStyle(BuildContext context, bool compact) {
   return TextStyle(
-    color: _readerMuted,
+    color: context.colors.textSecondary,
     fontFamily: 'Georgia',
     fontFamilyFallback: _readerFontFallback,
     fontSize: compact ? 16 : 17,
@@ -611,9 +607,9 @@ TextStyle _readerMetadataStyle(bool compact) {
   );
 }
 
-TextStyle _readerPreformattedStyle(bool compact) {
+TextStyle _readerPreformattedStyle(BuildContext context, bool compact) {
   return TextStyle(
-    color: _readerInk,
+    color: context.colors.textPrimary,
     fontFamily: 'Georgia',
     fontFamilyFallback: _readerFontFallback,
     fontSize: compact ? 16 : 17,

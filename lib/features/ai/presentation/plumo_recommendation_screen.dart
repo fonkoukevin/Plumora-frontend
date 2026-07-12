@@ -11,16 +11,16 @@ import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/ai_models.dart';
 import '../data/repositories/ai_repository.dart';
 
-class MukemeRecommendationScreen extends ConsumerStatefulWidget {
-  const MukemeRecommendationScreen({super.key});
+class PlumoRecommendationScreen extends ConsumerStatefulWidget {
+  const PlumoRecommendationScreen({super.key});
 
   @override
-  ConsumerState<MukemeRecommendationScreen> createState() =>
-      _MukemeRecommendationScreenState();
+  ConsumerState<PlumoRecommendationScreen> createState() =>
+      _PlumoRecommendationScreenState();
 }
 
-class _MukemeRecommendationScreenState
-    extends ConsumerState<MukemeRecommendationScreen> {
+class _PlumoRecommendationScreenState
+    extends ConsumerState<PlumoRecommendationScreen> {
   final _queryController = TextEditingController();
   final Set<String> _moods = {};
   final Set<String> _genres = {};
@@ -38,7 +38,7 @@ class _MukemeRecommendationScreenState
   @override
   Widget build(BuildContext context) {
     if (_results != null) {
-      return _MukemeResults(
+      return _PlumoResults(
         recommendations: _results!,
         loading: _loading,
         error: _error,
@@ -71,7 +71,7 @@ class _MukemeRecommendationScreenState
                 ),
                 SizedBox(height: 14),
                 Text(
-                  'Mukeme',
+                  'Plumo',
                   style: TextStyle(
                     color: context.colors.textPrimary,
                     fontSize: 38,
@@ -329,8 +329,8 @@ class _ChoiceButton extends StatelessWidget {
   }
 }
 
-class _MukemeResults extends StatelessWidget {
-  const _MukemeResults({
+class _PlumoResults extends StatelessWidget {
+  const _PlumoResults({
     required this.recommendations,
     required this.loading,
     required this.onBack,
@@ -396,7 +396,7 @@ class _MukemeResults extends StatelessWidget {
           else if (recommendations.isEmpty)
             const FigmaEmptyState(
               title: 'Aucune recommandation',
-              message: "Mukeme n'a renvoye aucun livre pour cette demande.",
+              message: "Plumo n'a renvoye aucun livre pour cette demande.",
               icon: Icons.auto_awesome,
             )
           else

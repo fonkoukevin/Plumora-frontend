@@ -50,8 +50,8 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
             data: (campaign) => campaign.deadline == null
                 ? const SizedBox.shrink()
                 : FigmaCard(
-                    color: const Color(0xFFFFFBEB),
-                    borderColor: const Color(0xFFFDE68A),
+                    color: context.colors.warning.withValues(alpha: 0.08),
+                    borderColor: context.colors.warning.withValues(alpha: 0.35),
                     child: Row(
                       children: [
                         Icon(Icons.schedule, color: context.colors.orange),
@@ -254,10 +254,7 @@ class _ErrorPanel extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],

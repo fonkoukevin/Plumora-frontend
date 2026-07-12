@@ -48,7 +48,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    context.go(session!.roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home);
+    context.go(
+      session!.roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home,
+    );
   }
 
   Future<void> _submitGoogle() async {
@@ -59,7 +61,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    context.go(session!.roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home);
+    context.go(
+      session!.roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home,
+    );
   }
 
   @override
@@ -169,7 +173,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
                   _SocialButton(
-                    icon: const Icon(Icons.code, color: Color(0xFF24292E)),
+                    icon: Icon(Icons.code, color: context.colors.textPrimary),
                     label: 'Continuer avec GitHub',
                     onPressed: isLoading
                         ? null

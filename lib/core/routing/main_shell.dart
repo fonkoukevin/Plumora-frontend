@@ -260,7 +260,7 @@ class _DesktopShell extends StatelessWidget {
           Container(
             width: 264,
             decoration: BoxDecoration(
-              color: context.colors.background,
+              color: context.colors.sidebar,
               border: Border(right: BorderSide(color: context.colors.border)),
             ),
             child: SafeArea(
@@ -318,7 +318,9 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? context.colors.primary : context.colors.textPrimary;
+    final color = selected
+        ? context.colors.primary
+        : context.colors.sidebarForeground;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -329,9 +331,7 @@ class _SidebarItem extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: selected
-                ? context.colors.primary.withValues(alpha: 0.10)
-                : Colors.transparent,
+            color: selected ? context.colors.cards : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(

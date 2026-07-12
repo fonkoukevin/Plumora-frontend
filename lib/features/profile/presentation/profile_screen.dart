@@ -178,10 +178,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           _SettingsTile(
             icon: Icons.auto_awesome,
-            title: 'Assistant Mukeme',
+            title: 'Assistant Plumo',
             subtitle: 'Ouvrir les assistants IA',
             color: const Color(0xFF6D3A5D),
-            onTap: () => context.go(AppRoutes.mukemeWriting),
+            onTap: () => context.go(AppRoutes.plumoWriting),
+          ),
+          _SettingsTile(
+            icon: Icons.settings_outlined,
+            title: 'Preferences',
+            subtitle: 'Theme clair ou sombre',
+            color: const Color(0xFF6B6B6B),
+            onTap: () => context.push(AppRoutes.preferences),
           ),
           const SizedBox(height: 14),
           OutlinedButton.icon(

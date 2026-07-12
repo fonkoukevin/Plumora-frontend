@@ -11,15 +11,22 @@ class ThemeModeStorage {
   final FlutterSecureStorage _storage;
 
   Future<ThemeMode> readThemeMode() async {
-    final raw = await _storage.read(key: _key);
-    return switch (raw) {
-      'dark' => ThemeMode.dark,
-      'light' => ThemeMode.light,
-      _ => ThemeMode.light,
-    };
+    try {
+      final raw = await _storage.read(key: _key);
+      return switch (raw) {
+        'dark' => ThemeMode.dark,
+        'light' => ThemeMode.light,
+        _ => ThemeMode.light,
+      };
+    } catch (_) {
+      return ThemeMode.light;
+    }
   }
 
   Future<void> saveThemeMode(ThemeMode mode) {
-    return _storage.write(key: _key, value: mode == ThemeMode.dark ? 'dark' : 'light');
+    return _storage.write(
+      key: _key,
+      value: mode == ThemeMode.dark ? 'dark' : 'light',
+    );
   }
 }

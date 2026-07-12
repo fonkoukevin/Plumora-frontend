@@ -11,6 +11,9 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../ai/data/models/plumo_ai_models.dart';
+import '../../ai/data/plumo_ai_error.dart';
+import '../../ai/data/repositories/plumo_ai_repository.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/catalog_book_model.dart';
 import '../data/models/external_book_model.dart';
@@ -68,7 +71,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               delegate: _DiscoverHeaderDelegate(
                 searchController: _searchController,
                 onSearch: _submitSearch,
-                onMukemeTap: () => context.go(AppRoutes.mukemeRecommendation),
+                onPlumoTap: () => context.go(AppRoutes.plumoRecommendation),
               ),
             ),
             SliverToBoxAdapter(
@@ -124,6 +127,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                             query: plumoraQuery,
                           ),
                           const SizedBox(height: 32),
+                          if (searchQuery.isEmpty) ...[
+                            const _PlumoRecommendationsSection(),
+                            const SizedBox(height: 32),
+                          ],
                           if (searchQuery.isNotEmpty) ...[
                             _ExternalAsyncRail(
                               title: 'Resultats',
@@ -234,12 +241,12 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
   const _DiscoverHeaderDelegate({
     required this.searchController,
     required this.onSearch,
-    required this.onMukemeTap,
+    required this.onPlumoTap,
   });
 
   final TextEditingController searchController;
   final VoidCallback onSearch;
-  final VoidCallback onMukemeTap;
+  final VoidCallback onPlumoTap;
 
   static const _height = 218.0;
 
@@ -261,9 +268,7 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: context.colors.background.withValues(alpha: 0.95),
-            border: Border(
-              bottom: BorderSide(color: context.colors.border),
-            ),
+            border: Border(bottom: BorderSide(color: context.colors.border)),
             boxShadow: overlapsContent
                 ? const [
                     BoxShadow(
@@ -310,7 +315,7 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _MukemeHeaderCard(onTap: onMukemeTap),
+                    _PlumoHeaderCard(onTap: onPlumoTap),
                   ],
                 ),
               ),
@@ -325,12 +330,12 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _DiscoverHeaderDelegate oldDelegate) {
     return oldDelegate.searchController != searchController ||
         oldDelegate.onSearch != onSearch ||
-        oldDelegate.onMukemeTap != onMukemeTap;
+        oldDelegate.onPlumoTap != onPlumoTap;
   }
 }
 
-class _MukemeHeaderCard extends StatelessWidget {
-  const _MukemeHeaderCard({required this.onTap});
+class _PlumoHeaderCard extends StatelessWidget {
+  const _PlumoHeaderCard({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -340,12 +345,19 @@ class _MukemeHeaderCard extends StatelessWidget {
       onTap: onTap,
       padding: const EdgeInsets.all(14),
       radius: 16,
-      color: context.colors.primary.withValues(alpha: 0.05),
-      borderColor: context.colors.primary.withValues(alpha: 0.12),
+      color: context.colors.brandPrimary.withValues(alpha: 0.05),
+      borderColor: context.colors.border,
       shadow: false,
       child: Row(
         children: [
-          const FigmaGradientIcon(icon: Icons.auto_awesome, size: 48),
+          FigmaGradientIcon(
+            icon: Icons.auto_awesome,
+            size: 48,
+            colors: [
+              context.colors.brandPrimary,
+              context.colors.brandPrimaryLight,
+            ],
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -353,7 +365,7 @@ class _MukemeHeaderCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Trouver avec Mukeme',
+                  'Trouver avec Plumo',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -378,8 +390,47 @@ class _MukemeHeaderCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          FilledButton(onPressed: onTap, child: const Text('Essayer')),
+          _PlumoTryButton(onTap: onTap),
         ],
+      ),
+    );
+  }
+}
+
+class _PlumoTryButton extends StatelessWidget {
+  const _PlumoTryButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            context.colors.brandPrimary,
+            context.colors.brandPrimaryLight,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Text(
+              'Essayer',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -616,6 +667,180 @@ class _PlumoraBookTile extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PlumoRecommendationsSection extends ConsumerWidget {
+  const _PlumoRecommendationsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recommendationsAsync = ref.watch(plumoBookRecommendationsProvider);
+
+    return Column(
+      children: [
+        FigmaSectionHeader(
+          title: 'Pour vous',
+          icon: Icons.auto_awesome,
+          iconColor: context.colors.primary,
+        ),
+        const SizedBox(height: 14),
+        recommendationsAsync.when(
+          loading: () => const _LoadingRail(),
+          error: (error, _) => _InlineError(
+            message: plumoAiErrorMessage(error),
+            onRetry: () => ref.invalidate(plumoBookRecommendationsProvider),
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return const _EmptyRail(
+                message: "Plumo n'a pas encore de recommandation pour toi.",
+              );
+            }
+
+            return SizedBox(
+              height: 262,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, index) =>
+                    _PlumoRecommendationTile(item: items[index]),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _PlumoRecommendationTile extends ConsumerWidget {
+  const _PlumoRecommendationTile({required this.item});
+
+  final BookRecommendationItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detailAsync = ref.watch(catalogBookDetailProvider(item.bookId));
+
+    return detailAsync.when(
+      loading: () => const SizedBox(
+        width: 220,
+        height: 262,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      // The recommendation references a book the catalog can't resolve
+      // (removed/unpublished since) -- skip it rather than show a broken
+      // card; Plumo must never appear to invent a book.
+      error: (_, _) => const SizedBox.shrink(),
+      data: (book) {
+        final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+
+        return Container(
+          width: 220,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: context.colors.cards,
+            border: Border.all(color: context.colors.border),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PlumoraBookCover(
+                    width: 62,
+                    height: 92,
+                    radius: 10,
+                    colors: _coverColors(book.id),
+                    imageUrl: book.coverUrl,
+                    imageBytes: cachedCover,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          book.title.isEmpty ? 'Livre sans titre' : book.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.colors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            height: 1.15,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          book.authorName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (item.reason.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Text(
+                    item.reason,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ] else
+                const Spacer(),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => context.go(
+                        AppRoutes.catalogBookDetailPath(book.id),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        textStyle: const TextStyle(fontSize: 11),
+                      ),
+                      child: const Text('Détail'),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () =>
+                          context.go(AppRoutes.readingPath(book.id)),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        textStyle: const TextStyle(fontSize: 11),
+                      ),
+                      child: const Text('Lire'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

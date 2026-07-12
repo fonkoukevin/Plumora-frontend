@@ -68,8 +68,8 @@ class LandingScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          context.colors.primary.withValues(alpha: 0.16),
-                          context.colors.primary.withValues(alpha: 0),
+                          context.colors.brandPrimary.withValues(alpha: 0.16),
+                          context.colors.brandPrimary.withValues(alpha: 0),
                         ],
                       ),
                     ),
@@ -109,7 +109,7 @@ class LandingScreen extends StatelessWidget {
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 448),
                             child: Text(
-                              "Ecrivez, publiez, lisez et collaborez avec une communaute passionnee. L'IA Mukeme vous accompagne a chaque etape.",
+                              "Ecrivez, publiez, lisez et collaborez avec une communaute passionnee. L'IA Plumo vous accompagne a chaque etape.",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: context.colors.textSecondary,
@@ -217,14 +217,17 @@ class _GradientPillButton extends StatelessWidget {
       constraints: BoxConstraints(minHeight: minHeight),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [context.colors.primary, context.colors.primaryLight],
+          colors: [
+            context.colors.brandPrimary,
+            context.colors.brandPrimaryLight,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-            color: context.colors.primary.withValues(alpha: 0.30),
+            color: context.colors.brandPrimary.withValues(alpha: 0.30),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -311,7 +314,10 @@ class _HeroTitle extends StatelessWidget {
             style: TextStyle(
               foreground: Paint()
                 ..shader = LinearGradient(
-                  colors: [context.colors.primary, context.colors.accent],
+                  colors: [
+                    context.colors.brandPrimary,
+                    context.colors.brandGold,
+                  ],
                 ).createShader(const Rect.fromLTWH(0, 0, 420, 80)),
             ),
           ),
@@ -439,21 +445,21 @@ class _FeatureGrid extends StatelessWidget {
         title: 'Ecrire',
         description:
             'Editeur puissant avec IA pour creer vos histoires sans limites',
-        color: context.colors.primary,
+        color: context.colors.brandPrimary,
       ),
       _LandingFeature(
         emoji: '🔍',
         title: 'Decouvrir',
         description:
-            'Mukeme vous recommande les livres parfaits selon vos gouts',
-        color: context.colors.secondary,
+            'Plumo vous recommande les livres parfaits selon vos gouts',
+        color: context.colors.brandNavy,
       ),
       _LandingFeature(
         emoji: '📚',
         title: 'Beta-lire',
         description:
             'Aidez les auteurs et recevez des retours sur vos manuscrits',
-        color: context.colors.accent,
+        color: context.colors.brandGold,
       ),
     ];
 

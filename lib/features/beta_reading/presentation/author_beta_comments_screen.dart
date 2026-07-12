@@ -253,10 +253,7 @@ class _CommentsContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          subtitle,
-          style: TextStyle(color: context.colors.textSecondary),
-        ),
+        Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
         const SizedBox(height: 22),
         _SummaryGrid(summary: summary),
         const SizedBox(height: 20),
@@ -542,8 +539,10 @@ class _AuthorCommentCard extends StatelessWidget {
                       children: [
                         PlumoraBadge(
                           label: chapter,
-                          backgroundColor: const Color(0xFFE6EFE4),
-                          foregroundColor: const Color(0xFF5F7A5A),
+                          backgroundColor: context.colors.success.withValues(
+                            alpha: 0.12,
+                          ),
+                          foregroundColor: context.colors.success,
                         ),
                         PlumoraBadge(
                           label: comment.type.label,
@@ -558,7 +557,10 @@ class _AuthorCommentCard extends StatelessWidget {
                             context,
                             comment.status,
                           ).withValues(alpha: 0.12),
-                          foregroundColor: _statusColor(context, comment.status),
+                          foregroundColor: _statusColor(
+                            context,
+                            comment.status,
+                          ),
                         ),
                       ],
                     ),
@@ -588,7 +590,7 @@ class _AuthorCommentCard extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFFAE9),
+                          color: context.colors.warning.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -683,7 +685,7 @@ class _PassivePanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PlumoraIconTile(
-            backgroundColor: Color(0xFFEAF3FF),
+            backgroundColor: context.colors.info.withValues(alpha: 0.12),
             child: Icon(Icons.forum_outlined, color: context.colors.info),
           ),
           const SizedBox(width: 16),
@@ -742,7 +744,7 @@ class _ErrorPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PlumoraIconTile(
-            backgroundColor: Color(0xFFF7E0DC),
+            backgroundColor: context.colors.destructive.withValues(alpha: 0.12),
             child: Icon(Icons.error_outline, color: context.colors.destructive),
           ),
           const SizedBox(height: 16),
@@ -753,10 +755,7 @@ class _ErrorPanel extends StatelessWidget {
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 18),
           FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],

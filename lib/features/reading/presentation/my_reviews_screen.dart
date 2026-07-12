@@ -21,13 +21,13 @@ class MyReviewsScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         PlumoraCard(
-          borderColor: const Color(0xFFE7D8B9),
+          borderColor: context.colors.warning.withValues(alpha: 0.35),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               PlumoraIconTile(
-                backgroundColor: Color(0xFFFFF5D8),
-                child: Icon(Icons.star, color: context.colors.primary),
+                backgroundColor: context.colors.warning.withValues(alpha: 0.12),
+                child: Icon(Icons.star, color: context.colors.warning),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -240,10 +240,7 @@ class _StateCard extends StatelessWidget {
         children: [
           Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
           if (action != null) ...[const SizedBox(height: 14), action!],
         ],
       ),

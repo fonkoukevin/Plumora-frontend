@@ -242,7 +242,9 @@ class _NotificationCard extends StatelessWidget {
                     if (!notification.isRead)
                       PlumoraBadge(
                         label: 'Nouveau',
-                        backgroundColor: Color(0xFFE6EFE4),
+                        backgroundColor: context.colors.success.withValues(
+                          alpha: 0.12,
+                        ),
                         foregroundColor: context.colors.success,
                       ),
                   ],
@@ -299,10 +301,7 @@ class _StateCard extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),
@@ -337,7 +336,7 @@ Color _typeColor(BuildContext context, String type) {
     return context.colors.primary;
   }
   if (normalized.contains('REVIEW')) {
-    return context.colors.mukemeAccent;
+    return context.colors.plumoAccent;
   }
   if (normalized.contains('FAVORITE')) {
     return context.colors.destructive;

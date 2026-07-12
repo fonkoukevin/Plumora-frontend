@@ -95,8 +95,8 @@ class HomeScreen extends ConsumerWidget {
                         _QuickActions(
                           onWrite: () => context.go(AppRoutes.write),
                           onDiscover: () => context.go(AppRoutes.discover),
-                          onMukeme: () =>
-                              context.go(AppRoutes.mukemeRecommendation),
+                          onPlumo: () =>
+                              context.go(AppRoutes.plumoRecommendation),
                         ),
                         const SizedBox(height: 26),
                         _BookRail(
@@ -196,9 +196,7 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: context.colors.background.withValues(alpha: 0.95),
-            border: Border(
-              bottom: BorderSide(color: context.colors.border),
-            ),
+            border: Border(bottom: BorderSide(color: context.colors.border)),
             boxShadow: overlapsContent
                 ? const [
                     BoxShadow(
@@ -270,13 +268,32 @@ class _HomeHeader extends ConsumerWidget {
         Semantics(
           button: true,
           label: isDark ? 'Activer le theme clair' : 'Activer le theme sombre',
-          child: InkWell(
-            onTap: () => ref.read(themeModeControllerProvider.notifier).toggle(),
-            borderRadius: BorderRadius.circular(999),
-            child: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              size: 20,
-              color: context.colors.textSecondary,
+          child: Tooltip(
+            message: isDark ? 'Thème clair' : 'Thème sombre',
+            child: InkWell(
+              onTap: () async {
+                try {
+                  await ref.read(themeModeControllerProvider.notifier).toggle();
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Impossible d’enregistrer le thème.'),
+                      ),
+                    );
+                  }
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: Icon(
+                  isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                  size: 20,
+                  color: context.colors.textSecondary,
+                ),
+              ),
             ),
           ),
         ),
@@ -326,8 +343,8 @@ class _HomeHeader extends ConsumerWidget {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF4B2E83), Color(0xFF17163F)],
+              gradient: LinearGradient(
+                colors: [context.colors.brandPrimary, context.colors.brandNavy],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -358,7 +375,6 @@ class _HomeBrand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 32,
@@ -375,13 +391,17 @@ class _HomeBrand extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          'Plumora',
-          style: GoogleFonts.playfairDisplay(
-            color: context.colors.textPrimary,
-            fontSize: 21,
-            fontWeight: FontWeight.w800,
-            height: 1,
+        Flexible(
+          child: Text(
+            'Plumora',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.playfairDisplay(
+              color: context.colors.textPrimary,
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
           ),
         ),
       ],
@@ -452,7 +472,7 @@ class _QuoteCard extends StatelessWidget {
                             '— Victor Hugo',
                             maxLines: 1,
                             style: TextStyle(
-                              color: const Color(0xFF706879),
+                              color: context.colors.textSecondary,
                               fontSize: authorFontSize,
                               fontWeight: FontWeight.w500,
                               height: 1.25,
@@ -483,16 +503,12 @@ class _QuoteIcon extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF5F1FA), Color(0xFFEDE7F5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: BoxDecoration(
+        color: context.colors.primary.withValues(alpha: 0.10),
         shape: BoxShape.circle,
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Color(0x124B2E83),
+            color: Color(0x12000000),
             blurRadius: 8,
             offset: Offset(0, 3),
           ),
@@ -701,12 +717,12 @@ class _QuickActions extends StatelessWidget {
   const _QuickActions({
     required this.onWrite,
     required this.onDiscover,
-    required this.onMukeme,
+    required this.onPlumo,
   });
 
   final VoidCallback onWrite;
   final VoidCallback onDiscover;
-  final VoidCallback onMukeme;
+  final VoidCallback onPlumo;
 
   @override
   Widget build(BuildContext context) {
@@ -716,7 +732,10 @@ class _QuickActions extends StatelessWidget {
           child: _QuickAction(
             label: 'Ecrire',
             icon: Icons.edit_outlined,
-            colors: [context.colors.primary, context.colors.primaryLight],
+            colors: [
+              context.colors.brandPrimary,
+              context.colors.brandPrimaryLight,
+            ],
             onTap: onWrite,
           ),
         ),
@@ -725,17 +744,17 @@ class _QuickActions extends StatelessWidget {
           child: _QuickAction(
             label: 'Decouvrir',
             icon: Icons.menu_book_outlined,
-            colors: [context.colors.secondary, const Color(0xFF1E3A5F)],
+            colors: [context.colors.brandNavy, context.colors.brandNavyLight],
             onTap: onDiscover,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _QuickAction(
-            label: 'Mukeme',
+            label: 'Plumo',
             icon: Icons.auto_awesome,
-            colors: [context.colors.accent, const Color(0xFFE0B830)],
-            onTap: onMukeme,
+            colors: [context.colors.brandGold, context.colors.brandGoldLight],
+            onTap: onPlumo,
           ),
         ),
       ],

@@ -18,15 +18,13 @@ import 'create_beta_comment_bottom_sheet.dart';
 /// cache ce FutureProvider.family par (campaignId, chapterId) : il ne
 /// declenche l'appel qu'une seule fois par chapitre pour la duree de vie de
 /// l'app, l'endpoint etant lui-meme idempotent cote serveur.
-final _chapterViewRecorderProvider = FutureProvider.family<void, (String, String)>((
-  ref,
-  ids,
-) {
-  final (campaignId, chapterId) = ids;
-  return ref
-      .watch(betaReadingRepositoryProvider)
-      .recordChapterView(campaignId, chapterId);
-});
+final _chapterViewRecorderProvider =
+    FutureProvider.family<void, (String, String)>((ref, ids) {
+      final (campaignId, chapterId) = ids;
+      return ref
+          .watch(betaReadingRepositoryProvider)
+          .recordChapterView(campaignId, chapterId);
+    });
 
 class BetaReadChapterScreen extends ConsumerWidget {
   const BetaReadChapterScreen({
@@ -222,9 +220,7 @@ class BetaReadChapterScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Chapitre ${index + 1} sur ${sorted.length}',
-                        style: TextStyle(
-                          color: context.colors.textSecondary,
-                        ),
+                        style: TextStyle(color: context.colors.textSecondary),
                       ),
                       const Spacer(),
                       OutlinedButton(
@@ -387,10 +383,10 @@ class _AnnotatableParagraph extends StatelessWidget {
             : EdgeInsets.zero,
         decoration: annotated
             ? BoxDecoration(
-                color: const Color(0xFFFFFBEB),
+                color: context.colors.warning.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
-                border: const Border(
-                  left: BorderSide(color: Color(0xFFFACC15), width: 4),
+                border: Border(
+                  left: BorderSide(color: context.colors.warning, width: 4),
                 ),
               )
             : null,
@@ -420,14 +416,14 @@ class _AnnotatableParagraph extends StatelessWidget {
             width: 24,
             height: 24,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFACC15),
+            decoration: BoxDecoration(
+              color: context.colors.warning,
               shape: BoxShape.circle,
             ),
             child: Text(
               '$badgeNumber',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.colors.onAccent,
                 fontSize: 12,
                 fontWeight: FontWeight.w900,
               ),
