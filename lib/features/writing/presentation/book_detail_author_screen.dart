@@ -16,11 +16,6 @@ import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
 import '../data/writing_cache_invalidator.dart';
 
-const _detailAccent = Color(0xFF7C5CFF);
-const _detailAccentLight = Color(0xFF9B80FF);
-const _detailGold = Color(0xFFD6B25E);
-const _detailGreen = Color(0xFF3FBF7F);
-
 enum _DetailTab { overview, chapters, stats, settings }
 
 class BookDetailAuthorScreen extends ConsumerStatefulWidget {
@@ -504,8 +499,11 @@ class _ActionTile extends StatelessWidget {
           height: 55,
           decoration: BoxDecoration(
             gradient: selected
-                ? const LinearGradient(
-                    colors: [_detailAccent, _detailAccentLight],
+                ? LinearGradient(
+                    colors: [
+                      context.colors.primary,
+                      context.colors.primaryLight,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
@@ -516,7 +514,7 @@ class _ActionTile extends StatelessWidget {
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: _detailAccent.withValues(alpha: 0.28),
+                      color: context.colors.primary.withValues(alpha: 0.28),
                       blurRadius: 12,
                       offset: const Offset(0, 5),
                     ),
@@ -808,7 +806,7 @@ class _PlumoHint extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: _detailAccent.withValues(alpha: 0.05),
+            color: context.colors.primary.withValues(alpha: 0.05),
             border: Border.all(color: context.colors.border),
             borderRadius: BorderRadius.circular(14),
           ),
@@ -818,8 +816,11 @@ class _PlumoHint extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [_detailAccent, _detailAccentLight],
+                  gradient: LinearGradient(
+                    colors: [
+                      context.colors.primary,
+                      context.colors.primaryLight,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -974,7 +975,7 @@ class _ChapterRow extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: published
-                      ? _detailGreen.withValues(alpha: 0.12)
+                      ? context.colors.success.withValues(alpha: 0.12)
                       : context.colors.textSecondary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(11),
                 ),
@@ -983,7 +984,7 @@ class _ChapterRow extends StatelessWidget {
                     '${index + 1}',
                     style: TextStyle(
                       color: published
-                          ? _detailGreen
+                          ? context.colors.success
                           : context.colors.textSecondary,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1014,7 +1015,7 @@ class _ChapterRow extends StatelessWidget {
                         _TinyStatePill(
                           label: published ? 'Publié' : 'Brouillon',
                           color: published
-                              ? _detailGreen
+                              ? context.colors.success
                               : context.colors.textSecondary,
                         ),
                       ],
@@ -1147,7 +1148,7 @@ class _StatsTab extends StatelessWidget {
                       value: book.viewCount > 0
                           ? _compactNumber(book.viewCount)
                           : '—',
-                      color: _detailAccent,
+                      color: context.colors.primary,
                       sub: 'Depuis la publication',
                     ),
                   ),
@@ -1159,7 +1160,7 @@ class _StatsTab extends StatelessWidget {
                       value: rating == null
                           ? '—'
                           : '${rating.toStringAsFixed(1)}/5',
-                      color: _detailGold,
+                      color: context.colors.accent,
                       sub: rating == null
                           ? 'Pas encore noté'
                           : 'Moyenne lecteurs',
@@ -1171,7 +1172,7 @@ class _StatsTab extends StatelessWidget {
                       icon: Icons.group_outlined,
                       label: 'Bêta-lecteurs',
                       value: betaValue,
-                      color: _detailGreen,
+                      color: context.colors.success,
                       sub: chapters.isEmpty
                           ? 'En attente'
                           : '${chapters.length} chapitres',
@@ -1349,19 +1350,19 @@ class _SettingsTab extends StatelessWidget {
                 icon: Icons.upload_outlined,
                 label: 'Soumettre en bêta-test',
                 route: AppRoutes.authorBetaCampaignsPath(book.id),
-                color: _detailAccent,
+                color: context.colors.primary,
               ),
               _QuickLink(
                 icon: Icons.menu_book_outlined,
                 label: 'Préparer la publication',
                 route: AppRoutes.publishBookPath(book.id),
-                color: _detailGold,
+                color: context.colors.accent,
               ),
               _QuickLink(
                 icon: Icons.chat_bubble_outline,
                 label: 'Voir les retours bêta',
                 route: AppRoutes.authorBetaCommentsPath(book.id),
-                color: _detailGreen,
+                color: context.colors.success,
               ),
             ],
           ),
@@ -1725,15 +1726,15 @@ class _GradientPillButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_detailAccent, _detailAccentLight],
+        gradient: LinearGradient(
+          colors: [context.colors.primary, context.colors.primaryLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(13),
         boxShadow: [
           BoxShadow(
-            color: _detailAccent.withValues(alpha: 0.28),
+            color: context.colors.primary.withValues(alpha: 0.28),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1787,7 +1788,7 @@ class _SmallGradientButton extends StatelessWidget {
       icon: Icon(icon, size: 14),
       label: Text(label),
       style: FilledButton.styleFrom(
-        backgroundColor: _detailAccent,
+        backgroundColor: context.colors.primary,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900),
