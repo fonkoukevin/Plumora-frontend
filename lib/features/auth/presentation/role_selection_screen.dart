@@ -250,7 +250,7 @@ List<_RoleChoice> _roleChoices(BuildContext context) => [
     label: 'Auteur',
     description: 'Ecrire, organiser et publier mes livres',
     icon: Icons.edit_outlined,
-    iconBackground: const Color(0xFFF3E8FF),
+    iconBackground: context.colors.primary.withValues(alpha: 0.14),
     iconColor: context.colors.primary,
   ),
   _RoleChoice(
@@ -258,16 +258,16 @@ List<_RoleChoice> _roleChoices(BuildContext context) => [
     label: 'Lecteur',
     description: 'Decouvrir, lire et sauvegarder des livres',
     icon: Icons.menu_book_outlined,
-    iconBackground: const Color(0xFFFFF3C4),
-    iconColor: context.colors.secondary,
+    iconBackground: context.colors.accent.withValues(alpha: 0.14),
+    iconColor: context.colors.accent,
   ),
   _RoleChoice(
     value: 'BETA_READER',
     label: 'Beta-testeur',
     description: 'Lire des manuscrits avant publication et donner mon avis',
     icon: Icons.science_outlined,
-    iconBackground: const Color(0xFFDDF8E8),
-    iconColor: context.colors.accent,
+    iconBackground: context.colors.success.withValues(alpha: 0.14),
+    iconColor: context.colors.success,
   ),
 ];
 
