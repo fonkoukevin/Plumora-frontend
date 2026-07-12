@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../data/models/notification_model.dart';
 import '../data/repositories/notification_repository.dart';
@@ -62,11 +64,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           children: [
                             Text(
                               'Notifications',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: context.colors.textPrimary,
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                              style: GoogleFonts.playfairDisplay(
+                                color: context.colors.textPrimary,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                height: 1.1,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             unreadCountAsync.maybeWhen(
@@ -111,9 +114,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         child: CircularProgressIndicator(),
                       ),
                     ),
-                    error: (error, _) => _StateCard(
+                    error: (error, _) => FigmaEmptyState(
+                      icon: Icons.error_outline,
                       title: 'Notifications indisponibles',
-                      subtitle: AppError.messageFor(error),
+                      message: AppError.messageFor(error),
                       action: FilledButton(
                         onPressed: () {
                           ref.invalidate(myNotificationsProvider);
@@ -124,9 +128,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     ),
                     data: (notifications) {
                       if (notifications.isEmpty) {
-                        return const _StateCard(
+                        return const FigmaEmptyState(
+                          icon: Icons.notifications_none_outlined,
                           title: 'Aucune notification',
-                          subtitle:
+                          message:
                               'Les invitations, retours bêta et publications apparaîtront ici.',
                         );
                       }
@@ -277,32 +282,6 @@ class _NotificationCard extends StatelessWidget {
               child: Text(busy ? '...' : 'Lire'),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _StateCard extends StatelessWidget {
-  const _StateCard({required this.title, required this.subtitle, this.action});
-
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
-          if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),
     );

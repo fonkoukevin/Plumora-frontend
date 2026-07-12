@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../../catalog/data/models/catalog_book_model.dart';
@@ -66,9 +67,10 @@ class MyFavoritesScreen extends ConsumerWidget {
               child: CircularProgressIndicator(),
             ),
           ),
-          error: (error, _) => _StateCard(
+          error: (error, _) => FigmaEmptyState(
+            icon: Icons.error_outline,
             title: 'Favoris indisponibles',
-            subtitle: AppError.messageFor(error),
+            message: AppError.messageFor(error),
             action: FilledButton(
               onPressed: () => ref.invalidate(myFavoritesProvider),
               child: const Text('Réessayer'),
@@ -83,11 +85,14 @@ class MyFavoritesScreen extends ConsumerWidget {
                 .toList(growable: false);
 
             if (filteredFavorites.isEmpty) {
-              return _StateCard(
+              return FigmaEmptyState(
+                icon: normalizedQuery.isEmpty
+                    ? Icons.favorite_border
+                    : Icons.search_off,
                 title: normalizedQuery.isEmpty
                     ? 'Aucun favori'
                     : 'Aucun résultat',
-                subtitle: normalizedQuery.isEmpty
+                message: normalizedQuery.isEmpty
                     ? 'Ajoute des livres depuis leur fiche pour les retrouver ici.'
                     : 'Aucun favori ne correspond à cette recherche.',
               );
@@ -227,29 +232,6 @@ class _FavoriteCard extends ConsumerWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StateCard extends StatelessWidget {
-  const _StateCard({required this.title, required this.subtitle, this.action});
-
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
-          if (action != null) ...[const SizedBox(height: 14), action!],
         ],
       ),
     );

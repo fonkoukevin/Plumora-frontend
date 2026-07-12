@@ -692,12 +692,14 @@ class FigmaEmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     this.icon = Icons.search,
+    this.action,
     super.key,
   });
 
   final String title;
   final String message;
   final IconData icon;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -724,11 +726,18 @@ class FigmaEmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 5),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
           ),
+          if (action != null) ...[const SizedBox(height: 18), action!],
         ],
       ),
     );
