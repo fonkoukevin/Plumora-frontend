@@ -7,6 +7,7 @@ import '../../../../core/storage/secure_token_storage.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/role_model.dart';
+import '../models/update_profile_request.dart';
 import '../models/user_model.dart';
 import '../services/auth_api_service.dart';
 import '../services/google_auth_service.dart';
@@ -98,6 +99,17 @@ class AuthRepository {
     }
 
     return _apiService.updateMyRoles(roleNames);
+  }
+
+  Future<UserModel> updateProfile(UpdateProfileRequest request) async {
+    if (request.firstname.trim().isEmpty || request.lastname.trim().isEmpty) {
+      throw const AppException('Le prenom et le nom sont requis.');
+    }
+    if (request.username.trim().isEmpty) {
+      throw const AppException("Le nom d'utilisateur est requis.");
+    }
+
+    return _apiService.updateMe(request);
   }
 
   Future<void> logout() {

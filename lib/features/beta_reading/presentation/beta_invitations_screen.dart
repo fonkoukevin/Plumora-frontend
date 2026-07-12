@@ -8,8 +8,10 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
+import '../data/models/beta_campaign_model.dart';
 import '../data/models/beta_invitation_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
+import 'beta_engagement_providers.dart';
 
 class BetaInvitationsScreen extends ConsumerStatefulWidget {
   const BetaInvitationsScreen({
@@ -29,12 +31,26 @@ class BetaInvitationsScreen extends ConsumerStatefulWidget {
 class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
   final Set<String> _mutatingIds = {};
   String? _error;
+  bool _markedSeen = false;
 
   @override
   Widget build(BuildContext context) {
+    final openCampaignsAsync = ref.watch(betaOpenCampaignsProvider);
     final invitationsAsync = ref.watch(betaInvitationsProvider);
+    final query = widget.query.trim().toLowerCase();
 
-    final content = invitationsAsync.when(
+    if (!_markedSeen &&
+        invitationsAsync.hasValue &&
+        openCampaignsAsync.hasValue) {
+      _markedSeen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          markBetaOpportunitiesSeen(ref);
+        }
+      });
+    }
+
+    final content = openCampaignsAsync.when(
       loading: () => const Center(
         child: Padding(
           padding: EdgeInsets.all(48),
@@ -43,17 +59,20 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
       ),
       error: (error, _) => _ErrorPanel(
         message: AppError.messageFor(error),
-        onRetry: () => ref.invalidate(betaInvitationsProvider),
+        onRetry: () => ref.invalidate(betaOpenCampaignsProvider),
       ),
-      data: (invitations) {
-        final query = widget.query.trim().toLowerCase();
-        final filtered = invitations.where((invitation) {
+      data: (campaigns) {
+        final filtered = campaigns.where((campaign) {
           if (query.isEmpty) {
             return true;
           }
-          return invitation.bookTitle.toLowerCase().contains(query) ||
-              invitation.authorName.toLowerCase().contains(query);
+          return campaign.bookTitle.toLowerCase().contains(query) ||
+              (campaign.authorUsername ?? '').toLowerCase().contains(query);
         }).toList();
+
+        final pendingInvitations = ref.watch(
+          betaActionablePendingInvitationsProvider,
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,65 +83,98 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
                 onTap: () => context.go(AppRoutes.home),
               ),
             if (!widget.embedded) const SizedBox(height: 18),
-            const Text(
+            Text(
               'Beta-tests',
               style: TextStyle(
-                color: PlumoraColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontSize: 38,
                 fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Lisez des manuscrits avant publication et aidez les auteurs avec vos retours',
               style: TextStyle(
-                color: PlumoraColors.textSecondary,
+                color: context.colors.textSecondary,
                 fontSize: 15,
               ),
             ),
             const SizedBox(height: 24),
-            _BetaStats(invitations: invitations),
+            _BetaStats(
+              openCampaignsCount: campaigns.length,
+              pendingInvitationsCount: pendingInvitations.length,
+            ),
             if (_error != null) ...[
               const SizedBox(height: 14),
               Text(
                 _error!,
-                style: const TextStyle(
-                  color: PlumoraColors.destructive,
+                style: TextStyle(
+                  color: context.colors.destructive,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
             const SizedBox(height: 26),
-            const Text(
-              'Invitations et manuscrits',
+            Text(
+              'Campagnes ouvertes',
               style: TextStyle(
-                color: PlumoraColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Tout beta-lecteur peut rejoindre l'une de ces campagnes et "
+              'commenter directement, sans invitation.',
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 13,
               ),
             ),
             const SizedBox(height: 14),
             if (filtered.isEmpty)
               const FigmaEmptyState(
-                title: 'Aucune invitation',
+                title: 'Aucune campagne active',
                 message:
-                    'Les invitations de beta-lecture liees a ton compte apparaitront ici.',
+                    'Les campagnes de beta-lecture ouvertes par les auteurs apparaitront ici.',
                 icon: Icons.edit_note_outlined,
               )
             else
-              for (final invitation in filtered) ...[
-                _BetaInviteCard(
+              for (final campaign in filtered) ...[
+                _OpenCampaignCard(campaign: campaign),
+                const SizedBox(height: 12),
+              ],
+            if (pendingInvitations.isNotEmpty) ...[
+              const SizedBox(height: 26),
+              Text(
+                'Mes invitations en attente',
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Une invitation ne conditionne plus l'acces a la campagne : "
+                "elle sert juste a signaler a l'auteur ta participation.",
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 14),
+              for (final invitation in pendingInvitations) ...[
+                _InvitationCard(
                   invitation: invitation,
                   mutating: _mutatingIds.contains(invitation.id),
-                  onAccept: invitation.isPending
-                      ? () => _respond(invitation, accept: true)
-                      : null,
-                  onRefuse: invitation.isPending
-                      ? () => _respond(invitation, accept: false)
-                      : null,
+                  onAccept: () => _respond(invitation, accept: true),
+                  onRefuse: () => _respond(invitation, accept: false),
                 ),
                 const SizedBox(height: 12),
               ],
+            ],
             const SizedBox(height: 14),
             const _TipsCard(),
           ],
@@ -152,22 +204,13 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
 
     try {
       final repository = ref.read(betaReadingRepositoryProvider);
-      final updated = accept
-          ? await repository.acceptInvitation(invitation.id)
-          : await repository.refuseInvitation(invitation.id);
-      ref.invalidate(betaInvitationsProvider);
-
-      if (accept && mounted) {
-        context.go(
-          AppRoutes.betaChaptersPath(
-            updated.campaignId.isEmpty
-                ? invitation.campaignId
-                : updated.campaignId,
-            invitationId: updated.id,
-            bookId: updated.bookId,
-          ),
-        );
+      if (accept) {
+        await repository.acceptInvitation(invitation.id);
+        await touchBetaCampaignActivity(ref, invitation.campaignId);
+      } else {
+        await repository.refuseInvitation(invitation.id);
       }
+      ref.invalidate(betaInvitationsProvider);
     } catch (error) {
       setState(() => _error = AppError.messageFor(error));
     } finally {
@@ -179,37 +222,28 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
 }
 
 class _BetaStats extends StatelessWidget {
-  const _BetaStats({required this.invitations});
+  const _BetaStats({
+    required this.openCampaignsCount,
+    required this.pendingInvitationsCount,
+  });
 
-  final List<BetaInvitationModel> invitations;
+  final int openCampaignsCount;
+  final int pendingInvitationsCount;
 
   @override
   Widget build(BuildContext context) {
-    final active = invitations
-        .where((invitation) => invitation.isAccepted)
-        .length;
-    final pending = invitations
-        .where((invitation) => invitation.isPending)
-        .length;
-    final feedbacks = invitations.fold<int>(
-      0,
-      (sum, invitation) => sum + invitation.feedbackCount,
-    );
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 720;
+        final compact = constraints.maxWidth < 520;
         final children = [
-          FigmaStatCard(label: 'Actives', value: active.toString()),
           FigmaStatCard(
-            label: 'En attente',
-            value: pending.toString(),
-            valueColor: PlumoraColors.accent,
+            label: 'Campagnes actives',
+            value: openCampaignsCount.toString(),
           ),
           FigmaStatCard(
-            label: 'Retours donnes',
-            value: feedbacks.toString(),
-            valueColor: PlumoraColors.secondary,
+            label: 'Invitations en attente',
+            value: pendingInvitationsCount.toString(),
+            valueColor: context.colors.accent,
           ),
         ];
         if (compact) {
@@ -236,26 +270,15 @@ class _BetaStats extends StatelessWidget {
   }
 }
 
-class _BetaInviteCard extends ConsumerWidget {
-  const _BetaInviteCard({
-    required this.invitation,
-    required this.mutating,
-    required this.onAccept,
-    required this.onRefuse,
-  });
+class _OpenCampaignCard extends ConsumerWidget {
+  const _OpenCampaignCard({required this.campaign});
 
-  final BetaInvitationModel invitation;
-  final bool mutating;
-  final VoidCallback? onAccept;
-  final VoidCallback? onRefuse;
+  final BetaCampaignModel campaign;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final completed = invitation.isRefused;
-    final progress = invitation.chaptersAvailable == 0
-        ? 0.0
-        : invitation.chaptersRead / invitation.chaptersAvailable;
-    final cachedCover = ref.watch(bookCoverBytesProvider(invitation.bookId));
+    final cachedCover = ref.watch(bookCoverBytesProvider(campaign.bookId));
+    final author = (campaign.authorUsername ?? '').trim();
 
     return FigmaCard(
       child: Row(
@@ -265,8 +288,8 @@ class _BetaInviteCard extends ConsumerWidget {
             width: 92,
             height: 124,
             radius: 14,
-            colors: _coverColors(invitation.bookId),
-            imageUrl: invitation.coverUrl,
+            colors: _coverColors(campaign.bookId),
+            imageUrl: campaign.coverUrl,
             imageBytes: cachedCover,
           ),
           const SizedBox(width: 16),
@@ -274,131 +297,43 @@ class _BetaInviteCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            invitation.bookTitle.isEmpty
-                                ? 'Manuscrit sans titre'
-                                : invitation.bookTitle,
-                            style: const TextStyle(
-                              color: PlumoraColors.textPrimary,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          Text(
-                            'par ${invitation.authorName}',
-                            style: const TextStyle(
-                              color: PlumoraColors.textSecondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    FigmaBadge(label: _statusLabel(invitation.status)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 14,
-                  runSpacing: 8,
-                  children: [
-                    _MiniMetric(
-                      icon: Icons.chat_bubble_outline,
-                      label: '${invitation.chaptersAvailable} chapitres',
-                    ),
-                    _MiniMetric(
-                      icon: Icons.thumb_up_outlined,
-                      label: '${invitation.feedbackCount} retours donnes',
-                    ),
-                    if (invitation.deadline != null)
-                      _MiniMetric(
-                        icon: Icons.schedule,
-                        label: 'Deadline : ${_shortDate(invitation.deadline!)}',
-                        color: PlumoraColors.accent,
-                      ),
-                  ],
-                ),
-                if (invitation.isAccepted &&
-                    invitation.chaptersAvailable > 0) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Text(
-                        'Progression',
-                        style: TextStyle(
-                          color: PlumoraColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${invitation.chaptersRead}/${invitation.chaptersAvailable} chapitres',
-                        style: const TextStyle(
-                          color: PlumoraColors.textPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+                Text(
+                  campaign.bookTitle.isEmpty
+                      ? 'Manuscrit sans titre'
+                      : campaign.bookTitle,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
                   ),
-                  const SizedBox(height: 5),
-                  FigmaProgressBar(value: progress),
+                ),
+                if (author.isNotEmpty)
+                  Text(
+                    'par $author',
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                if (campaign.deadline != null) ...[
+                  const SizedBox(height: 10),
+                  _MiniMetric(
+                    icon: Icons.schedule,
+                    label: 'Deadline : ${_shortDate(campaign.deadline!)}',
+                    color: context.colors.accent,
+                  ),
                 ],
                 const SizedBox(height: 14),
-                if (invitation.isPending)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: mutating ? null : onAccept,
-                          icon: mutating
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.check),
-                          label: const Text('Accepter'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      OutlinedButton(
-                        onPressed: mutating ? null : onRefuse,
-                        child: const Text('Refuser'),
-                      ),
-                    ],
-                  )
-                else
-                  Row(
-                    children: [
-                      Expanded(
-                        child: completed
-                            ? OutlinedButton(
-                                onPressed: null,
-                                child: const Text('Invitation refusee'),
-                              )
-                            : FilledButton(
-                                onPressed: () => context.go(
-                                  AppRoutes.betaChaptersPath(
-                                    invitation.campaignId,
-                                    invitationId: invitation.id,
-                                    bookId: invitation.bookId,
-                                  ),
-                                ),
-                                child: const Text('Continuer la lecture'),
-                              ),
-                      ),
-                    ],
+                FilledButton.icon(
+                  onPressed: () => context.go(
+                    AppRoutes.betaChaptersPath(
+                      campaign.id,
+                      bookId: campaign.bookId,
+                    ),
                   ),
+                  icon: const Icon(Icons.menu_book_outlined, size: 18),
+                  label: const Text('Lire et commenter'),
+                ),
               ],
             ),
           ),
@@ -408,25 +343,91 @@ class _BetaInviteCard extends ConsumerWidget {
   }
 }
 
-class _MiniMetric extends StatelessWidget {
-  const _MiniMetric({
-    required this.icon,
-    required this.label,
-    this.color = PlumoraColors.textSecondary,
+class _InvitationCard extends StatelessWidget {
+  const _InvitationCard({
+    required this.invitation,
+    required this.mutating,
+    required this.onAccept,
+    required this.onRefuse,
   });
 
-  final IconData icon;
-  final String label;
-  final Color color;
+  final BetaInvitationModel invitation;
+  final bool mutating;
+  final VoidCallback onAccept;
+  final VoidCallback onRefuse;
 
   @override
   Widget build(BuildContext context) {
+    final author = invitation.authorName.trim();
+
+    return FigmaCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  invitation.bookTitle.isEmpty
+                      ? 'Manuscrit sans titre'
+                      : invitation.bookTitle,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (author.isNotEmpty)
+                  Text(
+                    'par $author',
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.icon(
+            onPressed: mutating ? null : onAccept,
+            icon: mutating
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check, size: 18),
+            label: const Text('Accepter'),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: mutating ? null : onRefuse,
+            child: const Text('Refuser'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniMetric extends StatelessWidget {
+  const _MiniMetric({required this.icon, required this.label, this.color});
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedColor = color ?? context.colors.textSecondary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color),
+        Icon(icon, size: 16, color: resolvedColor),
         const SizedBox(width: 5),
-        Text(label, style: TextStyle(color: color, fontSize: 13)),
+        Text(label, style: TextStyle(color: resolvedColor, fontSize: 13)),
       ],
     );
   }
@@ -438,17 +439,17 @@ class _TipsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FigmaCard(
-      color: const Color(0xFFEFF6FF),
-      borderColor: const Color(0xFFBFDBFE),
-      child: const Row(
+      color: context.colors.info.withValues(alpha: 0.08),
+      borderColor: context.colors.info.withValues(alpha: 0.30),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FigmaGradientIcon(
+          const FigmaGradientIcon(
             icon: Icons.info_outline,
             size: 46,
-            colors: [Colors.blue, Color(0xFF2563EB)],
+            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
           ),
-          SizedBox(width: 14),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,7 +457,7 @@ class _TipsCard extends StatelessWidget {
                 Text(
                   'Conseils pour un bon beta-test',
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -464,7 +465,7 @@ class _TipsCard extends StatelessWidget {
                 Text(
                   "Soyez constructif et bienveillant, notez les incoherences, partagez ce que vous avez aime et respectez les delais fixes par l'auteur.",
                   style: TextStyle(
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     height: 1.4,
                   ),
                 ),
@@ -490,29 +491,17 @@ class _ErrorPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Invitations indisponibles',
+            'Campagnes indisponibles',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],
       ),
     );
   }
-}
-
-String _statusLabel(BetaInvitationStatus status) {
-  return switch (status) {
-    BetaInvitationStatus.pending => 'Nouveau',
-    BetaInvitationStatus.accepted => 'Acceptee',
-    BetaInvitationStatus.refused => 'Refusee',
-    BetaInvitationStatus.unknown => 'Inconnue',
-  };
 }
 
 String _shortDate(DateTime date) {

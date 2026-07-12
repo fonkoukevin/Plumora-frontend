@@ -10,7 +10,13 @@ import 'controllers/auth_controller.dart';
 import 'widgets/auth_screen_shell.dart';
 
 class RoleSelectionScreen extends ConsumerStatefulWidget {
-  const RoleSelectionScreen({super.key});
+  const RoleSelectionScreen({this.isOnboarding = true, super.key});
+
+  /// True right after signup, when the user must pick at least one role
+  /// before entering the app. False when reopened from the profile to edit
+  /// roles later, which pre-fills the current selection and returns to the
+  /// previous screen on save instead of routing to home.
+  final bool isOnboarding;
 
   @override
   ConsumerState<RoleSelectionScreen> createState() =>
@@ -20,6 +26,20 @@ class RoleSelectionScreen extends ConsumerStatefulWidget {
 class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
   final Set<String> _selectedRoles = {};
   String? _localError;
+  bool _prefilled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_prefilled) {
+      _prefilled = true;
+      final currentRoles =
+          ref.read(authControllerProvider).valueOrNull?.roles ?? const [];
+      _selectedRoles.addAll(
+        currentRoles.map((role) => role.name).where((name) => name.isNotEmpty),
+      );
+    }
+  }
 
   Future<void> _submit() async {
     if (_selectedRoles.isEmpty) {
@@ -37,7 +57,13 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
       return;
     }
 
-    context.go(AppRoutes.home);
+    if (widget.isOnboarding) {
+      context.go(AppRoutes.home);
+    } else if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.profile);
+    }
   }
 
   @override
@@ -63,22 +89,38 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
 
           return Column(
             children: [
-              const Text(
-                'Comment veux-tu utiliser Plumora ?',
+              if (!widget.isOnboarding) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FigmaBackButton(
+                    label: 'Profil',
+                    onTap: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.profile),
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ],
+              Text(
+                widget.isOnboarding
+                    ? 'Comment veux-tu utiliser Plumora ?'
+                    : 'Modifier mes roles',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: PlumoraColors.textPrimary,
+                  color: context.colors.textPrimary,
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
                   height: 1.1,
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Selectionne un ou plusieurs roles pour personnaliser ton experience',
+              Text(
+                widget.isOnboarding
+                    ? 'Selectionne un ou plusieurs roles pour personnaliser ton experience'
+                    : 'Ajoute ou retire des roles a tout moment',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: PlumoraColors.textSecondary,
+                  color: context.colors.textSecondary,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -92,7 +134,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                 spacing: 24,
                 runSpacing: 24,
                 children: [
-                  for (final role in _roleChoices)
+                  for (final role in _roleChoices(context))
                     SizedBox(
                       width: cardWidth,
                       child: _RoleCard(
@@ -109,21 +151,23 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                 child: FilledButton(
                   onPressed: isLoading || !hasSelection ? null : _submit,
                   child: LoadingButtonChild(
-                    label: 'Continuer',
+                    label: widget.isOnboarding ? 'Continuer' : 'Enregistrer',
                     isLoading: isLoading,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Tu pourras modifier tes roles plus tard dans ton profil',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: PlumoraColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              if (widget.isOnboarding) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Tu pourras modifier tes roles plus tard dans ton profil',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
+              ],
             ],
           );
         },
@@ -158,10 +202,10 @@ class _RoleCard extends StatelessWidget {
     return FigmaCard(
       onTap: onTap,
       padding: const EdgeInsets.all(24),
-      borderColor: selected ? PlumoraColors.primary : PlumoraColors.border,
+      borderColor: selected ? context.colors.primary : context.colors.border,
       color: selected
-          ? PlumoraColors.primary.withValues(alpha: 0.06)
-          : PlumoraColors.cards,
+          ? context.colors.primary.withValues(alpha: 0.06)
+          : context.colors.cards,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -177,8 +221,8 @@ class _RoleCard extends StatelessWidget {
           const SizedBox(height: 18),
           Text(
             role.label,
-            style: const TextStyle(
-              color: PlumoraColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 17,
               fontWeight: FontWeight.w900,
             ),
@@ -187,8 +231,8 @@ class _RoleCard extends StatelessWidget {
           Text(
             role.description,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 13,
               height: 1.35,
               fontWeight: FontWeight.w600,
@@ -200,30 +244,30 @@ class _RoleCard extends StatelessWidget {
   }
 }
 
-const List<_RoleChoice> _roleChoices = [
+List<_RoleChoice> _roleChoices(BuildContext context) => [
   _RoleChoice(
     value: 'AUTHOR',
     label: 'Auteur',
     description: 'Ecrire, organiser et publier mes livres',
     icon: Icons.edit_outlined,
-    iconBackground: Color(0xFFF3E8FF),
-    iconColor: PlumoraColors.primary,
+    iconBackground: const Color(0xFFF3E8FF),
+    iconColor: context.colors.primary,
   ),
   _RoleChoice(
     value: 'READER',
     label: 'Lecteur',
     description: 'Decouvrir, lire et sauvegarder des livres',
     icon: Icons.menu_book_outlined,
-    iconBackground: Color(0xFFFFF3C4),
-    iconColor: PlumoraColors.secondary,
+    iconBackground: const Color(0xFFFFF3C4),
+    iconColor: context.colors.secondary,
   ),
   _RoleChoice(
     value: 'BETA_READER',
     label: 'Beta-testeur',
     description: 'Lire des manuscrits avant publication et donner mon avis',
     icon: Icons.science_outlined,
-    iconBackground: Color(0xFFDDF8E8),
-    iconColor: PlumoraColors.accent,
+    iconBackground: const Color(0xFFDDF8E8),
+    iconColor: context.colors.accent,
   ),
 ];
 

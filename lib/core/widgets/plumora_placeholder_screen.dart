@@ -41,15 +41,15 @@ class PlumoraPlaceholderScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     PlumoraIconTile(
-                      backgroundColor: PlumoraColors.secondary,
-                      child: Icon(icon, color: PlumoraColors.primary, size: 30),
+                      backgroundColor: context.colors.secondary,
+                      child: Icon(icon, color: context.colors.primary, size: 30),
                     ),
                     const SizedBox(height: 22),
                     Text(
                       title,
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
-                            color: PlumoraColors.textPrimary,
+                            color: context.colors.textPrimary,
                             fontWeight: FontWeight.w900,
                           ),
                     ),
@@ -57,7 +57,7 @@ class PlumoraPlaceholderScreen extends StatelessWidget {
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                         height: 1.45,
                       ),
                     ),

@@ -52,8 +52,8 @@ void main() {
           AppRoutes.publicDomainBookDetail,
           AppRoutes.catalogSearch,
           AppRoutes.catalogBookDetail,
-          AppRoutes.mukemeRecommendation,
-          AppRoutes.mukemeWriting,
+          AppRoutes.plumoRecommendation,
+          AppRoutes.plumoWriting,
           AppRoutes.write,
           AppRoutes.manuscripts,
           AppRoutes.editor,
@@ -115,8 +115,8 @@ void main() {
         '/chapters/chapter-1/author?bookId=book-1',
       );
       expect(
-        AppRoutes.mukemeWritingPath(chapterId: 'chapter-1'),
-        '/mukeme/writing?chapterId=chapter-1',
+        AppRoutes.plumoWritingPath(chapterId: 'chapter-1'),
+        '/plumo/writing?chapterId=chapter-1',
       );
       expect(
         AppRoutes.authorBetaCommentsPath('book-1'),
@@ -508,7 +508,9 @@ void main() {
       expect(myReviews.single.id, 'review-1');
       expect(updatedReview.rating, 4);
 
+      final betaReaders = await beta.betaReaders();
       final invitations = await beta.myInvitations();
+      final openCampaigns = await beta.openCampaigns();
       final campaign = await beta.createCampaign(
         'book-1',
         const BetaCampaignCreateRequest(
@@ -519,13 +521,18 @@ void main() {
       final campaigns = await beta.campaignsForBook('book-1');
       final campaignDetail = await beta.campaignById('campaign-1');
       final closedCampaign = await beta.closeCampaign('campaign-1');
+      final cancelledCampaign = await beta.cancelCampaign('campaign-1');
       final invitation = await beta.createInvitation(
         'campaign-1',
-        const BetaInvitationCreateRequest(email: 'beta@plumora.test'),
+        const BetaInvitationCreateRequest(betaReaderId: 'user-2'),
+      );
+      final campaignInvitations = await beta.invitationsForCampaign(
+        'campaign-1',
       );
       final sharedAfterUpdate = await beta.updateSharedChapters('campaign-1', [
         'chapter-1',
       ]);
+      await beta.recordChapterView('campaign-1', 'chapter-1');
       final acceptedInvitation = await beta.acceptInvitation('invitation-1');
       final refusedInvitation = await beta.refuseInvitation('invitation-1');
       final sharedChapters = await beta.sharedChapters('campaign-1');
@@ -534,7 +541,7 @@ void main() {
           bookId: 'book-1',
           campaignId: 'campaign-1',
           chapterId: 'chapter-1',
-          type: BetaCommentType.incoherence,
+          type: BetaCommentType.plot,
           content: 'Ce passage contredit le chapitre précédent.',
         ),
       );
@@ -544,20 +551,26 @@ void main() {
         'comment-1',
         BetaCommentStatus.resolved,
       );
+      await beta.deleteComment('comment-1');
 
+      expect(betaReaders.single.username, 'sarah_seed');
       expect(invitations.single.id, 'invitation-1');
       expect(invitations.single.coverUrl, createdBook.coverUrl);
+      expect(openCampaigns.single.id, 'campaign-1');
+      expect(openCampaigns.single.engagedByMe, isTrue);
       expect(campaign.id, 'campaign-1');
       expect(campaign.coverUrl, createdBook.coverUrl);
       expect(campaigns.single.id, 'campaign-1');
-      expect(campaignDetail.status, BetaCampaignStatus.open);
+      expect(campaignDetail.status, BetaCampaignStatus.active);
       expect(closedCampaign.status, BetaCampaignStatus.closed);
+      expect(cancelledCampaign.status, BetaCampaignStatus.cancelled);
       expect(invitation.campaignId, 'campaign-1');
+      expect(campaignInvitations.single.id, 'invitation-1');
       expect(sharedAfterUpdate.single.id, 'shared-1');
       expect(acceptedInvitation.status.apiValue, 'ACCEPTED');
       expect(refusedInvitation.status.apiValue, 'REFUSED');
       expect(sharedChapters.single.id, 'shared-1');
-      expect(createdComment.type, BetaCommentType.incoherence);
+      expect(createdComment.type, BetaCommentType.plot);
       expect(commentsForBook.single.bookId, 'book-1');
       expect(commentsForCampaign.single.campaignId, 'campaign-1');
       expect(resolvedComment.status, BetaCommentStatus.resolved);
@@ -646,13 +659,18 @@ void main() {
           'GET /reviews/my',
           'PUT /reviews/review-1',
           'DELETE /reviews/review-1',
+          'GET /users',
           'GET /beta-invitations/my-invitations',
+          'GET /beta-campaigns',
           'POST /books/book-1/beta-campaigns',
           'GET /books/book-1/beta-campaigns',
           'GET /beta-campaigns/campaign-1',
           'PATCH /beta-campaigns/campaign-1/close',
+          'PATCH /beta-campaigns/campaign-1/cancel',
           'POST /beta-campaigns/campaign-1/invitations',
+          'GET /beta-campaigns/campaign-1/invitations',
           'PUT /beta-campaigns/campaign-1/chapters',
+          'POST /beta-campaigns/campaign-1/chapters/chapter-1/views',
           'PATCH /beta-invitations/invitation-1/accept',
           'PATCH /beta-invitations/invitation-1/refuse',
           'GET /beta-campaigns/campaign-1/chapters',
@@ -660,6 +678,7 @@ void main() {
           'GET /books/book-1/beta-comments',
           'GET /beta-campaigns/campaign-1/comments',
           'PATCH /beta-comments/comment-1/status',
+          'DELETE /beta-comments/comment-1',
           'POST /ai/writing/suggestions',
           'PATCH /ai/writing/suggestions/suggestion-1/accept',
           'PATCH /ai/writing/suggestions/suggestion-1/modify',
@@ -921,18 +940,19 @@ Map<String, Object?> _seedResponses() {
     'id': 'campaign-1',
     'bookId': 'book-1',
     'bookTitle': 'La Nuit Rouge',
-    'coverUrl': 'https://cdn.plumora.test/covers/nuit-rouge.jpg',
-    'status': 'OPEN',
+    'bookCoverUrl': 'https://cdn.plumora.test/covers/nuit-rouge.jpg',
+    'authorUsername': 'Kevin Fonkou',
+    'status': 'ACTIVE',
     'instructions': 'Chercher les incohérences.',
     'deadline': '2026-06-12',
+    'engagedByMe': true,
   };
   final invitation = {
     'id': 'invitation-1',
     'campaignId': 'campaign-1',
     'bookId': 'book-1',
     'bookTitle': 'La Nuit Rouge',
-    'authorName': 'Kevin Fonkou',
-    'coverUrl': 'https://cdn.plumora.test/covers/nuit-rouge.jpg',
+    'bookCoverUrl': 'https://cdn.plumora.test/covers/nuit-rouge.jpg',
     'status': 'PENDING',
   };
   final sharedChapter = {
@@ -950,10 +970,11 @@ Map<String, Object?> _seedResponses() {
     'campaignId': 'campaign-1',
     'chapterId': 'chapter-1',
     'chapterTitle': 'Chapitre 1',
-    'content': 'Ce passage contredit le chapitre précédent.',
-    'type': 'INCOHERENCE',
+    'commentText': 'Ce passage contredit le chapitre précédent.',
+    'feedbackType': 'PLOT',
+    'priority': 'HIGH',
     'status': 'OPEN',
-    'betaReaderName': 'Sarah Seed',
+    'betaReaderUsername': 'Sarah Seed',
   };
   final suggestion = {
     'id': 'suggestion-1',
@@ -1068,8 +1089,14 @@ Map<String, Object?> _seedResponses() {
     },
     'PUT /reviews/review-1': {...review, 'rating': 4, 'comment': 'Très bon.'},
     'DELETE /reviews/review-1': _emptyResponse,
+    'GET /users': [
+      {'id': 'user-2', 'username': 'sarah_seed'},
+    ],
     'GET /beta-invitations/my-invitations': {
       'invitations': [invitation],
+    },
+    'GET /beta-campaigns': {
+      'campaigns': [campaign],
     },
     'POST /books/book-1/beta-campaigns': campaign,
     'GET /books/book-1/beta-campaigns': {
@@ -1077,13 +1104,21 @@ Map<String, Object?> _seedResponses() {
     },
     'GET /beta-campaigns/campaign-1': campaign,
     'PATCH /beta-campaigns/campaign-1/close': {...campaign, 'status': 'CLOSED'},
+    'PATCH /beta-campaigns/campaign-1/cancel': {
+      ...campaign,
+      'status': 'CANCELLED',
+    },
     'POST /beta-campaigns/campaign-1/invitations': {
       ...invitation,
       'campaignId': 'campaign-1',
     },
+    'GET /beta-campaigns/campaign-1/invitations': {
+      'invitations': [invitation],
+    },
     'PUT /beta-campaigns/campaign-1/chapters': {
       'chapters': [sharedChapter],
     },
+    'POST /beta-campaigns/campaign-1/chapters/chapter-1/views': _emptyResponse,
     'PATCH /beta-invitations/invitation-1/accept': {
       ...invitation,
       'status': 'ACCEPTED',
@@ -1106,6 +1141,7 @@ Map<String, Object?> _seedResponses() {
       ...betaComment,
       'status': 'RESOLVED',
     },
+    'DELETE /beta-comments/comment-1': _emptyResponse,
     'POST /ai/writing/suggestions': suggestion,
     'PATCH /ai/writing/suggestions/suggestion-1/accept': {
       ...suggestion,

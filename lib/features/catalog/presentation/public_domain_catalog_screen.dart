@@ -83,15 +83,15 @@ class _PublicDomainCatalogScreenState
                     Text(
                       'Domaine public',
                       style: GoogleFonts.playfairDisplay(
-                        color: PlumoraColors.textPrimary,
+                        color: context.colors.textPrimary,
                         fontSize: 32,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'Classiques et livres libres disponibles dans Plumora.',
-                      style: TextStyle(color: PlumoraColors.textSecondary),
+                      style: TextStyle(color: context.colors.textSecondary),
                     ),
                   ],
                 ),
@@ -100,7 +100,7 @@ class _PublicDomainCatalogScreenState
               FigmaGradientIcon(
                 icon: Icons.public,
                 size: 54,
-                colors: const [PlumoraColors.primary, PlumoraColors.accent],
+                colors: [context.colors.primary, context.colors.accent],
               ),
             ],
           ),
@@ -468,8 +468,8 @@ class _ExternalBookCard extends StatelessWidget {
                   book.title.isEmpty ? 'Livre sans titre' : book.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
@@ -479,8 +479,8 @@ class _ExternalBookCard extends StatelessWidget {
                   book.authorLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -492,8 +492,8 @@ class _ExternalBookCard extends StatelessWidget {
                       : book.summary,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     height: 1.35,
                   ),
                 ),
@@ -505,11 +505,11 @@ class _ExternalBookCard extends StatelessWidget {
                     PlumoraBadge(
                       label: book.imported ? 'Importe' : 'Domaine public',
                       backgroundColor: book.imported
-                          ? PlumoraColors.success.withValues(alpha: 0.14)
-                          : const Color(0xFFEADFCF),
+                          ? context.colors.success.withValues(alpha: 0.14)
+                          : context.colors.primary.withValues(alpha: 0.12),
                       foregroundColor: book.imported
-                          ? PlumoraColors.success
-                          : PlumoraColors.primary,
+                          ? context.colors.success
+                          : context.colors.primary,
                     ),
                     if (book.languages.isNotEmpty)
                       PlumoraBadge(
@@ -536,12 +536,12 @@ class _ExternalBookCard extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+              Icon(Icons.chevron_right, color: context.colors.textSecondary),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Details',
                 style: TextStyle(
-                  color: PlumoraColors.primary,
+                  color: context.colors.primary,
                   fontSize: 11,
                   fontWeight: FontWeight.w900,
                 ),
@@ -572,10 +572,7 @@ class _StateCard extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
+          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),
@@ -592,16 +589,16 @@ class _InlineError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FigmaCard(
-      color: PlumoraColors.destructive.withValues(alpha: 0.06),
-      borderColor: PlumoraColors.destructive.withValues(alpha: 0.18),
+      color: context.colors.destructive.withValues(alpha: 0.06),
+      borderColor: context.colors.destructive.withValues(alpha: 0.18),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: PlumoraColors.destructive),
+          Icon(Icons.error_outline, color: context.colors.destructive),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: PlumoraColors.textSecondary),
+              style: TextStyle(color: context.colors.textSecondary),
             ),
           ),
           TextButton(onPressed: onRetry, child: const Text('Reessayer')),

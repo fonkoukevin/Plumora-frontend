@@ -29,7 +29,7 @@ class NotificationModel {
       title: _readString(json, ['title', 'subject']),
       message: _readString(json, ['message', 'body', 'content']),
       type: _readString(json, ['type', 'category']),
-      isRead: _readBool(json, ['isRead', 'read', 'seen']),
+      isRead: _readBool(json, ['is_read', 'isRead', 'read', 'seen']),
       createdAt: _readDate(json, ['createdAt', 'created_at']),
       readAt: _readDate(json, ['readAt', 'read_at']),
     );

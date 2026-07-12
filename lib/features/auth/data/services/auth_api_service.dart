@@ -5,6 +5,7 @@ import '../models/auth_response.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/role_model.dart';
+import '../models/update_profile_request.dart';
 import '../models/user_model.dart';
 
 class AuthApiService {
@@ -37,6 +38,11 @@ class AuthApiService {
 
   Future<UserModel> userMe() async {
     final response = await _dio.get('/users/me');
+    return UserModel.fromJson(_readMap(response.data));
+  }
+
+  Future<UserModel> updateMe(UpdateProfileRequest request) async {
+    final response = await _dio.put('/users/me', data: request.toJson());
     return UserModel.fromJson(_readMap(response.data));
   }
 

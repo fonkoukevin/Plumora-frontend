@@ -6,9 +6,13 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../ai/data/models/plumo_ai_models.dart';
+import '../../ai/data/plumo_ai_error.dart';
+import '../../ai/data/repositories/plumo_ai_repository.dart';
 import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
+import '../data/writing_cache_invalidator.dart';
 
 class ChapterDetailAuthorScreen extends ConsumerStatefulWidget {
   const ChapterDetailAuthorScreen({
@@ -202,6 +206,7 @@ class _ChapterDetailAuthorScreenState
     if (bookId.isNotEmpty) {
       ref.invalidate(bookChaptersProvider(bookId));
       ref.invalidate(authorBookProvider(bookId));
+      invalidateBookPublicationCaches(ref, bookId);
     }
     ref.invalidate(myBooksProvider);
   }
@@ -244,7 +249,7 @@ class _ChapterDetailForm extends StatelessWidget {
             padding: EdgeInsets.zero,
             minimumSize: const Size(0, 32),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            foregroundColor: PlumoraColors.textSecondary,
+            foregroundColor: context.colors.textSecondary,
           ),
           icon: const Icon(Icons.arrow_back, size: 16),
           label: const Text('Retour'),
@@ -253,14 +258,14 @@ class _ChapterDetailForm extends StatelessWidget {
         Text(
           chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: PlumoraColors.textPrimary,
+            color: context.colors.textPrimary,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Chapitre ${chapter.order == 0 ? '-' : chapter.order} · ${chapter.content.length} caractères',
-          style: const TextStyle(color: PlumoraColors.textSecondary),
+          style: TextStyle(color: context.colors.textSecondary),
         ),
         const SizedBox(height: 24),
         PlumoraCard(
@@ -303,7 +308,7 @@ class _ChapterDetailForm extends StatelessWidget {
                     icon: const Icon(Icons.delete_outline, size: 18),
                     label: const Text('Supprimer'),
                     style: TextButton.styleFrom(
-                      foregroundColor: PlumoraColors.destructive,
+                      foregroundColor: context.colors.destructive,
                     ),
                   ),
                   OutlinedButton.icon(
@@ -320,6 +325,300 @@ class _ChapterDetailForm extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 18),
+        _PlumoAnalysisCard(chapter: chapter),
+      ],
+    );
+  }
+}
+
+class _PlumoAnalysisCard extends ConsumerStatefulWidget {
+  const _PlumoAnalysisCard({required this.chapter});
+
+  final ChapterModel chapter;
+
+  @override
+  ConsumerState<_PlumoAnalysisCard> createState() =>
+      _PlumoAnalysisCardState();
+}
+
+class _PlumoAnalysisCardState extends ConsumerState<_PlumoAnalysisCard> {
+  bool _loading = false;
+  String? _error;
+  BetaReadingAnalysisResponse? _result;
+
+  Future<void> _analyze() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final result = await ref
+          .read(plumoAiRepositoryProvider)
+          .analyzeForBetaReading(
+            BetaReadingAnalysisRequest(
+              text: widget.chapter.content,
+              chapterId: widget.chapter.id,
+            ),
+          );
+      setState(() => _result = result);
+    } catch (error) {
+      setState(() => _error = plumoAiErrorMessage(error));
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasContent = widget.chapter.content.trim().isNotEmpty;
+
+    return PlumoraCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: context.colors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.auto_awesome,
+                  color: context.colors.primary,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Analyse Plumo',
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (_result != null && !_loading)
+                TextButton(onPressed: _analyze, child: const Text('Relancer')),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Demande à Plumo d'analyser ce chapitre avant de l'envoyer en bêta-lecture. Le texte reste inchangé, ce n'est qu'un avis.",
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          if (_error != null) ...[
+            _InlineError(message: _error!),
+            const SizedBox(height: 14),
+          ],
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_result == null)
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: hasContent ? _analyze : null,
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: const Text('Analyser avec Plumo'),
+              ),
+            )
+          else
+            _PlumoAnalysisResultView(result: _result!),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlumoAnalysisResultView extends StatelessWidget {
+  const _PlumoAnalysisResultView({required this.result});
+
+  final BetaReadingAnalysisResponse result;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (result.globalFeedback.trim().isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: context.colors.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              result.globalFeedback,
+              style: const TextStyle(height: 1.45, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _PlumoScoreTile(label: 'Clarté', score: result.clarityScore),
+            _PlumoScoreTile(label: 'Rythme', score: result.rhythmScore),
+            _PlumoScoreTile(label: 'Cohérence', score: result.coherenceScore),
+            _PlumoScoreTile(
+              label: 'Personnages',
+              score: result.characterScore,
+            ),
+          ],
+        ),
+        if (result.strengths.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _PlumoBulletSection(
+            title: 'Points forts',
+            icon: Icons.thumb_up_outlined,
+            color: context.colors.success,
+            items: result.strengths,
+          ),
+        ],
+        if (result.weaknesses.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _PlumoBulletSection(
+            title: 'Points faibles',
+            icon: Icons.thumb_down_outlined,
+            color: context.colors.destructive,
+            items: result.weaknesses,
+          ),
+        ],
+        if (result.suggestions.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _PlumoBulletSection(
+            title: "Suggestions d'amélioration",
+            icon: Icons.lightbulb_outline,
+            color: context.colors.accent,
+            items: result.suggestions,
+          ),
+        ],
+        if (result.warnings.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _PlumoBulletSection(
+            title: 'Avertissements',
+            icon: Icons.warning_amber_outlined,
+            color: context.colors.warning,
+            items: result.warnings,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _PlumoScoreTile extends StatelessWidget {
+  const _PlumoScoreTile({required this.label, required this.score});
+
+  final String label;
+  final int score;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 130,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.colors.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '$score',
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                '/10',
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlumoBulletSection extends StatelessWidget {
+  const _PlumoBulletSection({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.items,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                color: context.colors.textPrimary,
+                fontWeight: FontWeight.w900,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (final item in items)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6, left: 22),
+            child: Text(
+              '• $item',
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -340,7 +639,7 @@ class _DeleteChapterDialog extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color: PlumoraColors.cards,
+            color: context.colors.cards,
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [
               BoxShadow(
@@ -361,12 +660,12 @@ class _DeleteChapterDialog extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFBE6E4),
+                      color: context.colors.destructive.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.delete_outline,
-                      color: PlumoraColors.destructive,
+                      color: context.colors.destructive,
                       size: 24,
                     ),
                   ),
@@ -387,8 +686,8 @@ class _DeleteChapterDialog extends StatelessWidget {
                           chapterTitle.trim().isEmpty
                               ? 'Cette action est définitive.'
                               : '"$chapterTitle" sera définitivement supprimé.',
-                          style: const TextStyle(
-                            color: PlumoraColors.textSecondary,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
                             height: 1.4,
                           ),
                         ),
@@ -435,8 +734,8 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 7),
       child: Text(
         label,
-        style: const TextStyle(
-          color: PlumoraColors.textPrimary,
+        style: TextStyle(
+          color: context.colors.textPrimary,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
@@ -456,13 +755,13 @@ class _InlineError extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7E0DC),
+        color: context.colors.destructive.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         message,
-        style: const TextStyle(
-          color: PlumoraColors.destructive,
+        style: TextStyle(
+          color: context.colors.destructive,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -508,10 +807,7 @@ class _ErrorCard extends StatelessWidget {
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 16),
           FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],

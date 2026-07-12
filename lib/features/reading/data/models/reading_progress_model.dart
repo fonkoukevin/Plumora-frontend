@@ -58,6 +58,8 @@ class ReadingProgressModel {
         'cover_url',
         'coverImageUrl',
         'cover_image_url',
+        'bookCoverUrl',
+        'book_cover_url',
         'imageUrl',
         'image_url',
       ]),

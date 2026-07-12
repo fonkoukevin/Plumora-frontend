@@ -434,8 +434,8 @@ class _BookDetailContent extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             favoriteError!,
-            style: const TextStyle(
-              color: PlumoraColors.destructive,
+            style: TextStyle(
+              color: context.colors.destructive,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -450,17 +450,17 @@ class _BookDetailContent extends StatelessWidget {
           ),
         ] else if (!book.canReadInPlumora) ...[
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Aucune source lisible externe disponible pour ce livre.',
-            style: TextStyle(color: PlumoraColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
           ),
         ],
         if (importError != null) ...[
           const SizedBox(height: 8),
           Text(
             importError!,
-            style: const TextStyle(
-              color: PlumoraColors.destructive,
+            style: TextStyle(
+              color: context.colors.destructive,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -524,8 +524,8 @@ class _BookInfo extends StatelessWidget {
       children: [
         Text(
           book.title.isEmpty ? 'Livre sans titre' : book.title,
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 30,
             fontWeight: FontWeight.w900,
             height: 1.05,
@@ -534,8 +534,8 @@ class _BookInfo extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'par ${book.authorLabel}',
-          style: const TextStyle(
-            color: PlumoraColors.textSecondary,
+          style: TextStyle(
+            color: context.colors.textSecondary,
             fontSize: 16,
           ),
         ),
@@ -590,11 +590,11 @@ class _MetaMetric extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.sub,
-    this.iconColor = PlumoraColors.textSecondary,
+    this.iconColor,
   });
 
   final IconData icon;
-  final Color iconColor;
+  final Color? iconColor;
   final String label;
   final String sub;
 
@@ -603,12 +603,12 @@ class _MetaMetric extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18, color: iconColor),
+        Icon(icon, size: 18, color: iconColor ?? context.colors.textSecondary),
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w900,
           ),
@@ -617,8 +617,8 @@ class _MetaMetric extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             sub,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 13,
             ),
           ),
@@ -651,10 +651,10 @@ class _SummaryCardState extends State<_SummaryCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Resume',
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
@@ -666,8 +666,8 @@ class _SummaryCardState extends State<_SummaryCard> {
             overflow: canCollapse && !_expanded
                 ? TextOverflow.ellipsis
                 : TextOverflow.visible,
-            style: const TextStyle(
-              color: PlumoraColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               height: 1.55,
             ),
           ),
@@ -702,10 +702,10 @@ class _AuthorCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "A propos de l'auteur",
             style: TextStyle(
-              color: PlumoraColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
@@ -715,7 +715,7 @@ class _AuthorCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundColor: PlumoraColors.primary,
+                backgroundColor: context.colors.primary,
                 child: Text(
                   initials.isEmpty ? 'A' : initials,
                   style: const TextStyle(
@@ -731,8 +731,8 @@ class _AuthorCard extends StatelessWidget {
                   children: [
                     Text(
                       book.authorLabel,
-                      style: const TextStyle(
-                        color: PlumoraColors.textPrimary,
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
                       ),
@@ -740,8 +740,8 @@ class _AuthorCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${book.source} - domaine public',
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
                         fontSize: 13,
                       ),
                     ),
@@ -753,7 +753,7 @@ class _AuthorCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             '${book.subjects.length} sujets repertories  -  ${_formatCompact(book.downloadCount)} lectures',
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
         ],
       ),
@@ -788,11 +788,11 @@ class _ReviewsPreview extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Avis des lecteurs',
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
@@ -808,8 +808,8 @@ class _ReviewsPreview extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               error!,
-              style: const TextStyle(
-                color: PlumoraColors.destructive,
+              style: TextStyle(
+                color: context.colors.destructive,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -830,10 +830,10 @@ class _ReviewsPreview extends StatelessWidget {
               ),
               data: (reviews) {
                 if (reviews.isEmpty) {
-                  return const Text(
+                  return Text(
                     'Aucun avis pour ce livre pour le moment.',
                     style: TextStyle(
-                      color: PlumoraColors.textSecondary,
+                      color: context.colors.textSecondary,
                       height: 1.4,
                     ),
                   );
@@ -849,7 +849,7 @@ class _ReviewsPreview extends StatelessWidget {
                     ) ...[
                       _ReviewItem(review: visibleReviews[index]),
                       if (index != visibleReviews.length - 1)
-                        const Divider(color: PlumoraColors.border),
+                        Divider(color: context.colors.border),
                     ],
                   ],
                 );
@@ -875,7 +875,7 @@ class _ReviewsError extends StatelessWidget {
       children: [
         Text(
           message,
-          style: const TextStyle(color: PlumoraColors.textSecondary),
+          style: TextStyle(color: context.colors.textSecondary),
         ),
         const SizedBox(height: 10),
         TextButton(onPressed: onRetry, child: const Text('Reessayer')),
@@ -908,8 +908,8 @@ class _ReviewItem extends StatelessWidget {
               if (review.createdAt != null)
                 Text(
                   _shortDate(review.createdAt!),
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -919,8 +919,8 @@ class _ReviewItem extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               review.comment,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -1008,8 +1008,8 @@ class _ReviewDialogState extends State<_ReviewDialog> {
             const SizedBox(height: 8),
             Text(
               _error!,
-              style: const TextStyle(
-                color: PlumoraColors.destructive,
+              style: TextStyle(
+                color: context.colors.destructive,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -1064,7 +1064,7 @@ class _ErrorCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),

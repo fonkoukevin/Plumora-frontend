@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/review_model.dart';
@@ -21,31 +22,31 @@ class MyReviewsScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         PlumoraCard(
-          borderColor: const Color(0xFFE7D8B9),
+          borderColor: context.colors.warning.withValues(alpha: 0.35),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const PlumoraIconTile(
-                backgroundColor: Color(0xFFFFF5D8),
-                child: Icon(Icons.star, color: PlumoraColors.primary),
+              PlumoraIconTile(
+                backgroundColor: context.colors.warning.withValues(alpha: 0.12),
+                child: Icon(Icons.star, color: context.colors.warning),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'Mes avis',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Retrouvez les avis que vous avez publiés sur les livres Plumora.',
                       style: TextStyle(
-                        color: PlumoraColors.textSecondary,
+                        color: context.colors.textSecondary,
                         height: 1.45,
                       ),
                     ),
@@ -63,9 +64,10 @@ class MyReviewsScreen extends ConsumerWidget {
               child: CircularProgressIndicator(),
             ),
           ),
-          error: (error, _) => _StateCard(
+          error: (error, _) => FigmaEmptyState(
+            icon: Icons.error_outline,
             title: 'Avis indisponibles',
-            subtitle: AppError.messageFor(error),
+            message: AppError.messageFor(error),
             action: FilledButton(
               onPressed: () => ref.invalidate(myReviewsProvider),
               child: const Text('Réessayer'),
@@ -73,9 +75,10 @@ class MyReviewsScreen extends ConsumerWidget {
           ),
           data: (reviews) {
             if (reviews.isEmpty) {
-              return const _StateCard(
+              return const FigmaEmptyState(
+                icon: Icons.rate_review_outlined,
                 title: 'Aucun avis publié',
-                subtitle:
+                message:
                     'Les avis que tu laisseras depuis les fiches livres apparaîtront ici.',
               );
             }
@@ -161,7 +164,7 @@ class _MyReviewCardState extends ConsumerState<_MyReviewCard> {
                 icon: const Icon(Icons.delete_outline, size: 16),
                 label: Text(_isDeleting ? '...' : 'Supprimer'),
                 style: TextButton.styleFrom(
-                  foregroundColor: PlumoraColors.destructive,
+                  foregroundColor: context.colors.destructive,
                 ),
               ),
             ],
@@ -170,8 +173,8 @@ class _MyReviewCardState extends ConsumerState<_MyReviewCard> {
             const SizedBox(height: 10),
             Text(
               review.comment,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 height: 1.45,
               ),
             ),
@@ -221,32 +224,6 @@ class _Stars extends StatelessWidget {
             size: 16,
           ),
       ],
-    );
-  }
-}
-
-class _StateCard extends StatelessWidget {
-  const _StateCard({required this.title, required this.subtitle, this.action});
-
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
-          if (action != null) ...[const SizedBox(height: 14), action!],
-        ],
-      ),
     );
   }
 }
