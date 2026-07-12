@@ -8,6 +8,7 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
+import '../../catalog/data/repositories/catalog_repository.dart';
 import '../data/models/ai_models.dart';
 import '../data/repositories/ai_repository.dart';
 
@@ -423,7 +424,14 @@ class _RecommendationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final book = recommendation.book;
+    final thinBook = recommendation.book;
+    // The recommendation payload only carries id/title/coverUrl -- enrich
+    // with the real author/genre/rating/reading time from the catalog so
+    // this card doesn't fall back to "Plumora" / 0.0 / 0 lectures. Falls
+    // back to the thin data while loading or if the book can't be resolved
+    // anymore, rather than blocking the whole card.
+    final detailAsync = ref.watch(catalogBookDetailProvider(thinBook.id));
+    final book = detailAsync.valueOrNull?.summary ?? thinBook;
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
     return FigmaCard(
