@@ -7,7 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../../core/widgets/plumora_logo_mark.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../beta_reading/data/repositories/beta_reading_repository.dart';
@@ -37,7 +39,7 @@ class HomeScreen extends ConsumerWidget {
         ref.watch(unreadNotificationsCountProvider).valueOrNull ?? 0;
 
     return ColoredBox(
-      color: PlumoraColors.background,
+      color: context.colors.background,
       child: SafeArea(
         bottom: false,
         child: CustomScrollView(
@@ -54,14 +56,19 @@ class HomeScreen extends ConsumerWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1280),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 92),
+                    padding: EdgeInsets.fromLTRB(
+                      MediaQuery.sizeOf(context).width >= 420 ? 16 : 20,
+                      16,
+                      MediaQuery.sizeOf(context).width >= 420 ? 16 : 20,
+                      92,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const _QuoteCard(),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 22),
                         readingsAsync.when(
-                          loading: () => const _LoadingCard(height: 188),
+                          loading: () => const _LoadingCard(height: 146),
                           error: (_, _) => _NoReadingCard(
                             onDiscover: () => context.go(AppRoutes.discover),
                           ),
@@ -88,14 +95,14 @@ class HomeScreen extends ConsumerWidget {
                         _QuickActions(
                           onWrite: () => context.go(AppRoutes.write),
                           onDiscover: () => context.go(AppRoutes.discover),
-                          onMukeme: () =>
-                              context.go(AppRoutes.mukemeRecommendation),
+                          onPlumo: () =>
+                              context.go(AppRoutes.plumoRecommendation),
                         ),
                         const SizedBox(height: 26),
                         _BookRail(
                           title: 'Tendances',
                           icon: Icons.local_fire_department,
-                          iconColor: PlumoraColors.primary,
+                          iconColor: context.colors.primary,
                           booksAsync: popularAsync,
                           rankItems: true,
                           onSeeAll: () => context.go(AppRoutes.discover),
@@ -106,7 +113,7 @@ class HomeScreen extends ConsumerWidget {
                         _BookRail(
                           title: 'Nouveautes',
                           icon: Icons.bolt_outlined,
-                          iconColor: PlumoraColors.accent,
+                          iconColor: context.colors.accent,
                           booksAsync: latestAsync,
                           onSeeAll: () => context.go(AppRoutes.discover),
                           onRetry: () =>
@@ -169,7 +176,7 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
   final int unreadCount;
   final String displayName;
 
-  static const _height = 98.0;
+  static const _height = 78.0;
 
   @override
   double get minExtent => _height;
@@ -188,10 +195,8 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: PlumoraColors.background.withValues(alpha: 0.95),
-            border: const Border(
-              bottom: BorderSide(color: PlumoraColors.border),
-            ),
+            color: context.colors.background.withValues(alpha: 0.95),
+            border: Border(bottom: BorderSide(color: context.colors.border)),
             boxShadow: overlapsContent
                 ? const [
                     BoxShadow(
@@ -206,21 +211,29 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1280),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 7),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _HomeHeader(unreadCount: unreadCount),
                     const SizedBox(height: 4),
-                    Text(
-                      'Bonjour, $displayName',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: PlumoraColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Bonjour, $displayName',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: context.colors.textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        const Text('👋', style: TextStyle(fontSize: 12)),
+                      ],
                     ),
                   ],
                 ),
@@ -239,61 +252,156 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-class _HomeHeader extends StatelessWidget {
+class _HomeHeader extends ConsumerWidget {
   const _HomeHeader({required this.unreadCount});
 
   final int unreadCount;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeControllerProvider);
+    final isDark = themeMode == ThemeMode.dark;
+
     return Row(
       children: [
-        const Expanded(child: FigmaBrandMark(size: 40, textSize: 26)),
-        IconButton(
-          onPressed: () => context.go(AppRoutes.notifications),
-          icon: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_none, size: 23),
-              if (unreadCount > 0)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: PlumoraColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      unreadCount > 9 ? '9+' : unreadCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
+        const Expanded(child: _HomeBrand()),
+        Semantics(
+          button: true,
+          label: isDark ? 'Activer le theme clair' : 'Activer le theme sombre',
+          child: Tooltip(
+            message: isDark ? 'Thème clair' : 'Thème sombre',
+            child: InkWell(
+              onTap: () async {
+                try {
+                  await ref.read(themeModeControllerProvider.notifier).toggle();
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Impossible d’enregistrer le thème.'),
+                      ),
+                    );
+                  }
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: Icon(
+                  isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                  size: 20,
+                  color: context.colors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 2),
+        Semantics(
+          button: true,
+          label: unreadCount > 0
+              ? '$unreadCount notifications non lues'
+              : 'Notifications',
+          child: InkWell(
+            onTap: () => context.go(AppRoutes.notifications),
+            borderRadius: BorderRadius.circular(999),
+            child: SizedBox(
+              width: 34,
+              height: 34,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    size: 20,
+                    color: context.colors.textSecondary,
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: 5,
+                      right: 7,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: context.colors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const SizedBox(width: 6, height: 6),
                       ),
                     ),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
-          color: PlumoraColors.textSecondary,
         ),
+        const SizedBox(width: 5),
         InkWell(
           onTap: () => context.go(AppRoutes.profile),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(999),
           child: Container(
-            width: 38,
-            height: 38,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [PlumoraColors.primary, PlumoraColors.secondary],
+              gradient: LinearGradient(
+                colors: [context.colors.brandPrimary, context.colors.brandNavy],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(12),
+              shape: BoxShape.circle,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x26000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
             ),
-            child: const Icon(Icons.person_outline, color: Colors.white),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              size: 16,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeBrand extends StatelessWidget {
+  const _HomeBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: context.colors.primary,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: const PlumoraLogoMark(
+            size: 18,
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            'Plumora',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.playfairDisplay(
+              color: context.colors.textPrimary,
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
           ),
         ),
       ],
@@ -306,26 +414,111 @@ class _QuoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const FigmaCard(
-      padding: EdgeInsets.all(20),
-      shadow: false,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FigmaGradientIcon(icon: Icons.format_quote, size: 38, iconSize: 18),
-          SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              '"N\'attendez pas l\'inspiration. Elle vient en ecrivant."',
-              style: TextStyle(
-                color: PlumoraColors.textPrimary,
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
-                height: 1.45,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final factor = ((constraints.maxWidth - 282) / (456 - 282)).clamp(
+          0.0,
+          1.0,
+        );
+        final height = lerpDouble(90, 128, factor)!;
+        final horizontalPadding = lerpDouble(17, 24, factor)!;
+        final verticalPadding = lerpDouble(16, 20, factor)!;
+        final radius = lerpDouble(14, 18, factor)!;
+        final iconSize = lerpDouble(30, 44, factor)!;
+        final iconGlyphSize = lerpDouble(17, 22, factor)!;
+        final gap = lerpDouble(11, 18, factor)!;
+        final quoteFontSize = lerpDouble(12, 15.5, factor)!;
+        final authorFontSize = lerpDouble(10, 14, factor)!;
+        final authorGap = lerpDouble(4, 8, factor)!;
+        final textAreaWidth =
+            constraints.maxWidth - (horizontalPadding * 2) - iconSize - gap;
+
+        return SizedBox(
+          height: height,
+          child: FigmaCard(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: verticalPadding,
+            ),
+            radius: radius,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _QuoteIcon(size: iconSize, iconSize: iconGlyphSize),
+                SizedBox(width: gap),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topLeft,
+                    child: SizedBox(
+                      width: textAreaWidth,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '"N\'attendez pas l\'inspiration. Elle vient en écrivant."',
+                            maxLines: 2,
+                            style: TextStyle(
+                              color: context.colors.textPrimary,
+                              fontSize: quoteFontSize,
+                              fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: -0.15,
+                              height: 1.42,
+                            ),
+                          ),
+                          SizedBox(height: authorGap),
+                          Text(
+                            '— Victor Hugo',
+                            maxLines: 1,
+                            style: TextStyle(
+                              color: context.colors.textSecondary,
+                              fontSize: authorFontSize,
+                              fontWeight: FontWeight.w500,
+                              height: 1.25,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _QuoteIcon extends StatelessWidget {
+  const _QuoteIcon({required this.size, required this.iconSize});
+
+  final double size;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: context.colors.primary.withValues(alpha: 0.10),
+        shape: BoxShape.circle,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
         ],
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.format_quote_rounded,
+        size: iconSize,
+        color: context.colors.primary,
       ),
     );
   }
@@ -344,121 +537,134 @@ class _ContinueReadingCard extends ConsumerWidget {
       onTap: () => context.go(
         AppRoutes.readingPath(reading.bookId, chapterId: reading.chapterId),
       ),
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 188),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6D28D9), Color(0xFF4C1D95), Color(0xFF312E81)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x26000000),
-              blurRadius: 16,
-              offset: Offset(0, 8),
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 146,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF250047), Color(0xFF790FC0), Color(0xFF30267E)],
+              stops: [0, 0.58, 1],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withValues(alpha: 0.72),
-                      Colors.black.withValues(alpha: 0.26),
-                      Colors.transparent,
-                    ],
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x22000000),
+                blurRadius: 12,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.topRight,
+                      radius: 1.2,
+                      colors: [Color(0x287C3AED), Color(0x001F174A)],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  PlumoraBookCover(
-                    width: 92,
-                    height: 138,
+              Positioned(
+                left: 16,
+                top: 15,
+                child: Container(
+                  foregroundDecoration: BoxDecoration(
+                    border: Border.all(color: Color(0xFF8B38E9)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: PlumoraBookCover(
+                    width: 77,
+                    height: 114,
+                    radius: 10,
                     colors: _coverColors(reading.bookId),
                     imageUrl: reading.coverUrl,
                     imageBytes: cachedCover,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _WhiteBadge(
-                          icon: Icons.menu_book_outlined,
-                          label: 'Continuer la lecture',
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          reading.bookTitle.isEmpty
-                              ? 'Livre sans titre'
-                              : reading.bookTitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.playfairDisplay(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        Text(
-                          reading.chapterId == null
-                              ? 'Progression sauvegardee'
-                              : 'Chapitre ${reading.chapterIndex + 1}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: 170,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: LinearProgressIndicator(
-                              value: reading.progress,
-                              minHeight: 6,
-                              color: Colors.white,
-                              backgroundColor: const Color(0x33FFFFFF),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          '${reading.progressPercent}% lu',
-                          style: const TextStyle(
-                            color: Colors.white60,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.20),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.chevron_right, color: Colors.white),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+              Positioned(
+                left: 105,
+                right: 46,
+                top: 36,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _WhiteBadge(
+                      icon: Icons.menu_book_outlined,
+                      label: 'Continuer la lecture',
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      reading.bookTitle.isEmpty
+                          ? 'Livre sans titre'
+                          : reading.bookTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.playfairDisplay(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        height: 1.15,
+                      ),
+                    ),
+                    Text(
+                      reading.chapterId == null
+                          ? 'Progression sauvegardée'
+                          : 'Chapitre ${reading.chapterIndex + 1}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: reading.progress,
+                        minHeight: 5,
+                        color: Colors.white,
+                        backgroundColor: const Color(0x33FFFFFF),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${reading.progressPercent}% lu',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 9,
+                        height: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 7,
+                top: 57,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.20),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -478,29 +684,29 @@ class _NoReadingCard extends StatelessWidget {
         children: [
           const FigmaGradientIcon(icon: Icons.menu_book_outlined),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Aucune lecture en cours',
                   style: TextStyle(
-                    color: PlumoraColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Decouvre un livre pour commencer.',
                   style: TextStyle(
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+          Icon(Icons.chevron_right, color: context.colors.textSecondary),
         ],
       ),
     );
@@ -511,12 +717,12 @@ class _QuickActions extends StatelessWidget {
   const _QuickActions({
     required this.onWrite,
     required this.onDiscover,
-    required this.onMukeme,
+    required this.onPlumo,
   });
 
   final VoidCallback onWrite;
   final VoidCallback onDiscover;
-  final VoidCallback onMukeme;
+  final VoidCallback onPlumo;
 
   @override
   Widget build(BuildContext context) {
@@ -526,7 +732,10 @@ class _QuickActions extends StatelessWidget {
           child: _QuickAction(
             label: 'Ecrire',
             icon: Icons.edit_outlined,
-            colors: const [PlumoraColors.primary, PlumoraColors.primaryLight],
+            colors: [
+              context.colors.brandPrimary,
+              context.colors.brandPrimaryLight,
+            ],
             onTap: onWrite,
           ),
         ),
@@ -535,17 +744,17 @@ class _QuickActions extends StatelessWidget {
           child: _QuickAction(
             label: 'Decouvrir',
             icon: Icons.menu_book_outlined,
-            colors: const [PlumoraColors.secondary, Color(0xFF1E3A5F)],
+            colors: [context.colors.brandNavy, context.colors.brandNavyLight],
             onTap: onDiscover,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _QuickAction(
-            label: 'Mukeme',
+            label: 'Plumo',
             icon: Icons.auto_awesome,
-            colors: const [PlumoraColors.accent, Color(0xFFE0B830)],
-            onTap: onMukeme,
+            colors: [context.colors.brandGold, context.colors.brandGoldLight],
+            onTap: onPlumo,
           ),
         ),
       ],
@@ -707,8 +916,8 @@ class _BookTile extends ConsumerWidget {
                     child: Container(
                       width: 22,
                       height: 22,
-                      decoration: const BoxDecoration(
-                        color: PlumoraColors.orange,
+                      decoration: BoxDecoration(
+                        color: context.colors.orange,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -730,8 +939,8 @@ class _BookTile extends ConsumerWidget {
               book.title.isEmpty ? 'Livre sans titre' : book.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: PlumoraColors.textPrimary,
+              style: TextStyle(
+                color: context.colors.textPrimary,
                 fontSize: 12,
                 height: 1.15,
                 fontWeight: FontWeight.w900,
@@ -742,8 +951,8 @@ class _BookTile extends ConsumerWidget {
               book.authorName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: PlumoraColors.textSecondary,
+              style: TextStyle(
+                color: context.colors.textSecondary,
                 fontSize: 11,
               ),
             ),
@@ -793,14 +1002,14 @@ class _ActivityList extends StatelessWidget {
                           width: 42,
                           height: 42,
                           decoration: BoxDecoration(
-                            color: PlumoraColors.primary.withValues(
+                            color: context.colors.primary.withValues(
                               alpha: 0.10,
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.notifications_none,
-                            color: PlumoraColors.primary,
+                            color: context.colors.primary,
                             size: 21,
                           ),
                         ),
@@ -813,8 +1022,8 @@ class _ActivityList extends StatelessWidget {
                                 notification.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: PlumoraColors.textPrimary,
+                                style: TextStyle(
+                                  color: context.colors.textPrimary,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -823,17 +1032,17 @@ class _ActivityList extends StatelessWidget {
                                 notification.message,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: PlumoraColors.textSecondary,
+                                style: TextStyle(
+                                  color: context.colors.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(
+                        Icon(
                           Icons.chevron_right,
-                          color: PlumoraColors.textSecondary,
+                          color: context.colors.textSecondary,
                         ),
                       ],
                     ),
@@ -860,9 +1069,9 @@ class _BetaSummaryCard extends StatelessWidget {
       onTap: () => context.go(AppRoutes.betaInvitations),
       child: Row(
         children: [
-          const FigmaGradientIcon(
+          FigmaGradientIcon(
             icon: Icons.chat_bubble_outline,
-            colors: [PlumoraColors.secondary, PlumoraColors.primary],
+            colors: [context.colors.secondary, context.colors.primary],
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -873,23 +1082,23 @@ class _BetaSummaryCard extends StatelessWidget {
                   count == 0
                       ? 'Aucune beta-lecture active'
                       : '$count beta-lecture(s) a traiter',
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Consulte tes invitations et retours beta',
                   style: TextStyle(
-                    color: PlumoraColors.textSecondary,
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+          Icon(Icons.chevron_right, color: context.colors.textSecondary),
         ],
       ),
     );
@@ -905,25 +1114,30 @@ class _WhiteBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.20),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 13),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 13),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -953,12 +1167,12 @@ class _InlineRetry extends StatelessWidget {
     return FigmaCard(
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: PlumoraColors.destructive),
+          Icon(Icons.error_outline, color: context.colors.destructive),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
               'Donnees indisponibles.',
-              style: TextStyle(color: PlumoraColors.textSecondary),
+              style: TextStyle(color: context.colors.textSecondary),
             ),
           ),
           TextButton(onPressed: onRetry, child: const Text('Reessayer')),

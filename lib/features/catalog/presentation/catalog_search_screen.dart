@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/catalog_book_model.dart';
@@ -67,9 +69,11 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                   const SizedBox(height: 10),
                   Text(
                     'Recherche',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: PlumoraColors.textPrimary,
+                    style: GoogleFonts.playfairDisplay(
+                      color: context.colors.textPrimary,
+                      fontSize: 24,
                       fontWeight: FontWeight.w900,
+                      height: 1.1,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -95,9 +99,10 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                         child: CircularProgressIndicator(),
                       ),
                     ),
-                    error: (error, _) => _SearchStateCard(
+                    error: (error, _) => FigmaEmptyState(
+                      icon: Icons.error_outline,
                       title: 'Recherche indisponible',
-                      subtitle: AppError.messageFor(error),
+                      message: AppError.messageFor(error),
                       action: FilledButton(
                         onPressed: () =>
                             ref.invalidate(catalogSearchProvider(_query)),
@@ -106,9 +111,10 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                     ),
                     data: (books) {
                       if (books.isEmpty) {
-                        return const _SearchStateCard(
+                        return const FigmaEmptyState(
+                          icon: Icons.search_off,
                           title: 'Aucun résultat',
-                          subtitle:
+                          message:
                               'Essaie un autre titre, auteur ou genre Plumora.',
                         );
                       }
@@ -169,8 +175,8 @@ class _SearchBookCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'par ${book.authorName}',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -195,7 +201,7 @@ class _SearchBookCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+          Icon(Icons.chevron_right, color: context.colors.textSecondary),
         ],
       ),
     );
@@ -233,50 +239,17 @@ class _Meta extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: PlumoraColors.primary),
+        Icon(icon, size: 15, color: context.colors.primary),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: PlumoraColors.textSecondary,
+          style: TextStyle(
+            color: context.colors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SearchStateCard extends StatelessWidget {
-  const _SearchStateCard({
-    required this.title,
-    required this.subtitle,
-    this.action,
-  });
-
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
-          if (action != null) ...[const SizedBox(height: 16), action!],
-        ],
-      ),
     );
   }
 }

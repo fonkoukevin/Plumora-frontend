@@ -13,8 +13,8 @@ class BookStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return PlumoraBadge(
       label: status.label,
-      backgroundColor: status.backgroundColor,
-      foregroundColor: status.foregroundColor,
+      backgroundColor: status.backgroundColor(context),
+      foregroundColor: status.foregroundColor(context),
     );
   }
 }
@@ -96,7 +96,7 @@ extension BookStatusUi on BookStatus {
     }
   }
 
-  Color get backgroundColor {
+  Color backgroundColor(BuildContext context) {
     switch (this) {
       case BookStatus.draft:
         return const Color(0xFFF1E8D8);
@@ -109,28 +109,28 @@ extension BookStatusUi on BookStatus {
       case BookStatus.published:
         return const Color(0xFFE6EFE4);
       case BookStatus.archived:
-        return PlumoraColors.muted;
+        return context.colors.muted;
       case BookStatus.unknown:
         return const Color(0xFFF7E0DC);
     }
   }
 
-  Color get foregroundColor {
+  Color foregroundColor(BuildContext context) {
     switch (this) {
       case BookStatus.draft:
         return const Color(0xFF8E7345);
       case BookStatus.inBetaReading:
-        return PlumoraColors.info;
+        return context.colors.info;
       case BookStatus.inCorrection:
         return const Color(0xFFA4683E);
       case BookStatus.readyToPublish:
-        return PlumoraColors.success;
+        return context.colors.success;
       case BookStatus.published:
-        return PlumoraColors.mukemeAccent;
+        return context.colors.plumoAccent;
       case BookStatus.archived:
-        return PlumoraColors.textSecondary;
+        return context.colors.textSecondary;
       case BookStatus.unknown:
-        return PlumoraColors.destructive;
+        return context.colors.destructive;
     }
   }
 }

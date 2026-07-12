@@ -51,7 +51,7 @@ class LandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.background,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Stack(
           children: [
@@ -68,8 +68,8 @@ class LandingScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          PlumoraColors.primary.withValues(alpha: 0.16),
-                          PlumoraColors.primary.withValues(alpha: 0),
+                          context.colors.brandPrimary.withValues(alpha: 0.16),
+                          context.colors.brandPrimary.withValues(alpha: 0),
                         ],
                       ),
                     ),
@@ -108,11 +108,11 @@ class LandingScreen extends StatelessWidget {
                           const SizedBox(height: 18),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 448),
-                            child: const Text(
-                              "Ecrivez, publiez, lisez et collaborez avec une communaute passionnee. L'IA Mukeme vous accompagne a chaque etape.",
+                            child: Text(
+                              "Ecrivez, publiez, lisez et collaborez avec une communaute passionnee. L'IA Plumo vous accompagne a chaque etape.",
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: PlumoraColors.textSecondary,
+                                color: context.colors.textSecondary,
                                 fontSize: 16,
                                 height: 1.5,
                                 fontWeight: FontWeight.w400,
@@ -162,13 +162,13 @@ class LandingScreen extends StatelessWidget {
                                   label: Text(genre),
                                   onPressed: () =>
                                       context.go(AppRoutes.discover),
-                                  labelStyle: const TextStyle(
-                                    color: PlumoraColors.textSecondary,
+                                  labelStyle: TextStyle(
+                                    color: context.colors.textSecondary,
                                     fontWeight: FontWeight.w500,
                                   ),
-                                  backgroundColor: PlumoraColors.cards,
-                                  side: const BorderSide(
-                                    color: PlumoraColors.border,
+                                  backgroundColor: context.colors.cards,
+                                  side: BorderSide(
+                                    color: context.colors.border,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(999),
@@ -216,15 +216,18 @@ class _GradientPillButton extends StatelessWidget {
     return Container(
       constraints: BoxConstraints(minHeight: minHeight),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [PlumoraColors.primary, PlumoraColors.primaryLight],
+        gradient: LinearGradient(
+          colors: [
+            context.colors.brandPrimary,
+            context.colors.brandPrimaryLight,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-            color: PlumoraColors.primary.withValues(alpha: 0.30),
+            color: context.colors.brandPrimary.withValues(alpha: 0.30),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -269,21 +272,21 @@ class _HeroBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: PlumoraColors.primary.withValues(alpha: 0.08),
+        color: context.colors.primary.withValues(alpha: 0.08),
         border: Border.all(
-          color: PlumoraColors.primary.withValues(alpha: 0.20),
+          color: context.colors.primary.withValues(alpha: 0.20),
         ),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.star, size: 15, color: PlumoraColors.accent),
+          Icon(Icons.star, size: 15, color: context.colors.accent),
           SizedBox(width: 8),
           Text(
             '+50 000 histoires vous attendent',
             style: TextStyle(
-              color: PlumoraColors.primary,
+              color: context.colors.primary,
               fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
@@ -310,8 +313,11 @@ class _HeroTitle extends StatelessWidget {
             text: 'aventure litteraire\n',
             style: TextStyle(
               foreground: Paint()
-                ..shader = const LinearGradient(
-                  colors: [PlumoraColors.primary, PlumoraColors.accent],
+                ..shader = LinearGradient(
+                  colors: [
+                    context.colors.brandPrimary,
+                    context.colors.brandGold,
+                  ],
                 ).createShader(const Rect.fromLTWH(0, 0, 420, 80)),
             ),
           ),
@@ -320,7 +326,7 @@ class _HeroTitle extends StatelessWidget {
       ),
       textAlign: TextAlign.center,
       style: GoogleFonts.playfairDisplay(
-        color: PlumoraColors.textPrimary,
+        color: context.colors.textPrimary,
         fontSize: size,
         fontWeight: FontWeight.w700,
         height: 1.25,
@@ -360,10 +366,10 @@ class _CoverStack extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      PlumoraColors.background,
-                      PlumoraColors.background.withValues(alpha: 0),
-                      PlumoraColors.background.withValues(alpha: 0),
-                      PlumoraColors.background,
+                      context.colors.background,
+                      context.colors.background.withValues(alpha: 0),
+                      context.colors.background.withValues(alpha: 0),
+                      context.colors.background,
                     ],
                     stops: const [0.0, 0.15, 0.85, 1.0],
                   ),
@@ -398,20 +404,20 @@ class _StatsRow extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Icon(stat.$1, color: PlumoraColors.primary, size: 16),
+                    Icon(stat.$1, color: context.colors.primary, size: 16),
                     const SizedBox(height: 7),
                     Text(
                       stat.$2,
-                      style: const TextStyle(
-                        color: PlumoraColors.textPrimary,
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
                       stat.$3,
-                      style: const TextStyle(
-                        color: PlumoraColors.textSecondary,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                       ),
@@ -433,27 +439,27 @@ class _FeatureGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const features = [
+    final features = [
       _LandingFeature(
         emoji: '✍️',
         title: 'Ecrire',
         description:
             'Editeur puissant avec IA pour creer vos histoires sans limites',
-        color: PlumoraColors.primary,
+        color: context.colors.brandPrimary,
       ),
       _LandingFeature(
         emoji: '🔍',
         title: 'Decouvrir',
         description:
-            'Mukeme vous recommande les livres parfaits selon vos gouts',
-        color: PlumoraColors.secondary,
+            'Plumo vous recommande les livres parfaits selon vos gouts',
+        color: context.colors.brandNavy,
       ),
       _LandingFeature(
         emoji: '📚',
         title: 'Beta-lire',
         description:
             'Aidez les auteurs et recevez des retours sur vos manuscrits',
-        color: PlumoraColors.accent,
+        color: context.colors.brandGold,
       ),
     ];
 
@@ -487,8 +493,8 @@ class _FeatureGrid extends StatelessWidget {
                         const SizedBox(height: 12),
                         Text(
                           feature.title,
-                          style: const TextStyle(
-                            color: PlumoraColors.textPrimary,
+                          style: TextStyle(
+                            color: context.colors.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
@@ -496,8 +502,8 @@ class _FeatureGrid extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           feature.description,
-                          style: const TextStyle(
-                            color: PlumoraColors.textSecondary,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
                             fontSize: 14,
                             height: 1.5,
                             fontWeight: FontWeight.w400,

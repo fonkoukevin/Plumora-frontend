@@ -75,10 +75,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           const AppWordmark(iconSize: 32, textSize: 36, gap: 8),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Créez votre compte',
             style: TextStyle(
-              color: PlumoraColors.textSecondary,
+              color: context.colors.textSecondary,
               fontSize: 15,
               fontWeight: FontWeight.w400,
             ),
@@ -172,10 +172,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
+                      Text(
                         'Déjà un compte ? ',
                         style: TextStyle(
-                          color: PlumoraColors.textSecondary,
+                          color: context.colors.textSecondary,
                           fontSize: 14,
                         ),
                       ),

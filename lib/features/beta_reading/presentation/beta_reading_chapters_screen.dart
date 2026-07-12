@@ -26,6 +26,9 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final campaignAsync = ref.watch(betaCampaignProvider(campaignId));
     final chaptersAsync = ref.watch(betaSharedChaptersProvider(campaignId));
+    final commentsAsync = ref.watch(
+      betaCommentsForCampaignProvider(campaignId),
+    );
 
     return FigmaScreen(
       maxWidth: 900,
@@ -47,11 +50,11 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
             data: (campaign) => campaign.deadline == null
                 ? const SizedBox.shrink()
                 : FigmaCard(
-                    color: const Color(0xFFFFFBEB),
-                    borderColor: const Color(0xFFFDE68A),
+                    color: context.colors.warning.withValues(alpha: 0.08),
+                    borderColor: context.colors.warning.withValues(alpha: 0.35),
                     child: Row(
                       children: [
-                        const Icon(Icons.schedule, color: PlumoraColors.orange),
+                        Icon(Icons.schedule, color: context.colors.orange),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -95,6 +98,16 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
                 );
               }
 
+              final commentsByChapter = commentsAsync.maybeWhen(
+                data: (comments) => <String, int>{
+                  for (final chapter in sorted)
+                    chapter.id: comments
+                        .where((comment) => comment.chapterId == chapter.id)
+                        .length,
+                },
+                orElse: () => const <String, int>{},
+              );
+
               return Column(
                 children: [
                   for (final chapter in sorted) ...[
@@ -103,6 +116,7 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
                       campaignId: campaignId,
                       invitationId: invitationId,
                       fallbackBookId: bookId,
+                      commentsCount: commentsByChapter[chapter.id] ?? 0,
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -130,8 +144,8 @@ class _CampaignHeader extends StatelessWidget {
           campaign?.bookTitle.trim().isNotEmpty == true
               ? campaign!.bookTitle
               : 'Beta-lecture',
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 36,
             fontWeight: FontWeight.w900,
           ),
@@ -139,7 +153,7 @@ class _CampaignHeader extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           campaign == null ? 'Chapitres disponibles' : 'Chapitres disponibles',
-          style: const TextStyle(color: PlumoraColors.textSecondary),
+          style: TextStyle(color: context.colors.textSecondary),
         ),
       ],
     );
@@ -152,16 +166,18 @@ class _ChapterCard extends StatelessWidget {
     required this.campaignId,
     required this.invitationId,
     required this.fallbackBookId,
+    required this.commentsCount,
   });
 
   final BetaSharedChapterModel chapter;
   final String campaignId;
   final String? invitationId;
   final String? fallbackBookId;
+  final int commentsCount;
 
   @override
   Widget build(BuildContext context) {
-    final hasFeedback = chapter.commentsCount > 0;
+    final hasFeedback = commentsCount > 0;
 
     return FigmaCard(
       onTap: () => context.go(
@@ -179,8 +195,8 @@ class _ChapterCard extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               color: hasFeedback
-                  ? PlumoraColors.success.withValues(alpha: 0.12)
-                  : PlumoraColors.primary.withValues(alpha: 0.10),
+                  ? context.colors.success.withValues(alpha: 0.12)
+                  : context.colors.primary.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
@@ -188,8 +204,8 @@ class _ChapterCard extends StatelessWidget {
                   ? Icons.check_circle_outline
                   : Icons.description_outlined,
               color: hasFeedback
-                  ? PlumoraColors.success
-                  : PlumoraColors.primary,
+                  ? context.colors.success
+                  : context.colors.primary,
             ),
           ),
           const SizedBox(width: 14),
@@ -199,22 +215,22 @@ class _ChapterCard extends StatelessWidget {
               children: [
                 Text(
                   chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
-                  style: const TextStyle(
-                    color: PlumoraColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 Text(
-                  '${chapter.commentsCount} commentaire(s) laisse(s)',
-                  style: const TextStyle(
-                    color: PlumoraColors.textSecondary,
+                  '$commentsCount commentaire(s) laisse(s)',
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: PlumoraColors.textSecondary),
+          Icon(Icons.chevron_right, color: context.colors.textSecondary),
         ],
       ),
     );
@@ -238,10 +254,7 @@ class _ErrorPanel extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: const TextStyle(color: PlumoraColors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],

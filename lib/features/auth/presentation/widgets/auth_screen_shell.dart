@@ -23,7 +23,7 @@ class AuthScreenShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PlumoraColors.background,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -73,9 +73,9 @@ class AuthFormCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: PlumoraColors.cards,
+        color: context.colors.cards,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PlumoraColors.border),
+        border: Border.all(color: context.colors.border),
         boxShadow: const [
           BoxShadow(
             color: Color(0x18000000),
@@ -93,7 +93,7 @@ class BrandIconBox extends StatelessWidget {
   const BrandIconBox({
     this.size = 50,
     this.iconSize = 31,
-    this.backgroundColor = PlumoraColors.primary,
+    this.backgroundColor,
     this.iconColor = Colors.white,
     this.hasShadow = true,
     super.key,
@@ -101,7 +101,7 @@ class BrandIconBox extends StatelessWidget {
 
   final double size;
   final double iconSize;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final Color iconColor;
   final bool hasShadow;
 
@@ -111,7 +111,7 @@ class BrandIconBox extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: backgroundColor ?? context.colors.primary,
         borderRadius: BorderRadius.circular(12),
         boxShadow: hasShadow
             ? const [
@@ -158,14 +158,14 @@ class AppWordmark extends StatelessWidget {
         children: [
           PlumoraLogoMark(
             size: iconSize ?? (compact ? 26 : 43),
-            color: PlumoraColors.primary,
+            color: context.colors.primary,
             strokeWidth: compact ? 1.9 : 1.8,
           ),
           SizedBox(width: gap ?? (compact ? 7 : 9)),
           Text(
             'Plumora',
             style: TextStyle(
-              color: PlumoraColors.primary,
+              color: context.colors.primary,
               fontSize: textSize ?? (compact ? 30 : 48),
               fontWeight: FontWeight.w800,
               height: 1,
@@ -187,6 +187,7 @@ class PlumoraTextField extends StatelessWidget {
     this.obscureText = false,
     this.validator,
     this.onFieldSubmitted,
+    this.maxLines = 1,
     super.key,
   });
 
@@ -198,6 +199,7 @@ class PlumoraTextField extends StatelessWidget {
   final bool obscureText;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onFieldSubmitted;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -206,8 +208,8 @@ class PlumoraTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: PlumoraColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -220,9 +222,10 @@ class PlumoraTextField extends StatelessWidget {
           obscureText: obscureText,
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
-          style: const TextStyle(
+          maxLines: obscureText ? 1 : maxLines,
+          style: TextStyle(
             fontSize: 16,
-            color: PlumoraColors.textPrimary,
+            color: context.colors.textPrimary,
           ),
           decoration: InputDecoration(hintText: hint),
         ),
@@ -238,17 +241,17 @@ class AuthDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(child: Divider(color: PlumoraColors.border)),
+        Expanded(child: Divider(color: context.colors.border)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             'ou',
             style: Theme.of(
               context,
-            ).textTheme.bodySmall?.copyWith(color: PlumoraColors.textSecondary),
+            ).textTheme.bodySmall?.copyWith(color: context.colors.textSecondary),
           ),
         ),
-        const Expanded(child: Divider(color: PlumoraColors.border)),
+        Expanded(child: Divider(color: context.colors.border)),
       ],
     );
   }
