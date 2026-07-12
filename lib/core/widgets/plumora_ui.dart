@@ -37,6 +37,7 @@ class _PlumoraCardState extends State<PlumoraCard> {
   @override
   Widget build(BuildContext context) {
     final hasHover = widget.onTap != null && _hovered;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final card = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: double.infinity,
@@ -46,12 +47,16 @@ class _PlumoraCardState extends State<PlumoraCard> {
       decoration: BoxDecoration(
         color: context.colors.cards,
         borderRadius: BorderRadius.circular(widget.radius),
-        border: Border.all(color: widget.borderColor ?? context.colors.border),
+        border: Border.all(
+          color: widget.borderColor ?? context.elevatedBorderColor,
+        ),
         boxShadow: widget.shadow
             ? [
                 BoxShadow(
-                  color: const Color(0x1A000000),
-                  blurRadius: hasHover ? 8 : 3,
+                  color: isDark
+                      ? Color(hasHover ? 0x29FFFFFF : 0x14FFFFFF)
+                      : const Color(0x1A000000),
+                  blurRadius: hasHover ? (isDark ? 14 : 8) : (isDark ? 6 : 3),
                   offset: Offset(0, hasHover ? 4 : 1),
                 ),
               ]
@@ -113,17 +118,18 @@ class PlumoraIconTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: backgroundColor ?? context.colors.primary,
         borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x10000000),
+            color: isDark ? const Color(0x1AFFFFFF) : const Color(0x10000000),
             blurRadius: 8,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -256,6 +262,7 @@ class _PlumoraTabButtonState extends State<_PlumoraTabButton> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = selected
         ? Colors.white
         : _hovered
@@ -290,11 +297,15 @@ class _PlumoraTabButtonState extends State<_PlumoraTabButton> {
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: selected
-                      ? const [
+                      ? [
                           BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 10,
-                            offset: Offset(0, 4),
+                            color: isDark
+                                ? context.colors.primary.withValues(
+                                    alpha: 0.45,
+                                  )
+                                : const Color(0x33000000),
+                            blurRadius: isDark ? 16 : 10,
+                            offset: Offset(0, isDark ? 6 : 4),
                           ),
                         ]
                       : null,
@@ -353,17 +364,18 @@ class PlumoraBookCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedImageUrl = resolvePlumoraImageUrl(imageUrl);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 12,
-            offset: Offset(0, 7),
+            color: isDark ? const Color(0x33FFFFFF) : const Color(0x22000000),
+            blurRadius: isDark ? 16 : 12,
+            offset: Offset(0, isDark ? 8 : 7),
           ),
         ],
       ),

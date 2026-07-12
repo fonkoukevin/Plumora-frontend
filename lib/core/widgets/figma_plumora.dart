@@ -69,8 +69,9 @@ class FigmaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final resolvedColor = color ?? context.colors.cards;
-    final resolvedBorderColor = borderColor ?? context.colors.border;
+    final resolvedBorderColor = borderColor ?? context.elevatedBorderColor;
     final radiusValue = BorderRadius.circular(radius);
     final decorated = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -82,11 +83,13 @@ class FigmaCard extends StatelessWidget {
         borderRadius: radiusValue,
         border: Border.all(color: resolvedBorderColor),
         boxShadow: shadow
-            ? const [
+            ? [
                 BoxShadow(
-                  color: Color(0x1A000000),
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
+                  color: isDark
+                      ? const Color(0x1FFFFFFF)
+                      : const Color(0x1A000000),
+                  blurRadius: isDark ? 10 : 3,
+                  offset: Offset(0, isDark ? 3 : 1),
                 ),
               ]
             : null,
@@ -128,6 +131,7 @@ class FigmaGradientIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final resolvedColors =
         colors ?? [context.colors.primary, context.colors.primaryLight];
     return Container(
@@ -140,11 +144,13 @@ class FigmaGradientIcon extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 12,
-            offset: Offset(0, 6),
+            color: isDark
+                ? resolvedColors.first.withValues(alpha: 0.45)
+                : const Color(0x22000000),
+            blurRadius: isDark ? 18 : 12,
+            offset: Offset(0, isDark ? 8 : 6),
           ),
         ],
       ),
@@ -283,6 +289,7 @@ class FigmaBookCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: width,
       height: height,
@@ -294,11 +301,11 @@ class FigmaBookCover extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 14,
-            offset: Offset(0, 7),
+            color: isDark ? const Color(0x33FFFFFF) : const Color(0x26000000),
+            blurRadius: isDark ? 16 : 14,
+            offset: Offset(0, isDark ? 8 : 7),
           ),
         ],
       ),
@@ -579,6 +586,7 @@ class FigmaPillTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pill = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -594,15 +602,17 @@ class FigmaPillTab extends StatelessWidget {
               : null,
           color: selected ? null : context.colors.cards,
           border: Border.all(
-            color: selected ? Colors.transparent : context.colors.border,
+            color: selected ? Colors.transparent : context.elevatedBorderColor,
           ),
           borderRadius: BorderRadius.circular(999),
           boxShadow: selected
-              ? const [
+              ? [
                   BoxShadow(
-                    color: Color(0x22FF6B35),
-                    blurRadius: 12,
-                    offset: Offset(0, 5),
+                    color: isDark
+                        ? const Color(0x66FF6B35)
+                        : const Color(0x22FF6B35),
+                    blurRadius: isDark ? 18 : 12,
+                    offset: Offset(0, isDark ? 7 : 5),
                   ),
                 ]
               : null,
@@ -713,7 +723,7 @@ class FigmaEmptyState extends StatelessWidget {
             decoration: BoxDecoration(
               color: context.colors.cards,
               shape: BoxShape.circle,
-              border: Border.all(color: context.colors.border),
+              border: Border.all(color: context.elevatedBorderColor),
             ),
             child: Icon(icon, color: context.colors.textSecondary, size: 28),
           ),

@@ -97,32 +97,21 @@ extension BookStatusUi on BookStatus {
   }
 
   Color backgroundColor(BuildContext context) {
-    switch (this) {
-      case BookStatus.draft:
-        return const Color(0xFFF1E8D8);
-      case BookStatus.inBetaReading:
-        return const Color(0xFFE8F0F5);
-      case BookStatus.inCorrection:
-        return const Color(0xFFF8E6D2);
-      case BookStatus.readyToPublish:
-        return const Color(0xFFE6F0E7);
-      case BookStatus.published:
-        return const Color(0xFFE6EFE4);
-      case BookStatus.archived:
-        return context.colors.muted;
-      case BookStatus.unknown:
-        return const Color(0xFFF7E0DC);
+    if (this == BookStatus.archived) {
+      return context.colors.muted;
     }
+
+    return foregroundColor(context).withValues(alpha: 0.12);
   }
 
   Color foregroundColor(BuildContext context) {
     switch (this) {
       case BookStatus.draft:
-        return const Color(0xFF8E7345);
+        return context.colors.accent;
       case BookStatus.inBetaReading:
         return context.colors.info;
       case BookStatus.inCorrection:
-        return const Color(0xFFA4683E);
+        return context.colors.orange;
       case BookStatus.readyToPublish:
         return context.colors.success;
       case BookStatus.published:

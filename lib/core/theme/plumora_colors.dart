@@ -314,4 +314,17 @@ extension PlumoraColorsContext on BuildContext {
             ? PlumoraColors.dark
             : PlumoraColors.light);
   }
+
+  /// A brightened variant of [PlumoraColors.border], used for card, dialog
+  /// and input edges so they stay legible against the near-black dark
+  /// surfaces. Leaves [PlumoraColors.border] itself untouched (light theme,
+  /// and any code relying on the exact dark-palette token) — only how it's
+  /// drawn for elevated-surface outlines changes.
+  Color get elevatedBorderColor {
+    final base = colors.border;
+    if (Theme.of(this).brightness != Brightness.dark) {
+      return base;
+    }
+    return Color.lerp(base, Colors.white, 0.18)!;
+  }
 }
