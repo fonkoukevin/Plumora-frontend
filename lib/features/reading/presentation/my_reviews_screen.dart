@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/review_model.dart';
@@ -63,9 +64,10 @@ class MyReviewsScreen extends ConsumerWidget {
               child: CircularProgressIndicator(),
             ),
           ),
-          error: (error, _) => _StateCard(
+          error: (error, _) => FigmaEmptyState(
+            icon: Icons.error_outline,
             title: 'Avis indisponibles',
-            subtitle: AppError.messageFor(error),
+            message: AppError.messageFor(error),
             action: FilledButton(
               onPressed: () => ref.invalidate(myReviewsProvider),
               child: const Text('Réessayer'),
@@ -73,9 +75,10 @@ class MyReviewsScreen extends ConsumerWidget {
           ),
           data: (reviews) {
             if (reviews.isEmpty) {
-              return const _StateCard(
+              return const FigmaEmptyState(
+                icon: Icons.rate_review_outlined,
                 title: 'Aucun avis publié',
-                subtitle:
+                message:
                     'Les avis que tu laisseras depuis les fiches livres apparaîtront ici.',
               );
             }
@@ -221,29 +224,6 @@ class _Stars extends StatelessWidget {
             size: 16,
           ),
       ],
-    );
-  }
-}
-
-class _StateCard extends StatelessWidget {
-  const _StateCard({required this.title, required this.subtitle, this.action});
-
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlumoraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(subtitle, style: TextStyle(color: context.colors.textSecondary)),
-          if (action != null) ...[const SizedBox(height: 14), action!],
-        ],
-      ),
     );
   }
 }
