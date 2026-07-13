@@ -7,6 +7,7 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_theme.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import 'admin_colors.dart';
+import 'providers/admin_nav_providers.dart';
 
 class AdminNavItem {
   const AdminNavItem({required this.label, required this.icon, required this.path});
@@ -16,92 +17,85 @@ class AdminNavItem {
   final String path;
 }
 
-const List<AdminNavItem> adminNavItems = [
+/// The four sections shown in the maquette's primary nav (desktop sidebar
+/// AND mobile bottom tab bar).
+const List<AdminNavItem> adminPrimaryNavItems = [
   AdminNavItem(label: 'Tableau de bord', icon: Icons.dashboard_outlined, path: AppRoutes.admin),
   AdminNavItem(label: 'Utilisateurs', icon: Icons.people_outline, path: AppRoutes.adminUsers),
   AdminNavItem(label: 'Catalogue', icon: Icons.menu_book_outlined, path: AppRoutes.adminCatalog),
+  AdminNavItem(label: 'Signalements', icon: Icons.flag_outlined, path: AppRoutes.adminReports),
+];
+
+/// Secondary sections that stay fully functional (real backend endpoints)
+/// but aren't part of the maquette's 4-item primary nav — kept reachable
+/// from the desktop sidebar so nothing built for them is lost.
+const List<AdminNavItem> adminSecondaryNavItems = [
   AdminNavItem(
     label: 'Import domaine public',
     icon: Icons.cloud_download_outlined,
     path: AppRoutes.adminPublicDomainImport,
   ),
-  AdminNavItem(label: 'Signalements', icon: Icons.flag_outlined, path: AppRoutes.adminReports),
   AdminNavItem(label: 'Plumo IA', icon: Icons.auto_awesome_outlined, path: AppRoutes.adminAi),
-  AdminNavItem(label: 'Paramètres', icon: Icons.settings_outlined, path: AppRoutes.adminSettings),
 ];
 
-/// Wraps every `/admin/**` screen with the fixed dark control-room chrome
-/// (sidebar on desktop, drawer on mobile, top bar) from the Figma admin
-/// mockup. Each admin screen composes itself with `AdminShell(child: ...)`
-/// rather than this being a GoRouter ShellRoute, so screens keep full
-/// control of their own scaffolding (dialogs, scrolling) the same way the
-/// standalone editor/reading routes do outside `MainShell`.
-class AdminShell extends ConsumerStatefulWidget {
+/// Wraps every `/admin/**` screen with the fixed light-violet control-room
+/// chrome from the Figma admin mockup. Each admin screen composes itself
+/// with `AdminShell(child: ...)` rather than this being a GoRouter
+/// ShellRoute, so screens keep full control of their own scaffolding
+/// (dialogs, scrolling) the same way the standalone editor/reading routes
+/// do outside `MainShell`.
+class AdminShell extends ConsumerWidget {
   const AdminShell({required this.title, required this.child, super.key});
 
   final String title;
   final Widget child;
 
   @override
-  ConsumerState<AdminShell> createState() => _AdminShellState();
-}
-
-class _AdminShellState extends ConsumerState<AdminShell> {
-  bool _drawerOpen = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
 
-    // Administration always renders in the fixed dark control-room palette
+    // Administration always renders in the fixed light-violet palette
     // regardless of the user's own light/dark preference (per the Figma
     // source of truth). Overriding the Theme here means any shared app
     // widget reused inside admin screens (book covers, badges, ...) that
-    // reads `context.colors` resolves to the dark palette too, instead of
-    // following whatever theme the rest of the app is currently in.
+    // reads `context.colors` resolves to the light palette too.
     return Theme(
-      data: PlumoraTheme.dark,
-      child: Container(
-      color: AdminColors.background,
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 1024;
+      data: PlumoraTheme.light,
+      child: Scaffold(
+        backgroundColor: AdminColors.background,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth >= 1024;
 
-            return Stack(
-              children: [
-                Row(
-                  children: [
-                    if (isDesktop) _AdminSidebar(location: location),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _AdminTopBar(
-                            title: widget.title,
-                            showMenuButton: !isDesktop,
-                            onMenuTap: () => setState(() => _drawerOpen = true),
+              return Column(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (isDesktop) _AdminSidebar(location: location),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _AdminTopBar(title: title),
+                              Expanded(
+                                child: ColoredBox(
+                                  color: AdminColors.background,
+                                  child: child,
+                                ),
+                              ),
+                            ],
                           ),
-                          Expanded(
-                            child: ColoredBox(
-                              color: AdminColors.background,
-                              child: widget.child,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                if (!isDesktop && _drawerOpen)
-                  _AdminMobileDrawer(
-                    location: location,
-                    onClose: () => setState(() => _drawerOpen = false),
                   ),
-              ],
-            );
-          },
+                  if (!isDesktop) _AdminMobileTabBar(location: location),
+                ],
+              );
+            },
+          ),
         ),
-      ),
       ),
     );
   }
@@ -114,30 +108,84 @@ class _AdminSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final badges = ref.watch(adminNavBadgesProvider);
+    final session = ref.watch(authControllerProvider).valueOrNull;
+
     return Container(
-      width: 240,
+      width: 232,
       decoration: const BoxDecoration(
-        color: AdminColors.sidebar,
+        color: AdminColors.surface,
         border: Border(right: BorderSide(color: AdminColors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _AdminBrand(),
-          const SizedBox(height: 6),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               children: [
-                for (final item in adminNavItems)
-                  _AdminNavTile(item: item, active: _isActive(location, item.path)),
+                for (final item in adminPrimaryNavItems)
+                  _AdminNavTile(
+                    item: item,
+                    active: _isActive(location, item.path),
+                    badgeCount: badges.forPath(item.path),
+                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                  child: Divider(color: AdminColors.border, height: 1),
+                ),
+                for (final item in adminSecondaryNavItems)
+                  _AdminNavTile(
+                    item: item,
+                    active: _isActive(location, item.path),
+                    compact: true,
+                  ),
               ],
             ),
           ),
-          const Divider(color: AdminColors.border, height: 1),
-          Padding(
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: AdminColors.border)),
+            ),
             padding: const EdgeInsets.all(12),
-            child: _AdminBackToAppButton(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Row(
+                    children: [
+                      _AdminAvatar(initials: _initialsFor(session?.user?.displayName)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              session?.user?.displayName ?? 'Administrateur',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AdminColors.text,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const Text(
+                              'ADMIN',
+                              style: TextStyle(color: AdminColors.muted, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _QuitAdminButton(),
+              ],
+            ),
           ),
         ],
       ),
@@ -145,67 +193,99 @@ class _AdminSidebar extends ConsumerWidget {
   }
 }
 
-class _AdminMobileDrawer extends StatelessWidget {
-  const _AdminMobileDrawer({required this.location, required this.onClose});
+class _AdminMobileTabBar extends ConsumerWidget {
+  const _AdminMobileTabBar({required this.location});
 
   final String location;
-  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final badges = ref.watch(adminNavBadgesProvider);
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AdminColors.surface,
+        border: Border(top: BorderSide(color: AdminColors.border)),
+      ),
+      child: Row(
+        children: [
+          for (final item in adminPrimaryNavItems)
+            Expanded(
+              child: _AdminMobileTabItem(
+                item: item,
+                active: _isActive(location, item.path),
+                badgeCount: badges.forPath(item.path),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminMobileTabItem extends StatelessWidget {
+  const _AdminMobileTabItem({
+    required this.item,
+    required this.active,
+    this.badgeCount,
+  });
+
+  final AdminNavItem item;
+  final bool active;
+  final int? badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: onClose,
-            child: Container(color: Colors.black.withValues(alpha: 0.6)),
-          ),
-        ),
-        Positioned(
-          top: 0,
-          bottom: 0,
-          left: 0,
-          child: Container(
-            width: 260,
-            decoration: const BoxDecoration(
-              color: AdminColors.sidebar,
-              border: Border(right: BorderSide(color: AdminColors.border)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Expanded(child: _AdminBrand()),
-                    IconButton(
-                      onPressed: onClose,
-                      icon: const Icon(Icons.close, color: AdminColors.muted),
-                    ),
-                  ],
-                ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    children: [
-                      for (final item in adminNavItems)
-                        _AdminNavTile(
-                          item: item,
-                          active: _isActive(location, item.path),
-                          onTapExtra: onClose,
+    final color = active ? AdminColors.primary : AdminColors.muted;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.go(item.path),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(item.icon, size: 20, color: color),
+                  if (badgeCount != null && badgeCount! > 0)
+                    Positioned(
+                      top: -4,
+                      right: -8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        constraints: const BoxConstraints(minWidth: 16),
+                        decoration: const BoxDecoration(
+                          color: AdminColors.error,
+                          borderRadius: BorderRadius.all(Radius.circular(999)),
                         ),
-                    ],
-                  ),
-                ),
-                const Divider(color: AdminColors.border, height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: _AdminBackToAppButton(),
-                ),
-              ],
-            ),
+                        child: Text(
+                          badgeCount! > 99 ? '99+' : '$badgeCount',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.label == 'Tableau de bord' ? 'Tableau' : item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -215,7 +295,10 @@ class _AdminBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AdminColors.border)),
+      ),
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,19 +327,19 @@ class _AdminBrand extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
-              color: AdminColors.error.withValues(alpha: 0.14),
+              color: AdminColors.error.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AdminColors.error.withValues(alpha: 0.3)),
+              border: Border.all(color: AdminColors.error.withValues(alpha: 0.27)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.shield_outlined, size: 12, color: AdminColors.error),
+                const Icon(Icons.shield_outlined, size: 11, color: AdminColors.error),
                 const SizedBox(width: 6),
                 Text(
-                  'Accès Administrateur',
+                  'Administration',
                   style: TextStyle(
                     color: AdminColors.error,
                     fontSize: 11,
@@ -273,54 +356,64 @@ class _AdminBrand extends StatelessWidget {
 }
 
 class _AdminNavTile extends StatelessWidget {
-  const _AdminNavTile({required this.item, required this.active, this.onTapExtra});
+  const _AdminNavTile({
+    required this.item,
+    required this.active,
+    this.badgeCount,
+    this.compact = false,
+  });
 
   final AdminNavItem item;
   final bool active;
-  final VoidCallback? onTapExtra;
+  final int? badgeCount;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final color = active ? AdminColors.primary : AdminColors.muted;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
-          onTap: () {
-            onTapExtra?.call();
-            context.go(item.path);
-          },
+          onTap: () => context.go(item.path),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: compact ? 9 : 11),
             decoration: BoxDecoration(
-              color: active ? AdminColors.primary.withValues(alpha: 0.14) : null,
+              color: active ? AdminColors.primary.withValues(alpha: 0.12) : null,
               borderRadius: BorderRadius.circular(10),
               border: Border(
-                left: BorderSide(
-                  color: active ? AdminColors.primary : Colors.transparent,
-                  width: 3,
-                ),
+                left: BorderSide(color: active ? AdminColors.primary : Colors.transparent, width: 3),
               ),
             ),
             child: Row(
               children: [
-                Icon(
-                  item.icon,
-                  size: 17,
-                  color: active ? AdminColors.primary : AdminColors.muted,
-                ),
+                Icon(item.icon, size: compact ? 15 : 16, color: color),
                 const SizedBox(width: 11),
                 Expanded(
                   child: Text(
                     item.label,
                     style: TextStyle(
-                      color: active ? AdminColors.primary : AdminColors.muted,
-                      fontSize: 13,
+                      color: color,
+                      fontSize: compact ? 12.5 : 13,
                       fontWeight: active ? FontWeight.w700 : FontWeight.w600,
                     ),
                   ),
                 ),
+                if (badgeCount != null && badgeCount! > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: active ? AdminColors.primary.withValues(alpha: 0.25) : AdminColors.border,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      badgeCount! >= 1000 ? '${(badgeCount! / 1000).round()}k' : '$badgeCount',
+                      style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -330,55 +423,69 @@ class _AdminNavTile extends StatelessWidget {
   }
 }
 
-class _AdminBackToAppButton extends StatelessWidget {
+class _AdminAvatar extends StatelessWidget {
+  const _AdminAvatar({required this.initials});
+
+  final String initials;
+
   @override
   Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: AdminColors.plumora.withValues(alpha: 0.28),
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: const TextStyle(color: AdminColors.plumora, fontSize: 11, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+class _QuitAdminButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return OutlinedButton.icon(
-      onPressed: () => context.go(AppRoutes.home),
+      onPressed: () async {
+        await ref.read(authControllerProvider.notifier).logout();
+        if (context.mounted) {
+          context.go(AppRoutes.landing);
+        }
+      },
       style: OutlinedButton.styleFrom(
         foregroundColor: AdminColors.muted,
         side: const BorderSide(color: AdminColors.border),
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         minimumSize: const Size(double.infinity, 0),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      icon: const Icon(Icons.arrow_back, size: 14),
-      label: const Text("Retour à l'app", style: TextStyle(fontSize: 12)),
+      icon: const Icon(Icons.logout, size: 13),
+      label: const Text("Quitter l'admin", style: TextStyle(fontSize: 12)),
     );
   }
 }
 
 class _AdminTopBar extends ConsumerWidget {
-  const _AdminTopBar({
-    required this.title,
-    required this.showMenuButton,
-    required this.onMenuTap,
-  });
+  const _AdminTopBar({required this.title});
 
   final String title;
-  final bool showMenuButton;
-  final VoidCallback onMenuTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authControllerProvider).valueOrNull;
-    final initials = _initialsFor(session?.user?.displayName ?? 'Admin');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
-        color: AdminColors.sidebar,
+        color: AdminColors.surface,
         border: Border(bottom: BorderSide(color: AdminColors.border)),
       ),
       child: Row(
         children: [
-          if (showMenuButton) ...[
-            IconButton(
-              onPressed: onMenuTap,
-              icon: const Icon(Icons.menu, color: AdminColors.muted),
-            ),
-            const SizedBox(width: 4),
-          ],
           Expanded(
             child: Text(
               title,
@@ -391,38 +498,25 @@ class _AdminTopBar extends ConsumerWidget {
               ),
             ),
           ),
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AdminColors.primary.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: AdminColors.primary,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
+          Icon(Icons.notifications_outlined, size: 18, color: AdminColors.muted.withValues(alpha: 0.7)),
+          const SizedBox(width: 12),
+          _AdminAvatar(initials: _initialsFor(session?.user?.displayName)),
         ],
       ),
     );
   }
+}
 
-  String _initialsFor(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) {
-      return '?';
-    }
-    if (parts.length == 1) {
-      return parts.first.substring(0, 1).toUpperCase();
-    }
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+String _initialsFor(String? name) {
+  final trimmed = name?.trim() ?? '';
+  if (trimmed.isEmpty) {
+    return '?';
   }
+  final parts = trimmed.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.length == 1) {
+    return parts.first.substring(0, 1).toUpperCase();
+  }
+  return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
 }
 
 bool _isActive(String location, String path) {

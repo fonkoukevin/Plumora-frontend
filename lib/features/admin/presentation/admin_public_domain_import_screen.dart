@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../catalog/data/models/external_book_model.dart';
 import '../../catalog/data/repositories/external_book_repository.dart';
+import '../data/repositories/admin_repository.dart';
 import 'admin_colors.dart';
 import 'admin_shell.dart';
 import 'widgets/admin_widgets.dart';
@@ -164,7 +165,7 @@ class _ExternalBookCard extends ConsumerWidget {
                     const SizedBox(width: 8),
                     AdminBadge(
                       label: book.imported ? 'Déjà importé' : 'Domaine public',
-                      color: book.imported ? AdminColors.success : AdminColors.accent,
+                      color: book.imported ? AdminColors.success : AdminColors.plumora,
                     ),
                   ],
                 ),
@@ -219,14 +220,28 @@ class _ExternalBookCard extends ConsumerWidget {
       return;
     }
 
+    final gutendexId = int.tryParse(book.externalId);
+    if (gutendexId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Identifiant Gutendex invalide.')),
+      );
+      return;
+    }
+
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref
-          .read(externalBookRepositoryProvider)
-          .importGutendexBook(book.externalId);
+      final result =
+          await ref.read(adminRepositoryProvider).importGutendexBook(gutendexId);
       ref.invalidate(externalBookSearchProvider);
+      ref.invalidate(adminDashboardProvider);
       messenger.showSnackBar(
-        SnackBar(content: Text('"${book.title}" importé dans le catalogue.')),
+        SnackBar(
+          content: Text(
+            result.alreadyExisted
+                ? '"${result.title}" était déjà dans le catalogue.'
+                : '"${result.title}" importé dans le catalogue.',
+          ),
+        ),
       );
     } catch (error) {
       messenger.showSnackBar(
@@ -311,19 +326,19 @@ class _ImportConfirmationDialogState extends State<_ImportConfirmationDialog> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AdminColors.accent.withValues(alpha: 0.12),
+                  color: AdminColors.plumora.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AdminColors.accent.withValues(alpha: 0.3)),
+                  border: Border.all(color: AdminColors.plumora.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.shield_outlined, size: 14, color: AdminColors.accent),
+                    const Icon(Icons.shield_outlined, size: 14, color: AdminColors.plumora),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Action réservée aux administrateurs. Le livre sera ajouté au catalogue Plumora.',
-                        style: TextStyle(color: AdminColors.accent, fontSize: 11),
+                        style: TextStyle(color: AdminColors.plumora, fontSize: 11),
                       ),
                     ),
                   ],
