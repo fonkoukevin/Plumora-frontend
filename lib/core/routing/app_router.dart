@@ -8,6 +8,15 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/role_selection_screen.dart';
 import '../../features/ai/presentation/plumo_recommendation_screen.dart';
 import '../../features/ai/presentation/plumo_writing_screen.dart';
+import '../../features/admin/presentation/admin_access_denied_screen.dart';
+import '../../features/admin/presentation/admin_ai_screen.dart';
+import '../../features/admin/presentation/admin_catalog_screen.dart';
+import '../../features/admin/presentation/admin_dashboard_screen.dart';
+import '../../features/admin/presentation/admin_public_domain_import_screen.dart';
+import '../../features/admin/presentation/admin_reports_screen.dart';
+import '../../features/admin/presentation/admin_route_guard.dart';
+import '../../features/admin/presentation/admin_settings_screen.dart';
+import '../../features/admin/presentation/admin_users_screen.dart';
 import '../../features/beta_reading/presentation/author_beta_comments_screen.dart';
 import '../../features/beta_reading/presentation/beta_campaign_detail_author_screen.dart';
 import '../../features/beta_reading/presentation/beta_campaigns_author_screen.dart';
@@ -52,7 +61,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
+      final session = authState.valueOrNull;
+      final isAuthenticated = session?.isAuthenticated ?? false;
+
+      final adminRedirect = AdminRouteGuard.redirect(
+        location: state.matchedLocation,
+        isAuthenticated: isAuthenticated,
+        roleNames: session?.roles.map((role) => role.name).toList() ?? const [],
+      );
+      if (adminRedirect != null) {
+        return adminRedirect;
+      }
+
       if (isAuthenticated || _isPublicLocation(state.matchedLocation)) {
         return null;
       }
@@ -367,6 +387,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+      // Administration is a self-contained space with its own fixed dark
+      // chrome (AdminShell) matching the Figma admin mockup, so — like the
+      // editor/reading routes above — it lives outside MainShell's
+      // ShellRoute rather than trying to make MainShell's nav conditionally
+      // disappear for a completely different navigation structure.
+      GoRoute(
+        path: AppRoutes.adminAccessDenied,
+        name: 'admin-access-denied',
+        builder: (context, state) => const AdminAccessDeniedScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.admin,
+        name: 'admin-dashboard',
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminUsers,
+        name: 'admin-users',
+        builder: (context, state) => const AdminUsersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminCatalog,
+        name: 'admin-catalog',
+        builder: (context, state) => const AdminCatalogScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPublicDomainImport,
+        name: 'admin-public-domain-import',
+        builder: (context, state) => const AdminPublicDomainImportScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminReports,
+        name: 'admin-reports',
+        builder: (context, state) => const AdminReportsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminAi,
+        name: 'admin-ai',
+        builder: (context, state) => const AdminAiScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminSettings,
+        name: 'admin-settings',
+        builder: (context, state) => const AdminSettingsScreen(),
+      ),
     ],
   );
 });
@@ -412,6 +477,14 @@ abstract final class AppRoutes {
   static const String editProfile = '/profile/edit';
   static const String preferences = '/profile/preferences';
   static const String notifications = '/notifications';
+  static const String admin = '/admin';
+  static const String adminUsers = '/admin/users';
+  static const String adminCatalog = '/admin/catalog';
+  static const String adminPublicDomainImport = '/admin/public-domain-import';
+  static const String adminReports = '/admin/reports';
+  static const String adminAi = '/admin/ai';
+  static const String adminSettings = '/admin/settings';
+  static const String adminAccessDenied = '/admin/access-denied';
 
   static String authorBookDetailPath(String bookId) {
     final encoded = Uri.encodeComponent(bookId.trim());
