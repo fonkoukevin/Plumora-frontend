@@ -7,8 +7,20 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../data/models/login_request.dart';
+import '../data/models/role_model.dart';
 import 'controllers/auth_controller.dart';
 import 'widgets/auth_screen_shell.dart';
+
+/// ADMIN accounts land directly in the Administration space rather than the
+/// regular home dashboard — they never see the reader/author app (see
+/// `AdminRouteGuard`, which also enforces this on every subsequent
+/// navigation, not just this first redirect).
+String _postLoginDestination(List<RoleModel> roles) {
+  if (roles.any((role) => role.name.trim().toUpperCase() == 'ADMIN')) {
+    return AppRoutes.admin;
+  }
+  return roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home;
+}
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -48,9 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    context.go(
-      session!.roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home,
-    );
+    context.go(_postLoginDestination(session!.roles));
   }
 
   Future<void> _submitGoogle() async {
@@ -61,9 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    context.go(
-      session!.roles.isEmpty ? AppRoutes.roleSelection : AppRoutes.home,
-    );
+    context.go(_postLoginDestination(session!.roles));
   }
 
   @override
