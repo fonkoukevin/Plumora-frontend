@@ -32,7 +32,9 @@ class BookModel {
     this.visibility,
     this.language,
     this.authorId,
+    this.authorUsername,
     this.coverUrl,
+    this.externalSource,
     this.tags = const [],
     this.chapterCount = 0,
     this.wordCount = 0,
@@ -53,7 +55,9 @@ class BookModel {
   final String? visibility;
   final String? language;
   final String? authorId;
+  final String? authorUsername;
   final String? coverUrl;
+  final String? externalSource;
   final List<String> tags;
   final int chapterCount;
   final int wordCount;
@@ -66,6 +70,8 @@ class BookModel {
   final DateTime? publishedAt;
 
   bool get isArchived => status == BookStatus.archived;
+
+  bool get isPublicDomain => externalSource != null && externalSource!.trim().isNotEmpty;
 
   bool get canPublish {
     return status == BookStatus.readyToPublish ||
@@ -89,6 +95,16 @@ class BookModel {
         'lang',
       ]),
       authorId: _readNullableString(json, ['authorId', 'author_id']),
+      authorUsername: _readNullableString(json, [
+        'authorUsername',
+        'author_username',
+        'authorName',
+        'author_name',
+      ]),
+      externalSource: _readNullableString(json, [
+        'externalSource',
+        'external_source',
+      ]),
       coverUrl: _readNullableString(json, [
         'coverUrl',
         'cover_url',
@@ -143,8 +159,10 @@ class BookModel {
       if (visibility != null) 'visibility': visibility,
       if (language != null) 'language': language,
       if (authorId != null) 'authorId': authorId,
+      if (authorUsername != null) 'authorUsername': authorUsername,
       if (coverUrl != null && coverUrl!.trim().isNotEmpty)
         'coverUrl': coverUrl!.trim(),
+      if (externalSource != null) 'externalSource': externalSource,
       if (tags.isNotEmpty) 'tags': tags,
       'chapterCount': chapterCount,
       'wordCount': wordCount,

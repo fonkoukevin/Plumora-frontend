@@ -414,6 +414,8 @@ class _QuoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final factor = ((constraints.maxWidth - 282) / (456 - 282)).clamp(
@@ -441,6 +443,9 @@ class _QuoteCard extends StatelessWidget {
               vertical: verticalPadding,
             ),
             radius: radius,
+            borderColor: context.colors.accent.withValues(
+              alpha: isDark ? 0.25 : 0.4,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -500,26 +505,25 @@ class _QuoteIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tint = context.colors.accent;
+
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: context.colors.primary.withValues(alpha: 0.10),
+        color: tint.withValues(alpha: 0.14),
         shape: BoxShape.circle,
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
+            color: tint.withValues(alpha: isDark ? 0.35 : 0.30),
+            blurRadius: isDark ? 14 : 10,
+            offset: Offset(0, isDark ? 5 : 4),
           ),
         ],
       ),
       alignment: Alignment.center,
-      child: Icon(
-        Icons.format_quote_rounded,
-        size: iconSize,
-        color: context.colors.primary,
-      ),
+      child: Icon(Icons.format_quote_rounded, size: iconSize, color: tint),
     );
   }
 }
