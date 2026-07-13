@@ -15,7 +15,6 @@ import '../../features/admin/presentation/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/admin_public_domain_import_screen.dart';
 import '../../features/admin/presentation/admin_reports_screen.dart';
 import '../../features/admin/presentation/admin_route_guard.dart';
-import '../../features/admin/presentation/admin_settings_screen.dart';
 import '../../features/admin/presentation/admin_users_screen.dart';
 import '../../features/beta_reading/presentation/author_beta_comments_screen.dart';
 import '../../features/beta_reading/presentation/beta_campaign_detail_author_screen.dart';
@@ -427,11 +426,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'admin-ai',
         builder: (context, state) => const AdminAiScreen(),
       ),
-      GoRoute(
-        path: AppRoutes.adminSettings,
-        name: 'admin-settings',
-        builder: (context, state) => const AdminSettingsScreen(),
-      ),
     ],
   );
 });
@@ -483,7 +477,6 @@ abstract final class AppRoutes {
   static const String adminPublicDomainImport = '/admin/public-domain-import';
   static const String adminReports = '/admin/reports';
   static const String adminAi = '/admin/ai';
-  static const String adminSettings = '/admin/settings';
   static const String adminAccessDenied = '/admin/access-denied';
 
   static String authorBookDetailPath(String bookId) {
