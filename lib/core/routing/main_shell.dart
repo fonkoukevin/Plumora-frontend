@@ -318,6 +318,7 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = selected
         ? context.colors.primary
         : context.colors.sidebarForeground;
@@ -331,8 +332,23 @@ class _SidebarItem extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? context.colors.cards : Colors.transparent,
+            color: selected
+                ? (isDark
+                      ? context.colors.primary.withValues(alpha: 0.16)
+                      : context.colors.cards)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: context.colors.primary.withValues(
+                        alpha: isDark ? 0.30 : 0.18,
+                      ),
+                      blurRadius: isDark ? 16 : 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             children: [
