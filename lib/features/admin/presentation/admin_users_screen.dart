@@ -8,7 +8,9 @@ import 'admin_colors.dart';
 import 'admin_shell.dart';
 import 'widgets/admin_widgets.dart';
 
-const List<String> _roleFilters = ['USER', 'AUTHOR', 'BETA_READER', 'ADMIN'];
+/// Real backend `RoleName` values — the maquette's dropdown mockup listed a
+/// non-existent "USER" role; this uses the actual enum instead.
+const List<String> _assignableRoles = ['AUTHOR', 'READER', 'BETA_READER', 'ADMIN'];
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
   const AdminUsersScreen({super.key});
@@ -80,6 +82,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       return _UsersTable(
                         users: filtered,
                         busyIds: _busyIds,
+                        onDetail: _openDetail,
+                        onRole: _openRoleEditor,
                         onToggleActive: _toggleActive,
                       );
                     }
@@ -90,6 +94,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           _UserCard(
                             user: user,
                             busy: _busyIds.contains(user.id),
+                            onDetail: () => _openDetail(user),
+                            onRole: () => _openRoleEditor(user),
                             onToggleActive: () => _toggleActive(user),
                           ),
                           const SizedBox(height: 10),
@@ -108,8 +114,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
   bool _matches(AdminUser user) {
     final query = _search.trim().toLowerCase();
-    final matchesSearch =
-        query.isEmpty ||
+    final matchesSearch = query.isEmpty ||
         user.displayName.toLowerCase().contains(query) ||
         user.email.toLowerCase().contains(query);
     final matchesRole = _roleFilter == null || user.roles.contains(_roleFilter);
@@ -117,40 +122,327 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return matchesSearch && matchesRole && matchesStatus;
   }
 
-  Future<void> _toggleActive(AdminUser user) async {
-    final activating = !user.active;
-    final confirmed = await showAdminConfirmationDialog(
+  Future<void> _openDetail(AdminUser user) async {
+    setState(() => _busyIds.add(user.id));
+    AdminUser detail = user;
+    try {
+      detail = await ref.read(adminRepositoryProvider).getUserDetail(user.id);
+    } catch (_) {
+      // Falls back to the list-row data if the detail call fails.
+    } finally {
+      if (mounted) {
+        setState(() => _busyIds.remove(user.id));
+      }
+    }
+    if (!mounted) {
+      return;
+    }
+
+    await AdminModal.show<void>(
       context,
-      title: activating ? 'Réactiver ce compte ?' : 'Désactiver ce compte ?',
-      message: activating
-          ? '${user.displayName} pourra de nouveau se connecter à Plumora.'
-          : '${user.displayName} ne pourra plus se connecter tant que le compte est désactivé.',
-      confirmLabel: activating ? 'Réactiver' : 'Désactiver',
-      danger: !activating,
+      title: 'Détail utilisateur',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AdminColors.primary.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  detail.initials,
+                  style: const TextStyle(
+                    color: AdminColors.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      detail.displayName,
+                      style: const TextStyle(
+                        color: AdminColors.text,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      detail.email,
+                      style: const TextStyle(color: AdminColors.muted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        for (final role in detail.roles) AdminRoleBadge(role: role),
+                        AdminBadge(
+                          label: detail.status.label,
+                          color: detail.active ? AdminColors.success : AdminColors.error,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          AdminDetailRow(label: 'Inscription', value: Text(_formatDate(detail.createdAt))),
+          if (detail.booksCount != null)
+            AdminDetailRow(
+              label: 'Livres publiés',
+              value: Text('${detail.booksCount}', style: const TextStyle(color: AdminColors.text)),
+            ),
+          if (detail.reportsCount != null)
+            AdminDetailRow(
+              label: 'Signalements reçus',
+              value: Text('${detail.reportsCount}', style: const TextStyle(color: AdminColors.text)),
+            ),
+        ],
+      ),
     );
-    if (!confirmed || !mounted) {
+  }
+
+  Future<void> _openRoleEditor(AdminUser user) async {
+    var selectedRole = user.roles.isNotEmpty ? user.roles.first.toUpperCase() : _assignableRoles.first;
+    if (!_assignableRoles.contains(selectedRole)) {
+      selectedRole = _assignableRoles.first;
+    }
+
+    final confirmed = await AdminModal.show<bool>(
+      context,
+      title: 'Modifier le rôle',
+      child: StatefulBuilder(
+        builder: (context, setModalState) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RichText(
+                text: TextSpan(
+                  style: const TextStyle(color: AdminColors.muted, fontSize: 13),
+                  children: [
+                    const TextSpan(text: 'Rôle actuel de '),
+                    TextSpan(
+                      text: user.displayName,
+                      style: const TextStyle(color: AdminColors.text, fontWeight: FontWeight.w700),
+                    ),
+                    const TextSpan(text: ' : '),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, children: [for (final role in user.roles) AdminRoleBadge(role: role)]),
+              const SizedBox(height: 16),
+              const Text('Nouveau rôle', style: TextStyle(color: AdminColors.muted, fontSize: 12)),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: AdminColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AdminColors.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedRole,
+                    isExpanded: true,
+                    items: [
+                      for (final role in _assignableRoles)
+                        DropdownMenuItem(value: role, child: Text(role)),
+                    ],
+                    onChanged: (value) => setModalState(() => selectedRole = value!),
+                    style: const TextStyle(color: AdminColors.text, fontSize: 13),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AdminColors.text,
+                        side: const BorderSide(color: AdminColors.border),
+                      ),
+                      child: const Text('Annuler'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AdminPrimaryButton(
+                      label: 'Confirmer',
+                      onPressed: () => Navigator.of(context).pop(true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
       return;
     }
 
     setState(() => _busyIds.add(user.id));
     try {
-      await ref.read(adminRepositoryProvider).setUserActive(user.id, activating);
+      await ref.read(adminRepositoryProvider).updateUserRole(user.id, selectedRole);
       ref.invalidate(adminUsersProvider);
-      ref.invalidate(adminDashboardStatsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              activating ? 'Compte réactivé.' : 'Compte désactivé.',
-            ),
-          ),
+          SnackBar(content: Text('Rôle de ${user.displayName} modifié en $selectedRole.')),
         );
       }
     } catch (error) {
       if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busyIds.remove(user.id));
+      }
+    }
+  }
+
+  Future<void> _toggleActive(AdminUser user) async {
+    final activating = !user.active;
+    final reasonController = TextEditingController();
+
+    final confirmed = await AdminModal.show<bool>(
+      context,
+      title: activating ? 'Réactiver le compte' : 'Désactiver le compte',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!activating)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: AdminColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AdminColors.error.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 15, color: AdminColors.error),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(color: AdminColors.error, fontSize: 12.5, height: 1.4),
+                        children: [
+                          TextSpan(
+                            text: user.displayName,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const TextSpan(
+                            text: ' ne pourra plus se connecter ni accéder à la plateforme.',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Text(
+                'Voulez-vous réactiver le compte de ${user.displayName} ? L\'utilisateur pourra de nouveau se connecter.',
+                style: const TextStyle(color: AdminColors.muted, fontSize: 13),
+              ),
+            ),
+          if (!activating) ...[
+            const Text('Raison (facultatif)', style: TextStyle(color: AdminColors.muted, fontSize: 12)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              style: const TextStyle(color: AdminColors.text, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Motif de désactivation...',
+                filled: true,
+                fillColor: AdminColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AdminColors.border),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AdminColors.text,
+                    side: const BorderSide(color: AdminColors.border),
+                  ),
+                  child: const Text('Annuler'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: activating
+                    ? AdminPrimaryButton(
+                        label: 'Réactiver',
+                        icon: Icons.person_outline,
+                        onPressed: () => Navigator.of(context).pop(true),
+                      )
+                    : AdminDangerButton(
+                        label: 'Désactiver',
+                        outlined: false,
+                        icon: Icons.person_off_outlined,
+                        onPressed: () => Navigator.of(context).pop(true),
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final reason = reasonController.text;
+    reasonController.dispose();
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() => _busyIds.add(user.id));
+    try {
+      await ref
+          .read(adminRepositoryProvider)
+          .setUserActive(user.id, activating, reason: reason);
+      ref.invalidate(adminUsersProvider);
+      ref.invalidate(adminDashboardProvider);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppError.messageFor(error))),
+          SnackBar(content: Text(activating ? 'Compte réactivé.' : 'Compte désactivé.')),
         );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
       }
     } finally {
       if (mounted) {
@@ -185,74 +477,53 @@ class _Filters extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         SizedBox(
-          width: 260,
+          width: 240,
           child: AdminSearchField(
             controller: searchController,
-            hintText: 'Rechercher un utilisateur...',
+            hintText: 'Nom ou email...',
             onChanged: onSearchChanged,
           ),
         ),
-        _Dropdown<String?>(
-          value: roleFilter,
-          hint: 'Tous les rôles',
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Tous les rôles')),
-            for (final role in _roleFilters)
-              DropdownMenuItem(value: role, child: Text(role)),
-          ],
-          onChanged: onRoleChanged,
-        ),
-        _Dropdown<AdminUserStatus?>(
-          value: statusFilter,
-          hint: 'Tous les statuts',
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Tous les statuts')),
-            for (final status in AdminUserStatus.values)
-              DropdownMenuItem(value: status, child: Text(status.label)),
-          ],
-          onChanged: onStatusChanged,
-        ),
+        AdminFilterChip(label: 'Tous', selected: roleFilter == null, onTap: () => onRoleChanged(null)),
+        for (final role in _assignableRoles)
+          AdminFilterChip(
+            label: role,
+            selected: roleFilter == role,
+            onTap: () => onRoleChanged(role),
+          ),
+        _StatusDropdown(value: statusFilter, onChanged: onStatusChanged),
       ],
     );
   }
 }
 
-class _Dropdown<T> extends StatelessWidget {
-  const _Dropdown({
-    required this.value,
-    required this.hint,
-    required this.items,
-    required this.onChanged,
-    super.key,
-  });
+class _StatusDropdown extends StatelessWidget {
+  const _StatusDropdown({required this.value, required this.onChanged});
 
-  final T value;
-  final String hint;
-  final List<DropdownMenuItem<T>> items;
-  final ValueChanged<T> onChanged;
+  final AdminUserStatus? value;
+  final ValueChanged<AdminUserStatus?> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
+      height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: AdminColors.card,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AdminColors.border),
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
+        child: DropdownButton<AdminUserStatus?>(
           value: value,
-          items: items,
-          onChanged: (v) => onChanged(v as T),
-          dropdownColor: AdminColors.card,
-          style: const TextStyle(color: AdminColors.text, fontSize: 13),
-          icon: const Icon(
-            Icons.keyboard_arrow_down,
-            color: AdminColors.muted,
-            size: 18,
-          ),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('Tous statuts')),
+            for (final status in AdminUserStatus.values)
+              DropdownMenuItem(value: status, child: Text(status.label)),
+          ],
+          onChanged: onChanged,
+          style: const TextStyle(color: AdminColors.text, fontSize: 12),
+          icon: const Icon(Icons.keyboard_arrow_down, color: AdminColors.muted, size: 16),
         ),
       ),
     );
@@ -263,11 +534,15 @@ class _UsersTable extends StatelessWidget {
   const _UsersTable({
     required this.users,
     required this.busyIds,
+    required this.onDetail,
+    required this.onRole,
     required this.onToggleActive,
   });
 
   final List<AdminUser> users;
   final Set<String> busyIds;
+  final ValueChanged<AdminUser> onDetail;
+  final ValueChanged<AdminUser> onRole;
   final ValueChanged<AdminUser> onToggleActive;
 
   static const _columns = [2, 2, 1, 1, 1, 1];
@@ -285,14 +560,7 @@ class _UsersTable extends StatelessWidget {
             ),
             child: Row(
               children: [
-                for (final entry in [
-                  'Nom',
-                  'Email',
-                  'Rôle',
-                  'Statut',
-                  'Inscription',
-                  '',
-                ].asMap().entries)
+                for (final entry in ['Nom', 'Email', 'Rôle', 'Statut', 'Inscription', ''].asMap().entries)
                   Expanded(
                     flex: _columns[entry.key],
                     child: Text(
@@ -312,10 +580,11 @@ class _UsersTable extends StatelessWidget {
             _UserRow(
               user: users[i],
               busy: busyIds.contains(users[i].id),
+              onDetail: () => onDetail(users[i]),
+              onRole: () => onRole(users[i]),
               onToggleActive: () => onToggleActive(users[i]),
             ),
-            if (i != users.length - 1)
-              const Divider(color: AdminColors.border, height: 1),
+            if (i != users.length - 1) const Divider(color: AdminColors.border, height: 1),
           ],
         ],
       ),
@@ -327,11 +596,15 @@ class _UserRow extends StatelessWidget {
   const _UserRow({
     required this.user,
     required this.busy,
+    required this.onDetail,
+    required this.onRole,
     required this.onToggleActive,
   });
 
   final AdminUser user;
   final bool busy;
+  final VoidCallback onDetail;
+  final VoidCallback onRole;
   final VoidCallback onToggleActive;
 
   @override
@@ -354,11 +627,7 @@ class _UserRow extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     user.initials,
-                    style: const TextStyle(
-                      color: AdminColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: const TextStyle(color: AdminColors.primary, fontSize: 11, fontWeight: FontWeight.w800),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -367,11 +636,7 @@ class _UserRow extends StatelessWidget {
                     user.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AdminColors.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(color: AdminColors.text, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -401,20 +666,42 @@ class _UserRow extends StatelessWidget {
           ),
           Expanded(
             flex: 1,
-            child: Text(
-              _formatDate(user.createdAt),
-              style: const TextStyle(color: AdminColors.muted, fontSize: 11),
-            ),
+            child: Text(_formatDate(user.createdAt), style: const TextStyle(color: AdminColors.muted, fontSize: 11)),
           ),
           Expanded(
             flex: 1,
             child: Align(
               alignment: Alignment.centerRight,
-              child: _StatusToggleButton(
-                active: user.active,
-                busy: busy,
-                onTap: onToggleActive,
-              ),
+              child: busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Voir le détail',
+                          onPressed: onDetail,
+                          icon: const Icon(Icons.visibility_outlined, size: 15, color: AdminColors.muted),
+                        ),
+                        IconButton(
+                          tooltip: 'Changer le rôle',
+                          onPressed: onRole,
+                          icon: const Icon(Icons.edit_outlined, size: 15, color: AdminColors.muted),
+                        ),
+                        IconButton(
+                          tooltip: user.active ? 'Désactiver' : 'Réactiver',
+                          onPressed: onToggleActive,
+                          icon: Icon(
+                            user.active ? Icons.person_off_outlined : Icons.person_outline,
+                            size: 15,
+                            color: user.active ? AdminColors.error : AdminColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -427,106 +714,104 @@ class _UserCard extends StatelessWidget {
   const _UserCard({
     required this.user,
     required this.busy,
+    required this.onDetail,
+    required this.onRole,
     required this.onToggleActive,
   });
 
   final AdminUser user;
   final bool busy;
+  final VoidCallback onDetail;
+  final VoidCallback onRole;
   final VoidCallback onToggleActive;
 
   @override
   Widget build(BuildContext context) {
     return AdminCard(
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AdminColors.primary.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              user.initials,
-              style: const TextStyle(
-                color: AdminColors.primary,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AdminColors.primary.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  user.initials,
+                  style: const TextStyle(color: AdminColors.primary, fontSize: 13, fontWeight: FontWeight.w800),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.displayName,
-                  style: const TextStyle(
-                    color: AdminColors.text,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  user.email,
-                  style: const TextStyle(color: AdminColors.muted, fontSize: 12),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (user.roles.isNotEmpty)
-                      AdminRoleBadge(role: user.roles.first),
-                    AdminBadge(
-                      label: user.status.label,
-                      color: user.active
-                          ? AdminColors.success
-                          : AdminColors.error,
+                    Text(
+                      user.displayName,
+                      style: const TextStyle(color: AdminColors.text, fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    Text(user.email, style: const TextStyle(color: AdminColors.muted, fontSize: 12)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if (user.roles.isNotEmpty) AdminRoleBadge(role: user.roles.first),
+                        AdminBadge(
+                          label: user.status.label,
+                          color: user.active ? AdminColors.success : AdminColors.error,
+                        ),
+                      ],
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (busy)
+            const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onDetail,
+                    icon: const Icon(Icons.visibility_outlined, size: 13),
+                    label: const Text('Détail', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(foregroundColor: AdminColors.text, side: const BorderSide(color: AdminColors.border)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onRole,
+                    icon: const Icon(Icons.edit_outlined, size: 13),
+                    label: const Text('Rôle', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(foregroundColor: AdminColors.text, side: const BorderSide(color: AdminColors.border)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: user.active
+                      ? AdminDangerButton(label: 'Désactiver', onPressed: onToggleActive, icon: Icons.person_off_outlined)
+                      : OutlinedButton.icon(
+                          onPressed: onToggleActive,
+                          icon: const Icon(Icons.person_outline, size: 13),
+                          label: const Text('Réactiver', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(foregroundColor: AdminColors.success, side: const BorderSide(color: AdminColors.success)),
+                        ),
+                ),
               ],
             ),
-          ),
-          _StatusToggleButton(active: user.active, busy: busy, onTap: onToggleActive),
         ],
       ),
-    );
-  }
-}
-
-class _StatusToggleButton extends StatelessWidget {
-  const _StatusToggleButton({
-    required this.active,
-    required this.busy,
-    required this.onTap,
-  });
-
-  final bool active;
-  final bool busy;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: busy ? null : onTap,
-      tooltip: active ? 'Désactiver' : 'Réactiver',
-      icon: busy
-          ? const SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Icon(
-              active ? Icons.person_off_outlined : Icons.person_outline,
-              size: 17,
-              color: active ? AdminColors.error : AdminColors.success,
-            ),
     );
   }
 }

@@ -19,6 +19,13 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
   AdminReportStatus _filter = AdminReportStatus.open;
   final Set<String> _busyIds = {};
 
+  static const _filters = [
+    AdminReportStatus.open,
+    AdminReportStatus.inReview,
+    AdminReportStatus.resolved,
+    AdminReportStatus.dismissed,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final reportsAsync = ref.watch(adminReportsProvider);
@@ -46,14 +53,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                 onRetry: () => ref.invalidate(adminReportsProvider),
               ),
               data: (reports) {
-                final visibleStatuses = [
-                  AdminReportStatus.open,
-                  AdminReportStatus.inReview,
-                  AdminReportStatus.resolved,
-                  AdminReportStatus.dismissed,
-                ];
-                final filtered =
-                    reports.where((r) => r.status == _filter).toList();
+                final filtered = reports.where((r) => r.status == _filter).toList();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +62,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        for (final status in visibleStatuses)
+                        for (final status in _filters)
                           AdminFilterChip(
                             label: status.label,
                             selected: _filter == status,
@@ -85,9 +85,11 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                             _ReportCard(
                               report: report,
                               busy: _busyIds.contains(report.id),
-                              onResolve: () => _act(report, _Action.resolve),
-                              onReject: () => _act(report, _Action.reject),
                               onView: () => _openDetail(report),
+                              onInReview: () => _markInReview(report),
+                              onResolve: () => _resolve(report),
+                              onReject: () => _reject(report),
+                              onArchiveContent: report.bookId != null ? () => _archiveContent(report) : null,
                             ),
                             const SizedBox(height: 10),
                           ],
@@ -104,68 +106,181 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
   }
 
   void _openDetail(AdminReport report) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => _ReportDetailDialog(
-        report: report,
-        onResolve: report.status == AdminReportStatus.resolved
-            ? null
-            : () {
-                Navigator.of(context).pop();
-                _act(report, _Action.resolve);
-              },
-        onReject: report.status == AdminReportStatus.dismissed
-            ? null
-            : () {
-                Navigator.of(context).pop();
-                _act(report, _Action.reject);
-              },
+    AdminModal.show<void>(
+      context,
+      title: 'Signalement ${report.id.length > 8 ? report.id.substring(0, 8) : report.id}',
+      maxWidth: 460,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AdminDetailRow(
+            label: 'Contenu signalé',
+            value: Text(report.bookTitle ?? '—', textAlign: TextAlign.right),
+          ),
+          AdminDetailRow(label: 'Signalé par', value: Text(report.reporterUsername ?? '—')),
+          AdminDetailRow(label: 'Motif', value: Text(report.reason.isEmpty ? '—' : report.reason)),
+          AdminDetailRow(label: 'Statut', value: AdminBadge(label: report.status.label, color: _statusColor(report.status))),
+          AdminDetailRow(label: 'Date', value: Text(_formatDate(report.createdAt))),
+          if (report.resolvedAt != null)
+            AdminDetailRow(label: 'Clôturé le', value: Text(_formatDate(report.resolvedAt))),
+          if ((report.description ?? '').isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Text('Description', style: TextStyle(color: AdminColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(report.description!, style: const TextStyle(color: AdminColors.text, fontSize: 13, height: 1.45)),
+          ],
+        ],
       ),
     );
   }
 
-  Future<void> _act(AdminReport report, _Action action) async {
+  Future<void> _markInReview(AdminReport report) => _act(
+        report,
+        (repo) => repo.markReportInReview(report.id),
+        successMessage: 'Signalement passé en cours.',
+      );
+
+  Future<void> _resolve(AdminReport report) async {
+    final reason = await _promptReason(
+      title: 'Résoudre le signalement',
+      label: 'Commentaire administrateur (facultatif)',
+      confirmLabel: 'Résoudre',
+      danger: false,
+    );
+    if (reason == null || !mounted) {
+      return;
+    }
+    await _act(
+      report,
+      (repo) => repo.resolveReport(report.id, reason: reason),
+      successMessage: 'Signalement résolu.',
+    );
+  }
+
+  Future<void> _reject(AdminReport report) async {
+    final reason = await _promptReason(
+      title: 'Rejeter le signalement',
+      label: 'Justification',
+      confirmLabel: 'Rejeter',
+      danger: true,
+    );
+    if (reason == null || !mounted) {
+      return;
+    }
+    await _act(
+      report,
+      (repo) => repo.rejectReport(report.id, reason: reason),
+      successMessage: 'Signalement rejeté.',
+    );
+  }
+
+  Future<void> _archiveContent(AdminReport report) async {
     final confirmed = await showAdminConfirmationDialog(
       context,
-      title: action == _Action.resolve
-          ? 'Résoudre ce signalement ?'
-          : 'Rejeter ce signalement ?',
-      message: action == _Action.resolve
-          ? 'Le signalement sera marqué comme résolu.'
-          : 'Le signalement sera rejeté sans action supplémentaire.',
-      confirmLabel: action == _Action.resolve ? 'Résoudre' : 'Rejeter',
-      danger: action == _Action.reject,
+      title: 'Archiver le contenu',
+      message: 'Le livre "${report.bookTitle ?? ''}" sera archivé et ne sera plus visible publiquement.',
+      confirmLabel: 'Archiver le contenu',
     );
     if (!confirmed || !mounted) {
       return;
     }
+    final bookId = report.bookId;
+    if (bookId == null) {
+      return;
+    }
+    await _act(
+      report,
+      (repo) => repo.archiveBook(bookId).then((_) => repo.resolveReport(report.id)),
+      successMessage: 'Contenu archivé.',
+    );
+  }
 
+  Future<String?> _promptReason({
+    required String title,
+    required String label,
+    required String confirmLabel,
+    required bool danger,
+  }) async {
+    final controller = TextEditingController();
+    final confirmed = await AdminModal.show<bool>(
+      context,
+      title: title,
+      child: StatefulBuilder(
+        builder: (context, setModalState) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(color: AdminColors.muted, fontSize: 12)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                onChanged: (_) => setModalState(() {}),
+                style: const TextStyle(color: AdminColors.text, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: danger ? 'Raison du rejet...' : 'Résumé de la décision...',
+                  filled: true,
+                  fillColor: AdminColors.background,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AdminColors.border),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(foregroundColor: AdminColors.text, side: const BorderSide(color: AdminColors.border)),
+                      child: const Text('Annuler'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: danger
+                        ? AdminDangerButton(
+                            label: confirmLabel,
+                            outlined: false,
+                            onPressed: controller.text.trim().isEmpty
+                                ? null
+                                : () => Navigator.of(context).pop(true),
+                          )
+                        : AdminPrimaryButton(
+                            label: confirmLabel,
+                            onPressed: () => Navigator.of(context).pop(true),
+                          ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    final reason = controller.text;
+    controller.dispose();
+    return confirmed == true ? reason : null;
+  }
+
+  Future<void> _act(
+    AdminReport report,
+    Future<void> Function(AdminRepository repo) action, {
+    required String successMessage,
+  }) async {
     setState(() => _busyIds.add(report.id));
     try {
-      final repository = ref.read(adminRepositoryProvider);
-      if (action == _Action.resolve) {
-        await repository.resolveReport(report.id);
-      } else {
-        await repository.rejectReport(report.id);
-      }
+      await action(ref.read(adminRepositoryProvider));
       ref.invalidate(adminReportsProvider);
-      ref.invalidate(adminDashboardStatsProvider);
+      ref.invalidate(adminDashboardProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              action == _Action.resolve
-                  ? 'Signalement résolu.'
-                  : 'Signalement rejeté.',
-            ),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppError.messageFor(error))),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
       }
     } finally {
       if (mounted) {
@@ -175,214 +290,125 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
   }
 }
 
-enum _Action { resolve, reject }
-
 class _ReportCard extends StatelessWidget {
   const _ReportCard({
     required this.report,
     required this.busy,
+    required this.onView,
+    required this.onInReview,
     required this.onResolve,
     required this.onReject,
-    required this.onView,
+    required this.onArchiveContent,
   });
 
   final AdminReport report;
   final bool busy;
+  final VoidCallback onView;
+  final VoidCallback onInReview;
   final VoidCallback onResolve;
   final VoidCallback onReject;
-  final VoidCallback onView;
+  final VoidCallback? onArchiveContent;
 
   @override
   Widget build(BuildContext context) {
     return AdminCard(
-      child: Row(
+      borderColor: report.status == AdminReportStatus.open
+          ? AdminColors.primary.withValues(alpha: 0.4)
+          : AdminColors.border,
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AdminBadge(
-                      label: report.status.label,
-                      color: _statusColor(report.status),
+                    AdminBadge(label: report.status.label, color: _statusColor(report.status)),
+                    const SizedBox(height: 8),
+                    Text(
+                      report.bookTitle ?? 'Contenu Plumora',
+                      style: const TextStyle(color: AdminColors.text, fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Motif : ${report.reason.isEmpty ? 'Non précisé' : report.reason}',
+                      style: const TextStyle(color: AdminColors.muted, fontSize: 12),
+                    ),
+                    Text(
+                      'Signalé par ${report.reporterUsername ?? 'utilisateur'} · ${_formatDate(report.createdAt)}',
+                      style: const TextStyle(color: AdminColors.muted, fontSize: 11),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  report.bookTitle ?? 'Contenu Plumora',
-                  style: const TextStyle(
-                    color: AdminColors.text,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Motif : ${report.reason.isEmpty ? 'Non précisé' : report.reason}',
-                  style: const TextStyle(color: AdminColors.muted, fontSize: 12),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Signalé par ${report.reporterUsername ?? 'utilisateur'} · ${_formatDate(report.createdAt)}',
-                  style: const TextStyle(color: AdminColors.muted, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            children: [
-              IconButton(
-                tooltip: 'Voir le détail',
-                onPressed: onView,
-                icon: const Icon(Icons.visibility_outlined, size: 16, color: AdminColors.primary),
               ),
-              if (report.status == AdminReportStatus.open ||
-                  report.status == AdminReportStatus.inReview) ...[
+              if (busy)
+                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              else
                 IconButton(
-                  tooltip: 'Résoudre',
-                  onPressed: busy ? null : onResolve,
-                  icon: busy
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_circle_outline, size: 16, color: AdminColors.success),
+                  tooltip: 'Consulter',
+                  onPressed: onView,
+                  icon: const Icon(Icons.visibility_outlined, size: 16, color: AdminColors.primary),
                 ),
-                IconButton(
-                  tooltip: 'Rejeter',
-                  onPressed: busy ? null : onReject,
-                  icon: const Icon(Icons.cancel_outlined, size: 16, color: AdminColors.error),
-                ),
-              ],
             ],
           ),
+          if (!busy && report.status == AdminReportStatus.open) ...[
+            const Divider(color: AdminColors.border, height: 20),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _SmallActionButton(label: 'Passer en cours', icon: Icons.schedule, color: AdminColors.primary, onTap: onInReview),
+                _SmallActionButton(label: 'Résoudre', icon: Icons.check_circle_outline, color: AdminColors.success, onTap: onResolve),
+                _SmallActionButton(label: 'Rejeter', icon: Icons.cancel_outlined, color: AdminColors.error, outline: true, onTap: onReject),
+              ],
+            ),
+          ],
+          if (!busy && report.status == AdminReportStatus.inReview) ...[
+            const Divider(color: AdminColors.border, height: 20),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _SmallActionButton(label: 'Résoudre', icon: Icons.check_circle_outline, color: AdminColors.success, onTap: onResolve),
+                _SmallActionButton(label: 'Rejeter', icon: Icons.cancel_outlined, color: AdminColors.error, outline: true, onTap: onReject),
+                if (onArchiveContent != null)
+                  _SmallActionButton(label: 'Archiver le contenu', icon: Icons.archive_outlined, color: AdminColors.error, onTap: onArchiveContent!),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _ReportDetailDialog extends StatelessWidget {
-  const _ReportDetailDialog({
-    required this.report,
-    required this.onResolve,
-    required this.onReject,
+class _SmallActionButton extends StatelessWidget {
+  const _SmallActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.outline = false,
   });
 
-  final AdminReport report;
-  final VoidCallback? onResolve;
-  final VoidCallback? onReject;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
-        child: Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            color: AdminColors.card,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AdminColors.border),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Détail du signalement',
-                style: TextStyle(
-                  color: AdminColors.text,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AdminColors.background,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _DetailLine('Contenu', report.bookTitle ?? '—'),
-                    _DetailLine('Motif', report.reason.isEmpty ? '—' : report.reason),
-                    if ((report.description ?? '').isNotEmpty)
-                      _DetailLine('Description', report.description!),
-                    _DetailLine('Signalé par', report.reporterUsername ?? '—'),
-                    _DetailLine('Date', _formatDate(report.createdAt)),
-                    _DetailLine('Statut', report.status.label),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  if (onReject != null)
-                    Expanded(
-                      child: AdminDangerButton(
-                        label: 'Rejeter',
-                        onPressed: onReject,
-                      ),
-                    ),
-                  if (onReject != null && onResolve != null)
-                    const SizedBox(width: 10),
-                  if (onResolve != null)
-                    Expanded(
-                      child: AdminPrimaryButton(
-                        label: 'Résoudre',
-                        onPressed: onResolve,
-                        icon: Icons.check,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Fermer', style: TextStyle(color: AdminColors.muted)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DetailLine extends StatelessWidget {
-  const _DetailLine(this.label, this.value);
-
   final String label;
-  final String value;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool outline;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(color: AdminColors.muted, fontSize: 12),
-          children: [
-            TextSpan(
-              text: '$label : ',
-              style: const TextStyle(color: AdminColors.text, fontWeight: FontWeight.w600),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 13),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: outline ? color : Colors.white,
+        backgroundColor: outline ? Colors.transparent : color,
+        side: BorderSide(color: color),
       ),
     );
   }
