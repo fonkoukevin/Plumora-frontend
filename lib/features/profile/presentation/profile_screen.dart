@@ -190,6 +190,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             color: const Color(0xFF6B6B6B),
             onTap: () => context.push(AppRoutes.preferences),
           ),
+          if (roles.any((role) => role.name.trim().toUpperCase() == 'ADMIN'))
+            _SettingsTile(
+              icon: Icons.shield_outlined,
+              title: 'Administration',
+              subtitle: 'Utilisateurs, catalogue, signalements, Plumo IA',
+              color: const Color(0xFFE57373),
+              onTap: () => context.go(AppRoutes.admin),
+            ),
           const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: _loggingOut ? null : _logout,
