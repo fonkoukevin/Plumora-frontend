@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../data/models/admin_action_log_model.dart';
+import '../data/models/admin_dashboard_model.dart';
 import '../data/repositories/admin_repository.dart';
 import 'admin_colors.dart';
 import 'admin_shell.dart';
@@ -14,7 +16,7 @@ class AdminDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(adminDashboardStatsProvider);
+    final statsAsync = ref.watch(adminDashboardProvider);
 
     return AdminShell(
       title: 'Tableau de bord',
@@ -32,7 +34,7 @@ class AdminDashboardScreen extends ConsumerWidget {
               loading: () => const AdminLoadingState(),
               error: (error, _) => AdminErrorState(
                 message: AppError.messageFor(error),
-                onRetry: () => ref.invalidate(adminDashboardStatsProvider),
+                onRetry: () => ref.invalidate(adminDashboardProvider),
               ),
               data: (stats) => _DashboardContent(stats: stats),
             ),
@@ -55,41 +57,31 @@ class _DashboardContent extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 1100
-                ? 3
-                : constraints.maxWidth >= 700
-                ? 2
-                : 1;
+            final columns = constraints.maxWidth >= 900 ? 4 : constraints.maxWidth >= 560 ? 2 : 1;
             const spacing = 14.0;
-            final width =
-                (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
             final cards = [
               AdminStatCard(
                 icon: Icons.people_outline,
-                label: 'Utilisateurs inscrits',
+                label: 'Utilisateurs',
                 value: '${stats.totalUsers}',
                 sub: '${stats.activeUsers} actifs',
                 color: AdminColors.primary,
               ),
               AdminStatCard(
                 icon: Icons.menu_book_outlined,
-                label: 'Œuvres Plumora',
-                value: '${stats.publishedPlumoraWorks}',
-                color: AdminColors.accent,
+                label: 'Livres publiés',
+                value: '${stats.plumoraBooks}',
+                sub: 'Œuvres Plumora',
+                color: AdminColors.plumora,
               ),
               AdminStatCard(
                 icon: Icons.public,
                 label: 'Domaine public',
                 value: '${stats.publicDomainBooks}',
-                sub: 'Livres importés',
+                sub: 'Dans le catalogue',
                 color: AdminColors.success,
-              ),
-              AdminStatCard(
-                icon: Icons.archive_outlined,
-                label: 'Livres archivés',
-                value: '${stats.archivedBooks}',
-                color: AdminColors.muted,
               ),
               AdminStatCard(
                 icon: Icons.flag_outlined,
@@ -113,13 +105,11 @@ class _DashboardContent extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 820;
-            final activity = _RecentActivityCard(stats: stats);
-            final actions = const _QuickActionsCard();
+            final activity = _RecentActivityCard(actions: stats.recentAdminActions);
+            final side = const _SidePanel();
 
             if (!wide) {
-              return Column(
-                children: [activity, const SizedBox(height: 16), actions],
-              );
+              return Column(children: [activity, const SizedBox(height: 16), side]);
             }
 
             return IntrinsicHeight(
@@ -128,7 +118,7 @@ class _DashboardContent extends StatelessWidget {
                 children: [
                   Expanded(flex: 2, child: activity),
                   const SizedBox(width: 20),
-                  Expanded(child: actions),
+                  Expanded(child: side),
                 ],
               ),
             );
@@ -140,9 +130,9 @@ class _DashboardContent extends StatelessWidget {
 }
 
 class _RecentActivityCard extends StatelessWidget {
-  const _RecentActivityCard({required this.stats});
+  const _RecentActivityCard({required this.actions});
 
-  final AdminDashboardStats stats;
+  final List<AdminActionLog> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -150,19 +140,14 @@ class _RecentActivityCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'ACTIVITÉ RÉCENTE',
-          style: TextStyle(
-            color: AdminColors.text,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
-          ),
+          'Dernières actions administratives',
+          style: TextStyle(color: AdminColors.text, fontSize: 13, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
-        if (stats.recentActivity.isEmpty)
+        if (actions.isEmpty)
           const AdminEmptyState(
-            title: 'Aucune activité récente',
-            message: 'Les derniers livres et signalements apparaîtront ici.',
+            title: 'Aucune action récente',
+            message: 'Les actions des administrateurs apparaîtront ici.',
             icon: Icons.history,
           )
         else
@@ -170,10 +155,9 @@ class _RecentActivityCard extends StatelessWidget {
             padding: EdgeInsets.zero,
             child: Column(
               children: [
-                for (var i = 0; i < stats.recentActivity.length; i++) ...[
-                  _ActivityRow(item: stats.recentActivity[i]),
-                  if (i != stats.recentActivity.length - 1)
-                    const Divider(color: AdminColors.border, height: 1),
+                for (var i = 0; i < actions.length; i++) ...[
+                  _ActionRow(action: actions[i]),
+                  if (i != actions.length - 1) const Divider(color: AdminColors.border, height: 1),
                 ],
               ],
             ),
@@ -183,19 +167,14 @@ class _RecentActivityCard extends StatelessWidget {
   }
 }
 
-class _ActivityRow extends StatelessWidget {
-  const _ActivityRow({required this.item});
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.action});
 
-  final AdminActivityItem item;
+  final AdminActionLog action;
 
   @override
   Widget build(BuildContext context) {
-    final color = item.kind == AdminActivityKind.report
-        ? AdminColors.error
-        : AdminColors.primary;
-    final icon = item.kind == AdminActivityKind.report
-        ? Icons.flag_outlined
-        : Icons.menu_book_outlined;
+    final visuals = _actionVisuals(action.action);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -204,23 +183,33 @@ class _ActivityRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
+              color: visuals.color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, size: 14, color: color),
+            child: Icon(visuals.icon, size: 14, color: visuals.color),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              item.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AdminColors.text, fontSize: 13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  action.description.isEmpty ? action.action : action.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AdminColors.text, fontSize: 13),
+                ),
+                if (action.adminEmail != null)
+                  Text(
+                    'par ${action.adminEmail}',
+                    style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+                  ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
           Text(
-            _relativeDate(item.date),
+            _relativeDate(action.createdAt),
             style: const TextStyle(color: AdminColors.muted, fontSize: 11),
           ),
         ],
@@ -229,43 +218,94 @@ class _ActivityRow extends StatelessWidget {
   }
 }
 
-class _QuickActionsCard extends StatelessWidget {
-  const _QuickActionsCard();
+({IconData icon, Color color}) _actionVisuals(String action) {
+  switch (action) {
+    case 'USER_STATUS_UPDATED':
+      return (icon: Icons.person_off_outlined, color: AdminColors.error);
+    case 'USER_ROLE_UPDATED':
+      return (icon: Icons.edit_outlined, color: AdminColors.primary);
+    case 'BOOK_IMPORTED':
+      return (icon: Icons.cloud_download_outlined, color: AdminColors.primary);
+    case 'BOOK_ARCHIVED':
+      return (icon: Icons.archive_outlined, color: AdminColors.warning);
+    case 'BOOK_RESTORED':
+      return (icon: Icons.restore, color: AdminColors.success);
+    case 'BOOK_METADATA_UPDATED':
+      return (icon: Icons.edit_note_outlined, color: AdminColors.plumora);
+    case 'REPORT_RESOLVED':
+      return (icon: Icons.check_circle_outline, color: AdminColors.success);
+    case 'REPORT_REJECTED':
+      return (icon: Icons.cancel_outlined, color: AdminColors.muted);
+    case 'AI_SETTINGS_UPDATED':
+      return (icon: Icons.auto_awesome_outlined, color: AdminColors.plumo);
+    default:
+      return (icon: Icons.circle_outlined, color: AdminColors.muted);
+  }
+}
+
+class _SidePanel extends ConsumerWidget {
+  const _SidePanel();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final aiAsync = ref.watch(adminAiStatusProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'ACTIONS RAPIDES',
-          style: TextStyle(
-            color: AdminColors.text,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
+        aiAsync.maybeWhen(
+          data: (ai) => AdminCard(
+            borderColor: AdminColors.plumo.withValues(alpha: 0.3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 15, color: AdminColors.plumo),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Plumo IA',
+                      style: TextStyle(color: AdminColors.plumo, fontSize: 13, fontWeight: FontWeight.w800),
+                    ),
+                    const Spacer(),
+                    AdminBadge(
+                      label: ai.enabled ? 'Actif' : 'Désactivé',
+                      color: ai.enabled ? AdminColors.success : AdminColors.error,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Fournisseur : ${ai.providerName} ${ai.modelName}',
+                  style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+                ),
+              ],
+            ),
           ),
+          orElse: () => const SizedBox.shrink(),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Actions rapides',
+          style: TextStyle(color: AdminColors.text, fontSize: 13, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         _QuickActionButton(
-          label: 'Importer un livre',
-          icon: Icons.cloud_download_outlined,
-          color: AdminColors.primary,
-          onTap: () => context.go(AppRoutes.adminPublicDomainImport),
+          label: 'Gérer les utilisateurs',
+          icon: Icons.people_outline,
+          onTap: () => context.go(AppRoutes.adminUsers),
+        ),
+        const SizedBox(height: 8),
+        _QuickActionButton(
+          label: 'Consulter le catalogue',
+          icon: Icons.menu_book_outlined,
+          onTap: () => context.go(AppRoutes.adminCatalog),
         ),
         const SizedBox(height: 8),
         _QuickActionButton(
           label: 'Voir les signalements',
           icon: Icons.flag_outlined,
-          color: AdminColors.error,
           onTap: () => context.go(AppRoutes.adminReports),
-        ),
-        const SizedBox(height: 8),
-        _QuickActionButton(
-          label: 'Gérer les utilisateurs',
-          icon: Icons.people_outline,
-          color: AdminColors.accent,
-          onTap: () => context.go(AppRoutes.adminUsers),
         ),
       ],
     );
@@ -273,16 +313,10 @@ class _QuickActionsCard extends StatelessWidget {
 }
 
 class _QuickActionButton extends StatelessWidget {
-  const _QuickActionButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
+  const _QuickActionButton({required this.label, required this.icon, required this.onTap});
 
   final String label;
   final IconData icon;
-  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -292,26 +326,25 @@ class _QuickActionButton extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 16, color: color),
+          Icon(icon, size: 15, color: AdminColors.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                color: AdminColors.text,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(color: AdminColors.text, fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
-          const Icon(Icons.chevron_right, size: 16, color: AdminColors.muted),
+          const Icon(Icons.chevron_right, size: 14, color: AdminColors.muted),
         ],
       ),
     );
   }
 }
 
-String _relativeDate(DateTime date) {
+String _relativeDate(DateTime? date) {
+  if (date == null) {
+    return '';
+  }
   final local = date.toLocal();
   final diff = DateTime.now().difference(local);
   if (diff.inMinutes < 1) {

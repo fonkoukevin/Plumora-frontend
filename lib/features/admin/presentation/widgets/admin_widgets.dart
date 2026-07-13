@@ -46,6 +46,112 @@ class AdminPageHeader extends StatelessWidget {
   }
 }
 
+/// Shared modal shell (title + close button + scrollable content) matching
+/// the maquette's `Modal` component — used for detail/role/status dialogs
+/// across Users, Catalogue and Reports.
+class AdminModal extends StatelessWidget {
+  const AdminModal({
+    required this.title,
+    required this.child,
+    this.maxWidth = 420,
+    super.key,
+  });
+
+  final String title;
+  final Widget child;
+  final double maxWidth;
+
+  static Future<T?> show<T>(
+    BuildContext context, {
+    required String title,
+    required Widget child,
+    double maxWidth = 420,
+  }) {
+    return showDialog<T>(
+      context: context,
+      builder: (context) => AdminModal(title: title, maxWidth: maxWidth, child: child),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: 640),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AdminColors.card,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AdminColors.border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AdminColors.border)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.playfairDisplay(
+                          color: AdminColors.text,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close, size: 16, color: AdminColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: child,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A label/value row used inside [AdminModal] detail views.
+class AdminDetailRow extends StatelessWidget {
+  const AdminDetailRow({required this.label, required this.value, super.key});
+
+  final String label;
+  final Widget value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AdminColors.border)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: AdminColors.muted, fontSize: 12)),
+          const Spacer(),
+          Flexible(child: value),
+        ],
+      ),
+    );
+  }
+}
+
 class AdminCard extends StatelessWidget {
   const AdminCard({
     required this.child,
@@ -274,50 +380,53 @@ class AdminFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AdminColors.primary : AdminColors.card,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? Colors.transparent : AdminColors.border,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : AdminColors.muted,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? AdminColors.primary : AdminColors.card,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? Colors.transparent : AdminColors.border,
             ),
-            if (count != null) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.22)
-                      : AdminColors.border,
-                  borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? Colors.white : AdminColors.muted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                 ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: selected ? Colors.white : AdminColors.text,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
+              ),
+              if (count != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? Colors.white.withValues(alpha: 0.22)
+                        : AdminColors.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      color: selected ? Colors.white : AdminColors.text,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
