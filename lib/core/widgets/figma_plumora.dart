@@ -33,9 +33,24 @@ class FigmaScreen extends StatelessWidget {
     );
 
     final content = center ? Center(child: body) : body;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ColoredBox(
-      color: context.colors.background,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0, 0.55],
+          colors: [
+            Color.lerp(
+              context.colors.background,
+              isDark ? context.colors.cards : Colors.white,
+              isDark ? 0.4 : 0.6,
+            )!,
+            context.colors.background,
+          ],
+        ),
+      ),
       child: scroll
           ? SingleChildScrollView(physics: physics, child: content)
           : content,
@@ -301,6 +316,9 @@ class FigmaBookCover extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(radius),
+        border: isDark
+            ? Border.all(color: context.colors.accent.withValues(alpha: 0.22))
+            : null,
         boxShadow: [
           BoxShadow(
             color: isDark ? const Color(0x33FFFFFF) : const Color(0x26000000),
@@ -477,6 +495,15 @@ class FigmaSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: context.colors.accent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        const SizedBox(width: 10),
         if (icon != null) ...[
           Icon(icon, size: 18, color: iconColor ?? context.colors.primary),
           const SizedBox(width: 8),

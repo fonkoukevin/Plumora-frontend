@@ -371,6 +371,9 @@ class PlumoraBookCover extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
+        border: isDark
+            ? Border.all(color: context.colors.accent.withValues(alpha: 0.22))
+            : null,
         boxShadow: [
           BoxShadow(
             color: isDark ? const Color(0x33FFFFFF) : const Color(0x22000000),
