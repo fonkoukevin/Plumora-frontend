@@ -137,6 +137,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
             value: AdminBadge(
               label: report.status.label,
               color: _statusColor(report.status),
+              icon: _statusIcon(report.status),
             ),
           ),
           AdminDetailRow(
@@ -381,6 +382,7 @@ class _ReportCard extends StatelessWidget {
                     AdminBadge(
                       label: report.status.label,
                       color: _statusColor(report.status),
+                      icon: _statusIcon(report.status),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -532,6 +534,21 @@ Color _statusColor(AdminReportStatus status) {
       return AdminColors.muted;
     case AdminReportStatus.unknown:
       return AdminColors.muted;
+  }
+}
+
+IconData _statusIcon(AdminReportStatus status) {
+  switch (status) {
+    case AdminReportStatus.open:
+      return Icons.schedule;
+    case AdminReportStatus.inReview:
+      return Icons.visibility;
+    case AdminReportStatus.resolved:
+      return Icons.check_circle;
+    case AdminReportStatus.dismissed:
+      return Icons.cancel;
+    case AdminReportStatus.unknown:
+      return Icons.schedule;
   }
 }
 
