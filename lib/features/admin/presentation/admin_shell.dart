@@ -574,96 +574,14 @@ class _AdminTopBar extends ConsumerWidget {
               ),
             ),
           ),
-          _AdminTopLogoutButton(compact: compact),
+          Icon(
+            Icons.notifications_outlined,
+            size: compact ? 16 : 18,
+            color: AdminColors.muted.withValues(alpha: 0.7),
+          ),
           SizedBox(width: compact ? 8 : 12),
           _AdminAvatar(initials: _initialsFor(session?.user?.displayName)),
         ],
-      ),
-    );
-  }
-}
-
-class _AdminTopLogoutButton extends ConsumerWidget {
-  const _AdminTopLogoutButton({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final radius = BorderRadius.circular(999);
-
-    return Tooltip(
-      message: 'Se déconnecter',
-      child: Semantics(
-        button: true,
-        label: 'Se déconnecter de Plumora',
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AdminColors.primary, AdminColors.plumora],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: radius,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.42)),
-            boxShadow: [
-              BoxShadow(
-                color: AdminColors.primary.withValues(alpha: 0.28),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: radius,
-            child: InkWell(
-              onTap: () async {
-                await ref.read(authControllerProvider.notifier).logout();
-                if (context.mounted) {
-                  context.go(AppRoutes.landing);
-                }
-              },
-              borderRadius: radius,
-              splashColor: Colors.white.withValues(alpha: 0.18),
-              highlightColor: Colors.white.withValues(alpha: 0.08),
-              child: Container(
-                height: compact ? 32 : 38,
-                padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 15),
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: compact ? 18 : 21,
-                      height: compact ? 18 : 21,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.logout_rounded,
-                        size: compact ? 11 : 13,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(width: compact ? 7 : 9),
-                    Text(
-                      'Déconnexion',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: compact ? 10 : 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
