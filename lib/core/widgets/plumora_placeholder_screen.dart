@@ -42,7 +42,11 @@ class PlumoraPlaceholderScreen extends StatelessWidget {
                   children: [
                     PlumoraIconTile(
                       backgroundColor: context.colors.secondary,
-                      child: Icon(icon, color: context.colors.primary, size: 30),
+                      child: Icon(
+                        icon,
+                        color: context.colors.primary,
+                        size: 30,
+                      ),
                     ),
                     const SizedBox(height: 22),
                     Text(

@@ -103,9 +103,7 @@ class _ThemeOption extends StatelessWidget {
       onTap: onTap,
       padding: const EdgeInsets.all(16),
       borderColor: selected ? context.colors.primary : null,
-      color: selected
-          ? context.colors.primary.withValues(alpha: 0.06)
-          : null,
+      color: selected ? context.colors.primary.withValues(alpha: 0.06) : null,
       child: Row(
         children: [
           Container(

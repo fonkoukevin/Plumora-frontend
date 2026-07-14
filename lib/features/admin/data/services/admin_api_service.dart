@@ -26,15 +26,17 @@ class AdminApiService {
       '/admin/users',
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'query': query.trim(),
-        if (role != null) 'role': role,
-        if (status != null) 'status': status,
+        'role': ?role,
+        'status': ?status,
       },
     );
     return _readList(response.data).map(AdminUser.fromJson).toList();
   }
 
   Future<AdminUser> getUserDetail(String userId) async {
-    final response = await _dio.get('/admin/users/${Uri.encodeComponent(userId)}');
+    final response = await _dio.get(
+      '/admin/users/${Uri.encodeComponent(userId)}',
+    );
     return AdminUser.fromJson(response.data);
   }
 
@@ -70,15 +72,17 @@ class AdminApiService {
       '/admin/books',
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'query': query.trim(),
-        if (type != null) 'type': type,
-        if (status != null) 'status': status,
+        'type': ?type,
+        'status': ?status,
       },
     );
     return _readList(response.data).map(AdminBook.fromJson).toList();
   }
 
   Future<AdminBook> getBookDetail(String bookId) async {
-    final response = await _dio.get('/admin/books/${Uri.encodeComponent(bookId)}');
+    final response = await _dio.get(
+      '/admin/books/${Uri.encodeComponent(bookId)}',
+    );
     return AdminBook.fromJson(response.data);
   }
 
@@ -110,18 +114,21 @@ class AdminApiService {
       '/admin/books/${Uri.encodeComponent(bookId)}/metadata',
       data: {
         if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
-        if (authors != null) 'authors': authors,
-        if (summary != null) 'summary': summary,
-        if (subjects != null) 'subjects': subjects,
-        if (languages != null) 'languages': languages,
-        if (coverUrl != null && coverUrl.trim().isNotEmpty) 'coverUrl': coverUrl.trim(),
+        'authors': ?authors,
+        'summary': ?summary,
+        'subjects': ?subjects,
+        'languages': ?languages,
+        if (coverUrl != null && coverUrl.trim().isNotEmpty)
+          'coverUrl': coverUrl.trim(),
       },
     );
     return AdminBook.fromJson(response.data);
   }
 
   Future<AdminImportResult> importGutendexBook(int gutendexId) async {
-    final response = await _dio.post('/admin/books/import/gutendex/$gutendexId');
+    final response = await _dio.post(
+      '/admin/books/import/gutendex/$gutendexId',
+    );
     return AdminImportResult.fromJson(response.data);
   }
 
@@ -131,7 +138,9 @@ class AdminApiService {
   }
 
   Future<AdminReport> getReportDetail(String reportId) async {
-    final response = await _dio.get('/admin/reports/${Uri.encodeComponent(reportId)}');
+    final response = await _dio.get(
+      '/admin/reports/${Uri.encodeComponent(reportId)}',
+    );
     return AdminReport.fromJson(response.data);
   }
 

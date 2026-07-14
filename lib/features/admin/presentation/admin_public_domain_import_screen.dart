@@ -83,7 +83,10 @@ class _AdminPublicDomainImportScreenState
                 message: AppError.messageFor(error),
                 onRetry: () => ref.invalidate(
                   externalBookSearchProvider(
-                    ExternalBookSearchQuery(search: _query, language: _language),
+                    ExternalBookSearchQuery(
+                      search: _query,
+                      language: _language,
+                    ),
                   ),
                 ),
               ),
@@ -140,7 +143,11 @@ class _ExternalBookCard extends ConsumerWidget {
             ),
             alignment: Alignment.center,
             child: book.coverUrl == null
-                ? const Icon(Icons.menu_book_outlined, size: 16, color: AdminColors.muted)
+                ? const Icon(
+                    Icons.menu_book_outlined,
+                    size: 16,
+                    color: AdminColors.muted,
+                  )
                 : null,
           ),
           const SizedBox(width: 14),
@@ -165,23 +172,35 @@ class _ExternalBookCard extends ConsumerWidget {
                     const SizedBox(width: 8),
                     AdminBadge(
                       label: book.imported ? 'Déjà importé' : 'Domaine public',
-                      color: book.imported ? AdminColors.success : AdminColors.plumora,
+                      color: book.imported
+                          ? AdminColors.success
+                          : AdminColors.plumora,
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${book.authorLabel} · ${book.languages.isEmpty ? '—' : book.languages.first.toUpperCase()}',
-                  style: const TextStyle(color: AdminColors.muted, fontSize: 12),
+                  style: const TextStyle(
+                    color: AdminColors.muted,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.trending_up, size: 12, color: AdminColors.muted),
+                    const Icon(
+                      Icons.trending_up,
+                      size: 12,
+                      color: AdminColors.muted,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${book.downloadCount} téléchargements',
-                      style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+                      style: const TextStyle(
+                        color: AdminColors.muted,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -230,8 +249,9 @@ class _ExternalBookCard extends ConsumerWidget {
 
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final result =
-          await ref.read(adminRepositoryProvider).importGutendexBook(gutendexId);
+      final result = await ref
+          .read(adminRepositoryProvider)
+          .importGutendexBook(gutendexId);
       ref.invalidate(externalBookSearchProvider);
       ref.invalidate(adminDashboardProvider);
       messenger.showSnackBar(
@@ -320,7 +340,10 @@ class _ImportConfirmationDialogState extends State<_ImportConfirmationDialog> {
               if (book.formats.isNotEmpty)
                 Text(
                   'Formats : ${book.formats.keys.join(', ')}',
-                  style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+                  style: const TextStyle(
+                    color: AdminColors.muted,
+                    fontSize: 11,
+                  ),
                 ),
               const SizedBox(height: 14),
               Container(
@@ -328,17 +351,26 @@ class _ImportConfirmationDialogState extends State<_ImportConfirmationDialog> {
                 decoration: BoxDecoration(
                   color: AdminColors.plumora.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AdminColors.plumora.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AdminColors.plumora.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.shield_outlined, size: 14, color: AdminColors.plumora),
+                    const Icon(
+                      Icons.shield_outlined,
+                      size: 14,
+                      color: AdminColors.plumora,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Action réservée aux administrateurs. Le livre sera ajouté au catalogue Plumora.',
-                        style: TextStyle(color: AdminColors.plumora, fontSize: 11),
+                        style: TextStyle(
+                          color: AdminColors.plumora,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],

@@ -57,9 +57,14 @@ class _DashboardContent extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 900 ? 4 : constraints.maxWidth >= 560 ? 2 : 1;
+            final columns = constraints.maxWidth >= 900
+                ? 4
+                : constraints.maxWidth >= 560
+                ? 2
+                : 1;
             const spacing = 14.0;
-            final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            final width =
+                (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
             final cards = [
               AdminStatCard(
@@ -105,11 +110,15 @@ class _DashboardContent extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 820;
-            final activity = _RecentActivityCard(actions: stats.recentAdminActions);
+            final activity = _RecentActivityCard(
+              actions: stats.recentAdminActions,
+            );
             final side = const _SidePanel();
 
             if (!wide) {
-              return Column(children: [activity, const SizedBox(height: 16), side]);
+              return Column(
+                children: [activity, const SizedBox(height: 16), side],
+              );
             }
 
             return IntrinsicHeight(
@@ -141,7 +150,11 @@ class _RecentActivityCard extends StatelessWidget {
       children: [
         const Text(
           'Dernières actions administratives',
-          style: TextStyle(color: AdminColors.text, fontSize: 13, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: AdminColors.text,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 10),
         if (actions.isEmpty)
@@ -157,7 +170,8 @@ class _RecentActivityCard extends StatelessWidget {
               children: [
                 for (var i = 0; i < actions.length; i++) ...[
                   _ActionRow(action: actions[i]),
-                  if (i != actions.length - 1) const Divider(color: AdminColors.border, height: 1),
+                  if (i != actions.length - 1)
+                    const Divider(color: AdminColors.border, height: 1),
                 ],
               ],
             ),
@@ -194,7 +208,9 @@ class _ActionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  action.description.isEmpty ? action.action : action.description,
+                  action.description.isEmpty
+                      ? action.action
+                      : action.description,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AdminColors.text, fontSize: 13),
@@ -202,7 +218,10 @@ class _ActionRow extends StatelessWidget {
                 if (action.adminEmail != null)
                   Text(
                     'par ${action.adminEmail}',
-                    style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+                    style: const TextStyle(
+                      color: AdminColors.muted,
+                      fontSize: 11,
+                    ),
                   ),
               ],
             ),
@@ -261,23 +280,36 @@ class _SidePanel extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.auto_awesome, size: 15, color: AdminColors.plumo),
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 15,
+                      color: AdminColors.plumo,
+                    ),
                     const SizedBox(width: 8),
                     const Text(
                       'Plumo IA',
-                      style: TextStyle(color: AdminColors.plumo, fontSize: 13, fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        color: AdminColors.plumo,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const Spacer(),
                     AdminBadge(
                       label: ai.enabled ? 'Actif' : 'Désactivé',
-                      color: ai.enabled ? AdminColors.success : AdminColors.error,
+                      color: ai.enabled
+                          ? AdminColors.success
+                          : AdminColors.error,
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Fournisseur : ${ai.providerName} ${ai.modelName}',
-                  style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+                  style: const TextStyle(
+                    color: AdminColors.muted,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -287,7 +319,11 @@ class _SidePanel extends ConsumerWidget {
         const SizedBox(height: 16),
         const Text(
           'Actions rapides',
-          style: TextStyle(color: AdminColors.text, fontSize: 13, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: AdminColors.text,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 10),
         _QuickActionButton(
@@ -313,7 +349,11 @@ class _SidePanel extends ConsumerWidget {
 }
 
 class _QuickActionButton extends StatelessWidget {
-  const _QuickActionButton({required this.label, required this.icon, required this.onTap});
+  const _QuickActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
 
   final String label;
   final IconData icon;
@@ -331,7 +371,11 @@ class _QuickActionButton extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: AdminColors.text, fontSize: 13, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: AdminColors.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const Icon(Icons.chevron_right, size: 14, color: AdminColors.muted),

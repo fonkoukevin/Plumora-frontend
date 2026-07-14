@@ -300,9 +300,7 @@ class _PlumoraTabButtonState extends State<_PlumoraTabButton> {
                       ? [
                           BoxShadow(
                             color: isDark
-                                ? context.colors.primary.withValues(
-                                    alpha: 0.45,
-                                  )
+                                ? context.colors.primary.withValues(alpha: 0.45)
                                 : const Color(0x33000000),
                             blurRadius: isDark ? 16 : 10,
                             offset: Offset(0, isDark ? 6 : 4),

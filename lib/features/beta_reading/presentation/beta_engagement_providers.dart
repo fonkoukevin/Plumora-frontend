@@ -29,7 +29,9 @@ final betaActionablePendingInvitationsProvider =
           ref.watch(betaInvitationsProvider).valueOrNull ??
           const <BetaInvitationModel>[];
       final engagedCampaignIds =
-          ref.watch(betaEngagedCampaignsProvider).valueOrNull
+          ref
+              .watch(betaEngagedCampaignsProvider)
+              .valueOrNull
               ?.map((campaign) => campaign.id)
               .toSet() ??
           const <String>{};

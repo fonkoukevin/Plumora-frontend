@@ -25,7 +25,8 @@ class AdminImportResult {
       bookId: _readString(json, ['bookId', 'book_id']),
       title: _readString(json, ['title']),
       imported: _readBool(json['imported']) ?? false,
-      alreadyExisted: _readBool(json['alreadyExisted'] ?? json['already_existed']) ?? false,
+      alreadyExisted:
+          _readBool(json['alreadyExisted'] ?? json['already_existed']) ?? false,
       source: _readNullableString(json, ['source']),
       externalId: _readNullableString(json, ['externalId', 'external_id']),
       message: _readNullableString(json, ['message']),

@@ -813,9 +813,8 @@ class _PlumoRecommendationTile extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => context.go(
-                        AppRoutes.catalogBookDetailPath(book.id),
-                      ),
+                      onPressed: () =>
+                          context.go(AppRoutes.catalogBookDetailPath(book.id)),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         textStyle: const TextStyle(fontSize: 11),

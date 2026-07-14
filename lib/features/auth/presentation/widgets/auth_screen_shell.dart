@@ -223,10 +223,7 @@ class PlumoraTextField extends StatelessWidget {
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
           maxLines: obscureText ? 1 : maxLines,
-          style: TextStyle(
-            fontSize: 16,
-            color: context.colors.textPrimary,
-          ),
+          style: TextStyle(fontSize: 16, color: context.colors.textPrimary),
           decoration: InputDecoration(hintText: hint),
         ),
       ],
@@ -246,9 +243,9 @@ class AuthDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             'ou',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: context.colors.textSecondary),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.colors.textSecondary,
+            ),
           ),
         ),
         Expanded(child: Divider(color: context.colors.border)),
