@@ -180,9 +180,7 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: context.colors.background.withValues(alpha: 0.95),
-            border: Border(
-              bottom: BorderSide(color: context.colors.border),
-            ),
+            border: Border(bottom: BorderSide(color: context.colors.border)),
             boxShadow: overlapsContent
                 ? const [
                     BoxShadow(
@@ -439,26 +437,29 @@ class _BetaTab extends ConsumerWidget {
             orElse: () => const Iterable<_BetaLibraryEntry>.empty(),
           ),
         ];
-        final filtered = entries.where((entry) {
-          if (query.isEmpty) {
-            return true;
-          }
-          return entry.bookTitle.toLowerCase().contains(query) ||
-              entry.authorName.toLowerCase().contains(query);
-        }).toList()..sort((a, b) {
-          final aDate = activityByCampaignId[a.campaignId] ?? a.fallbackDate;
-          final bDate = activityByCampaignId[b.campaignId] ?? b.fallbackDate;
-          if (aDate == null && bDate == null) {
-            return 0;
-          }
-          if (aDate == null) {
-            return 1;
-          }
-          if (bDate == null) {
-            return -1;
-          }
-          return bDate.compareTo(aDate);
-        });
+        final filtered =
+            entries.where((entry) {
+              if (query.isEmpty) {
+                return true;
+              }
+              return entry.bookTitle.toLowerCase().contains(query) ||
+                  entry.authorName.toLowerCase().contains(query);
+            }).toList()..sort((a, b) {
+              final aDate =
+                  activityByCampaignId[a.campaignId] ?? a.fallbackDate;
+              final bDate =
+                  activityByCampaignId[b.campaignId] ?? b.fallbackDate;
+              if (aDate == null && bDate == null) {
+                return 0;
+              }
+              if (aDate == null) {
+                return 1;
+              }
+              if (bDate == null) {
+                return -1;
+              }
+              return bDate.compareTo(aDate);
+            });
 
         return Column(
           children: [
@@ -790,10 +791,7 @@ class _FavoriteTile extends ConsumerWidget {
             book.authorName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 10,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 10),
           ),
         ],
       ),
@@ -958,7 +956,11 @@ class _LibraryStatCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(stat.icon, size: 17, color: stat.color ?? context.colors.primary),
+          Icon(
+            stat.icon,
+            size: 17,
+            color: stat.color ?? context.colors.primary,
+          ),
           const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -1032,10 +1034,7 @@ class _ErrorPanel extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],

@@ -338,8 +338,7 @@ class _PlumoAnalysisCard extends ConsumerStatefulWidget {
   final ChapterModel chapter;
 
   @override
-  ConsumerState<_PlumoAnalysisCard> createState() =>
-      _PlumoAnalysisCardState();
+  ConsumerState<_PlumoAnalysisCard> createState() => _PlumoAnalysisCardState();
 }
 
 class _PlumoAnalysisCardState extends ConsumerState<_PlumoAnalysisCard> {
@@ -474,10 +473,7 @@ class _PlumoAnalysisResultView extends StatelessWidget {
             _PlumoScoreTile(label: 'Clarté', score: result.clarityScore),
             _PlumoScoreTile(label: 'Rythme', score: result.rhythmScore),
             _PlumoScoreTile(label: 'Cohérence', score: result.coherenceScore),
-            _PlumoScoreTile(
-              label: 'Personnages',
-              score: result.characterScore,
-            ),
+            _PlumoScoreTile(label: 'Personnages', score: result.characterScore),
           ],
         ),
         if (result.strengths.isNotEmpty) ...[

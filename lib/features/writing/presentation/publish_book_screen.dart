@@ -179,9 +179,7 @@ class _PublishContent extends StatelessWidget {
     final completed = checklist.where((item) => item.done).length;
     final progress = completed / checklist.length;
     final canPublish =
-        checklist
-            .where((item) => item.required)
-            .every((item) => item.done) &&
+        checklist.where((item) => item.required).every((item) => item.done) &&
         book.canPublish;
 
     return Column(
@@ -208,9 +206,7 @@ class _PublishContent extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           book.status.shortFrenchLabel,
-                          style: TextStyle(
-                            color: context.colors.textSecondary,
-                          ),
+                          style: TextStyle(color: context.colors.textSecondary),
                         ),
                       ],
                     ),
@@ -370,10 +366,7 @@ class _ErrorPanel extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],

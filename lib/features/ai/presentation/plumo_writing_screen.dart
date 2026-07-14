@@ -17,8 +17,7 @@ class PlumoWritingScreen extends ConsumerStatefulWidget {
   final String? chapterId;
 
   @override
-  ConsumerState<PlumoWritingScreen> createState() =>
-      _PlumoWritingScreenState();
+  ConsumerState<PlumoWritingScreen> createState() => _PlumoWritingScreenState();
 }
 
 class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {

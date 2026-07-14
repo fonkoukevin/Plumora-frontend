@@ -170,10 +170,7 @@ class BetaReadingAnalysisResponse {
   factory BetaReadingAnalysisResponse.fromJson(Object? value) {
     final json = _readMap(value);
     return BetaReadingAnalysisResponse(
-      globalFeedback: _readString(json, [
-        'global_feedback',
-        'globalFeedback',
-      ]),
+      globalFeedback: _readString(json, ['global_feedback', 'globalFeedback']),
       strengths: _readStringList(json['strengths']),
       weaknesses: _readStringList(json['weaknesses']),
       clarityScore: _readInt(json, ['clarity_score', 'clarityScore']),
