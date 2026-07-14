@@ -636,17 +636,18 @@ class _UsersTable extends StatelessWidget {
             child: Row(
               children: [
                 for (final entry in [
-                  'Nom',
-                  'Email',
-                  'Rôle',
-                  'Statut',
-                  'Inscription',
-                  '',
+                  'NOM',
+                  'EMAIL',
+                  'RÔLE',
+                  'STATUT',
+                  'INSCRIPTION',
+                  'ACTIONS',
                 ].asMap().entries)
                   Expanded(
                     flex: _columns[entry.key],
                     child: Text(
                       entry.value,
+                      textAlign: entry.key == 5 ? TextAlign.right : TextAlign.left,
                       style: const TextStyle(
                         color: AdminColors.muted,
                         fontSize: 11,
