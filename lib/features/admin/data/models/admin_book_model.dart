@@ -48,7 +48,8 @@ class AdminBook {
 
   bool get isArchived => status.trim().toUpperCase() == 'ARCHIVED';
 
-  String get authorLabel => authors.isEmpty ? 'Auteur inconnu' : authors.join(', ');
+  String get authorLabel =>
+      authors.isEmpty ? 'Auteur inconnu' : authors.join(', ');
 
   factory AdminBook.fromJson(Object? value) {
     final json = _readMap(value);
@@ -58,7 +59,16 @@ class AdminBook {
       type: _readType(json['type']),
       status: _readString(json, ['status']),
       authors: _readStringList(json['authors']),
-      coverUrl: _readNullableString(json, ['coverUrl', 'cover_url']),
+      coverUrl: _readNullableString(json, [
+        'coverUrl',
+        'cover_url',
+        'coverImageUrl',
+        'cover_image_url',
+        'imageUrl',
+        'image_url',
+        'bookCoverUrl',
+        'book_cover_url',
+      ]),
       createdAt: _readDate(json, ['createdAt', 'created_at']),
       source: _readNullableString(json, ['source']),
       externalId: _readNullableString(json, ['externalId', 'external_id']),
@@ -66,7 +76,10 @@ class AdminBook {
       summary: _readNullableString(json, ['summary']),
       readUrl: _readNullableString(json, ['readUrl', 'read_url']),
       updatedAt: _readDate(json, ['updatedAt', 'updated_at']),
-      chaptersCount: _readNullableInt(json, ['chaptersCount', 'chapters_count']),
+      chaptersCount: _readNullableInt(json, [
+        'chaptersCount',
+        'chapters_count',
+      ]),
     );
   }
 }
