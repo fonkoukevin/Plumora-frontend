@@ -534,10 +534,7 @@ class _BookInfo extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'par ${book.authorLabel}',
-          style: TextStyle(
-            color: context.colors.textSecondary,
-            fontSize: 16,
-          ),
+          style: TextStyle(color: context.colors.textSecondary, fontSize: 16),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -617,10 +614,7 @@ class _MetaMetric extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             sub,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
           ),
         ],
       ],
@@ -666,10 +660,7 @@ class _SummaryCardState extends State<_SummaryCard> {
             overflow: canCollapse && !_expanded
                 ? TextOverflow.ellipsis
                 : TextOverflow.visible,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              height: 1.55,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, height: 1.55),
           ),
           if (canCollapse) ...[
             const SizedBox(height: 8),
@@ -873,10 +864,7 @@ class _ReviewsError extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          message,
-          style: TextStyle(color: context.colors.textSecondary),
-        ),
+        Text(message, style: TextStyle(color: context.colors.textSecondary)),
         const SizedBox(height: 10),
         TextButton(onPressed: onRetry, child: const Text('Reessayer')),
       ],
@@ -1062,10 +1050,7 @@ class _ErrorCard extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],

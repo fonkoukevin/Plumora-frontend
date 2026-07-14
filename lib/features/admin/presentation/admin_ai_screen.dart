@@ -40,7 +40,8 @@ class _AdminAiScreenState extends ConsumerState<AdminAiScreen> {
                 message: AppError.messageFor(error),
                 onRetry: () => ref.invalidate(adminAiStatusProvider),
               ),
-              data: (status) => _AiContent(status: status, busy: _busy, onToggle: _toggle),
+              data: (status) =>
+                  _AiContent(status: status, busy: _busy, onToggle: _toggle),
             ),
           ],
         ),
@@ -62,10 +63,17 @@ class _AdminAiScreenState extends ConsumerState<AdminAiScreen> {
             enabling
                 ? "Plumo IA sera de nouveau disponible pour tous les utilisateurs de la plateforme."
                 : "Plumo IA ne sera plus disponible pour aucun utilisateur, sur toute la plateforme, jusqu'à réactivation.",
-            style: const TextStyle(color: AdminColors.muted, fontSize: 13, height: 1.45),
+            style: const TextStyle(
+              color: AdminColors.muted,
+              fontSize: 13,
+              height: 1.45,
+            ),
           ),
           const SizedBox(height: 14),
-          const Text('Raison (facultatif)', style: TextStyle(color: AdminColors.muted, fontSize: 12)),
+          const Text(
+            'Raison (facultatif)',
+            style: TextStyle(color: AdminColors.muted, fontSize: 12),
+          ),
           const SizedBox(height: 6),
           TextField(
             controller: reasonController,
@@ -87,15 +95,25 @@ class _AdminAiScreenState extends ConsumerState<AdminAiScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  style: OutlinedButton.styleFrom(foregroundColor: AdminColors.text, side: const BorderSide(color: AdminColors.border)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AdminColors.text,
+                    side: const BorderSide(color: AdminColors.border),
+                  ),
                   child: const Text('Annuler'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: enabling
-                    ? AdminPrimaryButton(label: 'Activer', onPressed: () => Navigator.of(context).pop(true))
-                    : AdminDangerButton(label: 'Désactiver', outlined: false, onPressed: () => Navigator.of(context).pop(true)),
+                    ? AdminPrimaryButton(
+                        label: 'Activer',
+                        onPressed: () => Navigator.of(context).pop(true),
+                      )
+                    : AdminDangerButton(
+                        label: 'Désactiver',
+                        outlined: false,
+                        onPressed: () => Navigator.of(context).pop(true),
+                      ),
               ),
             ],
           ),
@@ -111,16 +129,24 @@ class _AdminAiScreenState extends ConsumerState<AdminAiScreen> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(adminRepositoryProvider).updateAiSettings(enabling, reason: reason);
+      await ref
+          .read(adminRepositoryProvider)
+          .updateAiSettings(enabling, reason: reason);
       ref.invalidate(adminAiStatusProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(enabling ? 'Plumo IA activé.' : 'Plumo IA désactivé.')),
+          SnackBar(
+            content: Text(
+              enabling ? 'Plumo IA activé.' : 'Plumo IA désactivé.',
+            ),
+          ),
         );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
       }
     } finally {
       if (mounted) {
@@ -131,7 +157,11 @@ class _AdminAiScreenState extends ConsumerState<AdminAiScreen> {
 }
 
 class _AiContent extends StatelessWidget {
-  const _AiContent({required this.status, required this.busy, required this.onToggle});
+  const _AiContent({
+    required this.status,
+    required this.busy,
+    required this.onToggle,
+  });
 
   final AdminAiStatus status;
   final bool busy;
@@ -143,17 +173,25 @@ class _AiContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AdminCard(
-          borderColor: status.enabled ? AdminColors.plumo.withValues(alpha: 0.35) : AdminColors.border,
+          borderColor: status.enabled
+              ? AdminColors.plumo.withValues(alpha: 0.35)
+              : AdminColors.border,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: (status.enabled ? AdminColors.plumo : AdminColors.muted).withValues(alpha: 0.16),
+                  color:
+                      (status.enabled ? AdminColors.plumo : AdminColors.muted)
+                          .withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(Icons.auto_awesome, size: 26, color: status.enabled ? AdminColors.plumo : AdminColors.muted),
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 26,
+                  color: status.enabled ? AdminColors.plumo : AdminColors.muted,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -162,36 +200,65 @@ class _AiContent extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Text('Plumo IA', style: TextStyle(color: AdminColors.text, fontSize: 16, fontWeight: FontWeight.w800)),
+                        const Text(
+                          'Plumo IA',
+                          style: TextStyle(
+                            color: AdminColors.text,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                         const SizedBox(width: 10),
                         AdminBadge(
                           label: status.enabled ? 'Actif' : 'Désactivé',
-                          color: status.enabled ? AdminColors.success : AdminColors.error,
+                          color: status.enabled
+                              ? AdminColors.success
+                              : AdminColors.error,
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Fournisseur : ${status.providerName} · Modèle : ${status.modelName}',
-                      style: const TextStyle(color: AdminColors.muted, fontSize: 12),
+                      style: const TextStyle(
+                        color: AdminColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
               ),
               busy
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : status.enabled
-                      ? AdminDangerButton(label: 'Désactiver', icon: Icons.power_settings_new, onPressed: () => onToggle(status))
-                      : AdminPrimaryButton(label: 'Activer', icon: Icons.power_settings_new, onPressed: () => onToggle(status)),
+                  ? AdminDangerButton(
+                      label: 'Désactiver',
+                      icon: Icons.power_settings_new,
+                      onPressed: () => onToggle(status),
+                    )
+                  : AdminPrimaryButton(
+                      label: 'Activer',
+                      icon: Icons.power_settings_new,
+                      onPressed: () => onToggle(status),
+                    ),
             ],
           ),
         ),
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 420 ? 2 : 1;
+            final columns = constraints.maxWidth >= 700
+                ? 3
+                : constraints.maxWidth >= 420
+                ? 2
+                : 1;
             const spacing = 14.0;
-            final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            final width =
+                (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
             final cards = [
               AdminStatCard(
@@ -219,7 +286,9 @@ class _AiContent extends StatelessWidget {
             return Wrap(
               spacing: spacing,
               runSpacing: spacing,
-              children: [for (final card in cards) SizedBox(width: width, child: card)],
+              children: [
+                for (final card in cards) SizedBox(width: width, child: card),
+              ],
             );
           },
         ),
@@ -230,16 +299,41 @@ class _AiContent extends StatelessWidget {
             children: [
               Row(
                 children: const [
-                  Icon(Icons.lock_outline, size: 15, color: AdminColors.plumora),
+                  Icon(
+                    Icons.lock_outline,
+                    size: 15,
+                    color: AdminColors.plumora,
+                  ),
                   SizedBox(width: 8),
-                  Text('Sécurité', style: TextStyle(color: AdminColors.text, fontSize: 14, fontWeight: FontWeight.w700)),
+                  Text(
+                    'Sécurité',
+                    style: TextStyle(
+                      color: AdminColors.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
-              const _SecurityRow(icon: Icons.key_outlined, label: 'Clé API Gemini conservée côté backend uniquement'),
-              const _SecurityRow(icon: Icons.shield_outlined, label: 'Le frontend Flutter ne contacte jamais Gemini directement'),
-              const _SecurityRow(icon: Icons.fact_check_outlined, label: "Les suggestions de Plumo sont toujours validées manuellement par l'auteur"),
-              const _SecurityRow(icon: Icons.edit_off_outlined, label: 'Plumo ne modifie jamais automatiquement les manuscrits'),
+              const _SecurityRow(
+                icon: Icons.key_outlined,
+                label: 'Clé API Gemini conservée côté backend uniquement',
+              ),
+              const _SecurityRow(
+                icon: Icons.shield_outlined,
+                label:
+                    'Le frontend Flutter ne contacte jamais Gemini directement',
+              ),
+              const _SecurityRow(
+                icon: Icons.fact_check_outlined,
+                label:
+                    "Les suggestions de Plumo sont toujours validées manuellement par l'auteur",
+              ),
+              const _SecurityRow(
+                icon: Icons.edit_off_outlined,
+                label: 'Plumo ne modifie jamais automatiquement les manuscrits',
+              ),
             ],
           ),
         ),
@@ -269,7 +363,12 @@ class _SecurityRow extends StatelessWidget {
             child: Icon(icon, size: 13, color: AdminColors.success),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(color: AdminColors.text, fontSize: 13))),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: AdminColors.text, fontSize: 13),
+            ),
+          ),
           const Icon(Icons.check_circle, size: 15, color: AdminColors.success),
         ],
       ),

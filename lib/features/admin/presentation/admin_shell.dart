@@ -10,7 +10,11 @@ import 'admin_colors.dart';
 import 'providers/admin_nav_providers.dart';
 
 class AdminNavItem {
-  const AdminNavItem({required this.label, required this.icon, required this.path});
+  const AdminNavItem({
+    required this.label,
+    required this.icon,
+    required this.path,
+  });
 
   final String label;
   final IconData icon;
@@ -20,10 +24,26 @@ class AdminNavItem {
 /// The four sections shown in the maquette's primary nav (desktop sidebar
 /// AND mobile bottom tab bar).
 const List<AdminNavItem> adminPrimaryNavItems = [
-  AdminNavItem(label: 'Tableau de bord', icon: Icons.dashboard_outlined, path: AppRoutes.admin),
-  AdminNavItem(label: 'Utilisateurs', icon: Icons.people_outline, path: AppRoutes.adminUsers),
-  AdminNavItem(label: 'Catalogue', icon: Icons.menu_book_outlined, path: AppRoutes.adminCatalog),
-  AdminNavItem(label: 'Signalements', icon: Icons.flag_outlined, path: AppRoutes.adminReports),
+  AdminNavItem(
+    label: 'Tableau de bord',
+    icon: Icons.dashboard_outlined,
+    path: AppRoutes.admin,
+  ),
+  AdminNavItem(
+    label: 'Utilisateurs',
+    icon: Icons.people_outline,
+    path: AppRoutes.adminUsers,
+  ),
+  AdminNavItem(
+    label: 'Catalogue',
+    icon: Icons.menu_book_outlined,
+    path: AppRoutes.adminCatalog,
+  ),
+  AdminNavItem(
+    label: 'Signalements',
+    icon: Icons.flag_outlined,
+    path: AppRoutes.adminReports,
+  ),
 ];
 
 /// Secondary sections that stay fully functional (real backend endpoints)
@@ -35,7 +55,11 @@ const List<AdminNavItem> adminSecondaryNavItems = [
     icon: Icons.cloud_download_outlined,
     path: AppRoutes.adminPublicDomainImport,
   ),
-  AdminNavItem(label: 'Plumo IA', icon: Icons.auto_awesome_outlined, path: AppRoutes.adminAi),
+  AdminNavItem(
+    label: 'Plumo IA',
+    icon: Icons.auto_awesome_outlined,
+    path: AppRoutes.adminAi,
+  ),
 ];
 
 /// Wraps every `/admin/**` screen with the fixed light-violet control-room
@@ -77,7 +101,7 @@ class AdminShell extends ConsumerWidget {
                         Expanded(
                           child: Column(
                             children: [
-                              _AdminTopBar(title: title),
+                              _AdminTopBar(title: title, compact: !isDesktop),
                               Expanded(
                                 child: ColoredBox(
                                   color: AdminColors.background,
@@ -153,10 +177,15 @@ class _AdminSidebar extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   child: Row(
                     children: [
-                      _AdminAvatar(initials: _initialsFor(session?.user?.displayName)),
+                      _AdminAvatar(
+                        initials: _initialsFor(session?.user?.displayName),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -174,7 +203,10 @@ class _AdminSidebar extends ConsumerWidget {
                             ),
                             const Text(
                               'ADMIN',
-                              style: TextStyle(color: AdminColors.muted, fontSize: 11),
+                              style: TextStyle(
+                                color: AdminColors.muted,
+                                fontSize: 11,
+                              ),
                             ),
                           ],
                         ),
@@ -243,20 +275,23 @@ class _AdminMobileTabItem extends StatelessWidget {
       child: InkWell(
         onTap: () => context.go(item.path),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Icon(item.icon, size: 20, color: color),
+                  Icon(item.icon, size: 19, color: color),
                   if (badgeCount != null && badgeCount! > 0)
                     Positioned(
                       top: -4,
                       right: -8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
                         constraints: const BoxConstraints(minWidth: 16),
                         decoration: const BoxDecoration(
                           color: AdminColors.error,
@@ -275,12 +310,16 @@ class _AdminMobileTabItem extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Text(
                 item.label == 'Tableau de bord' ? 'Tableau' : item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -312,7 +351,11 @@ class _AdminBrand extends StatelessWidget {
                   color: AdminColors.primary,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.edit_note, color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.edit_note,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
@@ -331,12 +374,18 @@ class _AdminBrand extends StatelessWidget {
             decoration: BoxDecoration(
               color: AdminColors.error.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AdminColors.error.withValues(alpha: 0.27)),
+              border: Border.all(
+                color: AdminColors.error.withValues(alpha: 0.27),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.shield_outlined, size: 11, color: AdminColors.error),
+                const Icon(
+                  Icons.shield_outlined,
+                  size: 11,
+                  color: AdminColors.error,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'Administration',
@@ -380,12 +429,20 @@ class _AdminNavTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           onTap: () => context.go(item.path),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: compact ? 9 : 11),
+            padding: EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: compact ? 9 : 11,
+            ),
             decoration: BoxDecoration(
-              color: active ? AdminColors.primary.withValues(alpha: 0.12) : null,
+              color: active
+                  ? AdminColors.primary.withValues(alpha: 0.12)
+                  : null,
               borderRadius: BorderRadius.circular(10),
               border: Border(
-                left: BorderSide(color: active ? AdminColors.primary : Colors.transparent, width: 3),
+                left: BorderSide(
+                  color: active ? AdminColors.primary : Colors.transparent,
+                  width: 3,
+                ),
               ),
             ),
             child: Row(
@@ -404,14 +461,25 @@ class _AdminNavTile extends StatelessWidget {
                 ),
                 if (badgeCount != null && badgeCount! > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
-                      color: active ? AdminColors.primary.withValues(alpha: 0.25) : AdminColors.border,
+                      color: active
+                          ? AdminColors.primary.withValues(alpha: 0.25)
+                          : AdminColors.border,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      badgeCount! >= 1000 ? '${(badgeCount! / 1000).round()}k' : '$badgeCount',
-                      style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700),
+                      badgeCount! >= 1000
+                          ? '${(badgeCount! / 1000).round()}k'
+                          : '$badgeCount',
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
               ],
@@ -440,7 +508,11 @@ class _AdminAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         initials,
-        style: const TextStyle(color: AdminColors.plumora, fontSize: 11, fontWeight: FontWeight.w800),
+        style: const TextStyle(
+          color: AdminColors.plumora,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -470,16 +542,20 @@ class _QuitAdminButton extends ConsumerWidget {
 }
 
 class _AdminTopBar extends ConsumerWidget {
-  const _AdminTopBar({required this.title});
+  const _AdminTopBar({required this.title, required this.compact});
 
   final String title;
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authControllerProvider).valueOrNull;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 14 : 16,
+        vertical: compact ? 8 : 12,
+      ),
       decoration: const BoxDecoration(
         color: AdminColors.surface,
         border: Border(bottom: BorderSide(color: AdminColors.border)),
@@ -491,17 +567,103 @@ class _AdminTopBar extends ConsumerWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AdminColors.text,
-                fontSize: 14,
+                fontSize: compact ? 12 : 14,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          Icon(Icons.notifications_outlined, size: 18, color: AdminColors.muted.withValues(alpha: 0.7)),
-          const SizedBox(width: 12),
+          _AdminTopLogoutButton(compact: compact),
+          SizedBox(width: compact ? 8 : 12),
           _AdminAvatar(initials: _initialsFor(session?.user?.displayName)),
         ],
+      ),
+    );
+  }
+}
+
+class _AdminTopLogoutButton extends ConsumerWidget {
+  const _AdminTopLogoutButton({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final radius = BorderRadius.circular(999);
+
+    return Tooltip(
+      message: 'Se déconnecter',
+      child: Semantics(
+        button: true,
+        label: 'Se déconnecter de Plumora',
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AdminColors.primary, AdminColors.plumora],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: radius,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.42)),
+            boxShadow: [
+              BoxShadow(
+                color: AdminColors.primary.withValues(alpha: 0.28),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: radius,
+            child: InkWell(
+              onTap: () async {
+                await ref.read(authControllerProvider.notifier).logout();
+                if (context.mounted) {
+                  context.go(AppRoutes.landing);
+                }
+              },
+              borderRadius: radius,
+              splashColor: Colors.white.withValues(alpha: 0.18),
+              highlightColor: Colors.white.withValues(alpha: 0.08),
+              child: Container(
+                height: compact ? 32 : 38,
+                padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 15),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: compact ? 18 : 21,
+                      height: compact ? 18 : 21,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.logout_rounded,
+                        size: compact ? 11 : 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: compact ? 7 : 9),
+                    Text(
+                      'Déconnexion',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: compact ? 10 : 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -512,13 +674,18 @@ String _initialsFor(String? name) {
   if (trimmed.isEmpty) {
     return '?';
   }
-  final parts = trimmed.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  final parts = trimmed
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
   if (parts.length == 1) {
     return parts.first.substring(0, 1).toUpperCase();
   }
-  return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+  return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+      .toUpperCase();
 }
 
 bool _isActive(String location, String path) {
-  return location == path || (path != AppRoutes.admin && location.startsWith(path));
+  return location == path ||
+      (path != AppRoutes.admin && location.startsWith(path));
 }

@@ -441,9 +441,7 @@ class _Header extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: context.colors.background.withValues(alpha: 0.95),
-            border: Border(
-              bottom: BorderSide(color: context.colors.border),
-            ),
+            border: Border(bottom: BorderSide(color: context.colors.border)),
           ),
           child: SafeArea(
             bottom: false,
@@ -1099,10 +1097,7 @@ class _ErrorPanel extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],
