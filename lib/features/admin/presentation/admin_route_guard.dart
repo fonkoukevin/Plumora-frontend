@@ -20,7 +20,8 @@ class AdminRouteGuard {
   const AdminRouteGuard._();
 
   static bool isAdminLocation(String location) {
-    return location == AppRoutes.admin || location.startsWith('${AppRoutes.admin}/');
+    return location == AppRoutes.admin ||
+        location.startsWith('${AppRoutes.admin}/');
   }
 
   static String? redirect({
@@ -28,7 +29,9 @@ class AdminRouteGuard {
     required bool isAuthenticated,
     required List<String> roleNames,
   }) {
-    final isAdmin = roleNames.any((role) => role.trim().toUpperCase() == 'ADMIN');
+    final isAdmin = roleNames.any(
+      (role) => role.trim().toUpperCase() == 'ADMIN',
+    );
 
     if (isAdminLocation(location)) {
       if (location == AppRoutes.adminAccessDenied) {
@@ -54,7 +57,11 @@ class AdminRouteGuard {
   }
 
   static bool _isAlwaysReachable(String location) {
-    const alwaysReachable = [AppRoutes.landing, AppRoutes.login, AppRoutes.register];
+    const alwaysReachable = [
+      AppRoutes.landing,
+      AppRoutes.login,
+      AppRoutes.register,
+    ];
     return alwaysReachable.contains(location);
   }
 }

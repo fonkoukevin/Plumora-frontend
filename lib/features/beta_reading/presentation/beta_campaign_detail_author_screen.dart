@@ -279,9 +279,7 @@ class _CampaignHeader extends StatelessWidget {
                         ),
                         label: Text(
                           isCancelling ? 'Annulation...' : 'Annuler',
-                          style: TextStyle(
-                            color: context.colors.destructive,
-                          ),
+                          style: TextStyle(color: context.colors.destructive),
                         ),
                       ),
                   ],
@@ -528,9 +526,7 @@ class _ChapterRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  chapter.title.isEmpty
-                      ? 'Chapitre sans titre'
-                      : chapter.title,
+                  chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w700),

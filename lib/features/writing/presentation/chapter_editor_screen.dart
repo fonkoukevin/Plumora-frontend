@@ -133,8 +133,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
                   onChanged: _markDirty,
                   onReadModeChanged: (value) =>
                       setState(() => _readMode = value),
-                  onPlumoChanged: (value) =>
-                      setState(() => _showPlumo = value),
+                  onPlumoChanged: (value) => setState(() => _showPlumo = value),
                 );
               },
             );
@@ -1452,10 +1451,7 @@ class _FigmaMobileFooterStats extends StatelessWidget {
           const SizedBox(width: 16),
           Text(
             '~$readTime min lecture',
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 10,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 10),
           ),
           const Spacer(),
           Container(
@@ -1880,9 +1876,7 @@ class _FigmaPlumoDesktopPanelState
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: OutlinedButton(
-                onPressed: _pendingAction == null
-                    ? () => _run(action)
-                    : null,
+                onPressed: _pendingAction == null ? () => _run(action) : null,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -2327,7 +2321,11 @@ class _FigmaSquareIconButton extends StatelessWidget {
         child: SizedBox(
           width: 36,
           height: 36,
-          child: Icon(icon, size: 20, color: color ?? context.colors.textSecondary),
+          child: Icon(
+            icon,
+            size: 20,
+            color: color ?? context.colors.textSecondary,
+          ),
         ),
       ),
     );
@@ -2476,10 +2474,7 @@ class _FigmaChapterStatusStrip extends StatelessWidget {
           const SizedBox(width: 16),
           Text(
             '$wordCount mots - ~$readTime min lecture',
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -2507,10 +2502,7 @@ class _FigmaEditorBreadcrumb extends StatelessWidget {
             bookTitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
           ),
         ),
         Padding(
@@ -3052,10 +3044,7 @@ class _FigmaMobileJumpButton extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 10,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 10),
           ),
           Text(
             _figmaChapterTitle(chapter),
@@ -3082,7 +3071,10 @@ class _FigmaMobileJumpButton extends StatelessWidget {
         ),
         child: Row(
           children: trailing
-              ? [text, Icon(icon, color: context.colors.textSecondary, size: 18)]
+              ? [
+                  text,
+                  Icon(icon, color: context.colors.textSecondary, size: 18),
+                ]
               : [
                   Icon(icon, color: context.colors.textSecondary, size: 18),
                   text,
@@ -3326,10 +3318,11 @@ Future<void> _runPlumoQuickAction({
 }) async {
   final selection = contentController.selection;
   final hasSelection = selection.isValid && !selection.isCollapsed;
-  final sourceText = (hasSelection
-          ? selection.textInside(contentController.text)
-          : contentController.text)
-      .trim();
+  final sourceText =
+      (hasSelection
+              ? selection.textInside(contentController.text)
+              : contentController.text)
+          .trim();
 
   if (sourceText.isEmpty) {
     if (context.mounted) {
@@ -3457,9 +3450,7 @@ class _PlumoResultSheet extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: context.colors.cards,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(20),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
           child: FutureBuilder<_PlumoQuickResult>(
@@ -3602,10 +3593,7 @@ class _PlumoResultSheet extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             result.explanation,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              height: 1.4,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, height: 1.4),
           ),
         ],
         if (result.warnings.isNotEmpty) ...[
@@ -3990,10 +3978,7 @@ class _ErrorCard extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
           FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
         ],
