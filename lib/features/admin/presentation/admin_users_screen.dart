@@ -200,6 +200,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           color: detail.active
                               ? AdminColors.success
                               : AdminColors.error,
+                          icon: detail.active
+                              ? Icons.check_circle
+                              : Icons.cancel,
                         ),
                       ],
                     ),
@@ -754,6 +757,7 @@ class _UserRow extends StatelessWidget {
             child: AdminBadge(
               label: user.status.label,
               color: user.active ? AdminColors.success : AdminColors.error,
+              icon: user.active ? Icons.check_circle : Icons.cancel,
             ),
           ),
           Expanded(
@@ -890,6 +894,7 @@ class _UserCard extends StatelessWidget {
                           color: user.active
                               ? AdminColors.success
                               : AdminColors.error,
+                          icon: user.active ? Icons.check_circle : Icons.cancel,
                         ),
                       ],
                     ),
