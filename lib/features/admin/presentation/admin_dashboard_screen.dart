@@ -300,6 +300,7 @@ class _SidePanel extends ConsumerWidget {
                       color: ai.enabled
                           ? AdminColors.success
                           : AdminColors.error,
+                      icon: ai.enabled ? Icons.check_circle : Icons.cancel,
                     ),
                   ],
                 ),

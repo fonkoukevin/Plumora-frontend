@@ -200,6 +200,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           color: detail.active
                               ? AdminColors.success
                               : AdminColors.error,
+                          icon: detail.active
+                              ? Icons.check_circle
+                              : Icons.cancel,
                         ),
                       ],
                     ),
@@ -629,7 +632,7 @@ class _UsersTable extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AdminColors.border)),
             ),
@@ -694,7 +697,7 @@ class _UserRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
           Expanded(
@@ -702,8 +705,8 @@ class _UserRow extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 30,
-                  height: 30,
+                  width: 34,
+                  height: 34,
                   decoration: BoxDecoration(
                     color: AdminColors.primary.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
@@ -713,12 +716,12 @@ class _UserRow extends StatelessWidget {
                     user.initials,
                     style: const TextStyle(
                       color: AdminColors.primary,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     user.displayName,
@@ -754,6 +757,7 @@ class _UserRow extends StatelessWidget {
             child: AdminBadge(
               label: user.status.label,
               color: user.active ? AdminColors.success : AdminColors.error,
+              icon: user.active ? Icons.check_circle : Icons.cancel,
             ),
           ),
           Expanded(
@@ -890,6 +894,7 @@ class _UserCard extends StatelessWidget {
                           color: user.active
                               ? AdminColors.success
                               : AdminColors.error,
+                          icon: user.active ? Icons.check_circle : Icons.cancel,
                         ),
                       ],
                     ),

@@ -214,6 +214,9 @@ class _AiContent extends StatelessWidget {
                           color: status.enabled
                               ? AdminColors.success
                               : AdminColors.error,
+                          icon: status.enabled
+                              ? Icons.check_circle
+                              : Icons.cancel,
                         ),
                       ],
                     ),

@@ -266,6 +266,7 @@ class _AdminCatalogScreenState extends ConsumerState<AdminCatalogScreen> {
                         AdminBadge(
                           label: detail.status,
                           color: _statusColor(detail.status),
+                          icon: _statusIcon(detail.status),
                         ),
                       ],
                     ),
@@ -920,6 +921,7 @@ class _BookRow extends StatelessWidget {
               child: AdminBadge(
                 label: book.status,
                 color: _statusColor(book.status),
+                icon: _statusIcon(book.status),
               ),
             ),
             SizedBox(
@@ -1021,6 +1023,22 @@ Color _statusColor(String status) {
       return AdminColors.warning;
     default:
       return AdminColors.muted;
+  }
+}
+
+IconData _statusIcon(String status) {
+  switch (status.trim().toUpperCase()) {
+    case 'PUBLISHED':
+      return Icons.check_circle;
+    case 'ARCHIVED':
+      return Icons.archive;
+    case 'DRAFT':
+    case 'IN_CORRECTION':
+    case 'IN_BETA_READING':
+    case 'READY_TO_PUBLISH':
+      return Icons.schedule;
+    default:
+      return Icons.schedule;
   }
 }
 
