@@ -632,7 +632,7 @@ class _UsersTable extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AdminColors.border)),
             ),
@@ -697,7 +697,7 @@ class _UserRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Row(
         children: [
           Expanded(
