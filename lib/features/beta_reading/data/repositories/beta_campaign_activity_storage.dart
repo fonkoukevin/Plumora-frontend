@@ -41,9 +41,7 @@ class BetaCampaignActivityStorage {
     await _storage.write(
       key: _storageKey,
       value: jsonEncode(
-        all.map(
-          (id, timestamp) => MapEntry(id, timestamp.toIso8601String()),
-        ),
+        all.map((id, timestamp) => MapEntry(id, timestamp.toIso8601String())),
       ),
     );
   }

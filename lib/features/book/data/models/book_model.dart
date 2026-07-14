@@ -71,7 +71,8 @@ class BookModel {
 
   bool get isArchived => status == BookStatus.archived;
 
-  bool get isPublicDomain => externalSource != null && externalSource!.trim().isNotEmpty;
+  bool get isPublicDomain =>
+      externalSource != null && externalSource!.trim().isNotEmpty;
 
   bool get canPublish {
     return status == BookStatus.readyToPublish ||
