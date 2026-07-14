@@ -34,7 +34,10 @@ class AdminDashboardStats {
       activeUsers: _readInt(json, ['activeUsers', 'active_users']),
       totalBooks: _readInt(json, ['totalBooks', 'total_books']),
       plumoraBooks: _readInt(json, ['plumoraBooks', 'plumora_books']),
-      publicDomainBooks: _readInt(json, ['publicDomainBooks', 'public_domain_books']),
+      publicDomainBooks: _readInt(json, [
+        'publicDomainBooks',
+        'public_domain_books',
+      ]),
       pendingReports: _readInt(json, ['pendingReports', 'pending_reports']),
       resolvedReports: _readInt(json, ['resolvedReports', 'resolved_reports']),
       archivedBooks: _readInt(json, ['archivedBooks', 'archived_books']),

@@ -53,7 +53,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                 onRetry: () => ref.invalidate(adminReportsProvider),
               ),
               data: (reports) {
-                final filtered = reports.where((r) => r.status == _filter).toList();
+                final filtered = reports
+                    .where((r) => r.status == _filter)
+                    .toList();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,7 +68,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                           AdminFilterChip(
                             label: status.label,
                             selected: _filter == status,
-                            count: reports.where((r) => r.status == status).length,
+                            count: reports
+                                .where((r) => r.status == status)
+                                .length,
                             onTap: () => setState(() => _filter = status),
                           ),
                       ],
@@ -89,7 +93,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                               onInReview: () => _markInReview(report),
                               onResolve: () => _resolve(report),
                               onReject: () => _reject(report),
-                              onArchiveContent: report.bookId != null ? () => _archiveContent(report) : null,
+                              onArchiveContent: report.bookId != null
+                                  ? () => _archiveContent(report)
+                                  : null,
                             ),
                             const SizedBox(height: 10),
                           ],
@@ -108,7 +114,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
   void _openDetail(AdminReport report) {
     AdminModal.show<void>(
       context,
-      title: 'Signalement ${report.id.length > 8 ? report.id.substring(0, 8) : report.id}',
+      title:
+          'Signalement ${report.id.length > 8 ? report.id.substring(0, 8) : report.id}',
       maxWidth: 460,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,17 +124,49 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
             label: 'Contenu signalé',
             value: Text(report.bookTitle ?? '—', textAlign: TextAlign.right),
           ),
-          AdminDetailRow(label: 'Signalé par', value: Text(report.reporterUsername ?? '—')),
-          AdminDetailRow(label: 'Motif', value: Text(report.reason.isEmpty ? '—' : report.reason)),
-          AdminDetailRow(label: 'Statut', value: AdminBadge(label: report.status.label, color: _statusColor(report.status))),
-          AdminDetailRow(label: 'Date', value: Text(_formatDate(report.createdAt))),
+          AdminDetailRow(
+            label: 'Signalé par',
+            value: Text(report.reporterUsername ?? '—'),
+          ),
+          AdminDetailRow(
+            label: 'Motif',
+            value: Text(report.reason.isEmpty ? '—' : report.reason),
+          ),
+          AdminDetailRow(
+            label: 'Statut',
+            value: AdminBadge(
+              label: report.status.label,
+              color: _statusColor(report.status),
+            ),
+          ),
+          AdminDetailRow(
+            label: 'Date',
+            value: Text(_formatDate(report.createdAt)),
+          ),
           if (report.resolvedAt != null)
-            AdminDetailRow(label: 'Clôturé le', value: Text(_formatDate(report.resolvedAt))),
+            AdminDetailRow(
+              label: 'Clôturé le',
+              value: Text(_formatDate(report.resolvedAt)),
+            ),
           if ((report.description ?? '').isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Text('Description', style: TextStyle(color: AdminColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+            const Text(
+              'Description',
+              style: TextStyle(
+                color: AdminColors.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(report.description!, style: const TextStyle(color: AdminColors.text, fontSize: 13, height: 1.45)),
+            Text(
+              report.description!,
+              style: const TextStyle(
+                color: AdminColors.text,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
           ],
         ],
       ),
@@ -135,10 +174,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
   }
 
   Future<void> _markInReview(AdminReport report) => _act(
-        report,
-        (repo) => repo.markReportInReview(report.id),
-        successMessage: 'Signalement passé en cours.',
-      );
+    report,
+    (repo) => repo.markReportInReview(report.id),
+    successMessage: 'Signalement passé en cours.',
+  );
 
   Future<void> _resolve(AdminReport report) async {
     final reason = await _promptReason(
@@ -178,7 +217,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
     final confirmed = await showAdminConfirmationDialog(
       context,
       title: 'Archiver le contenu',
-      message: 'Le livre "${report.bookTitle ?? ''}" sera archivé et ne sera plus visible publiquement.',
+      message:
+          'Le livre "${report.bookTitle ?? ''}" sera archivé et ne sera plus visible publiquement.',
       confirmLabel: 'Archiver le contenu',
     );
     if (!confirmed || !mounted) {
@@ -190,7 +230,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
     }
     await _act(
       report,
-      (repo) => repo.archiveBook(bookId).then((_) => repo.resolveReport(report.id)),
+      (repo) =>
+          repo.archiveBook(bookId).then((_) => repo.resolveReport(report.id)),
       successMessage: 'Contenu archivé.',
     );
   }
@@ -210,7 +251,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(color: AdminColors.muted, fontSize: 12)),
+              Text(
+                label,
+                style: const TextStyle(color: AdminColors.muted, fontSize: 12),
+              ),
               const SizedBox(height: 6),
               TextField(
                 controller: controller,
@@ -218,7 +262,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                 onChanged: (_) => setModalState(() {}),
                 style: const TextStyle(color: AdminColors.text, fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: danger ? 'Raison du rejet...' : 'Résumé de la décision...',
+                  hintText: danger
+                      ? 'Raison du rejet...'
+                      : 'Résumé de la décision...',
                   filled: true,
                   fillColor: AdminColors.background,
                   border: OutlineInputBorder(
@@ -233,7 +279,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(false),
-                      style: OutlinedButton.styleFrom(foregroundColor: AdminColors.text, side: const BorderSide(color: AdminColors.border)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AdminColors.text,
+                        side: const BorderSide(color: AdminColors.border),
+                      ),
                       child: const Text('Annuler'),
                     ),
                   ),
@@ -276,11 +325,15 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
       ref.invalidate(adminReportsProvider);
       ref.invalidate(adminDashboardProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(successMessage)));
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
       }
     } finally {
       if (mounted) {
@@ -325,31 +378,52 @@ class _ReportCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AdminBadge(label: report.status.label, color: _statusColor(report.status)),
+                    AdminBadge(
+                      label: report.status.label,
+                      color: _statusColor(report.status),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       report.bookTitle ?? 'Contenu Plumora',
-                      style: const TextStyle(color: AdminColors.text, fontSize: 14, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        color: AdminColors.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Motif : ${report.reason.isEmpty ? 'Non précisé' : report.reason}',
-                      style: const TextStyle(color: AdminColors.muted, fontSize: 12),
+                      style: const TextStyle(
+                        color: AdminColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                     Text(
                       'Signalé par ${report.reporterUsername ?? 'utilisateur'} · ${_formatDate(report.createdAt)}',
-                      style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+                      style: const TextStyle(
+                        color: AdminColors.muted,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
               ),
               if (busy)
-                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               else
                 IconButton(
                   tooltip: 'Consulter',
                   onPressed: onView,
-                  icon: const Icon(Icons.visibility_outlined, size: 16, color: AdminColors.primary),
+                  icon: const Icon(
+                    Icons.visibility_outlined,
+                    size: 16,
+                    color: AdminColors.primary,
+                  ),
                 ),
             ],
           ),
@@ -359,9 +433,25 @@ class _ReportCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _SmallActionButton(label: 'Passer en cours', icon: Icons.schedule, color: AdminColors.primary, onTap: onInReview),
-                _SmallActionButton(label: 'Résoudre', icon: Icons.check_circle_outline, color: AdminColors.success, onTap: onResolve),
-                _SmallActionButton(label: 'Rejeter', icon: Icons.cancel_outlined, color: AdminColors.error, outline: true, onTap: onReject),
+                _SmallActionButton(
+                  label: 'Passer en cours',
+                  icon: Icons.schedule,
+                  color: AdminColors.primary,
+                  onTap: onInReview,
+                ),
+                _SmallActionButton(
+                  label: 'Résoudre',
+                  icon: Icons.check_circle_outline,
+                  color: AdminColors.success,
+                  onTap: onResolve,
+                ),
+                _SmallActionButton(
+                  label: 'Rejeter',
+                  icon: Icons.cancel_outlined,
+                  color: AdminColors.error,
+                  outline: true,
+                  onTap: onReject,
+                ),
               ],
             ),
           ],
@@ -371,10 +461,26 @@ class _ReportCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _SmallActionButton(label: 'Résoudre', icon: Icons.check_circle_outline, color: AdminColors.success, onTap: onResolve),
-                _SmallActionButton(label: 'Rejeter', icon: Icons.cancel_outlined, color: AdminColors.error, outline: true, onTap: onReject),
+                _SmallActionButton(
+                  label: 'Résoudre',
+                  icon: Icons.check_circle_outline,
+                  color: AdminColors.success,
+                  onTap: onResolve,
+                ),
+                _SmallActionButton(
+                  label: 'Rejeter',
+                  icon: Icons.cancel_outlined,
+                  color: AdminColors.error,
+                  outline: true,
+                  onTap: onReject,
+                ),
                 if (onArchiveContent != null)
-                  _SmallActionButton(label: 'Archiver le contenu', icon: Icons.archive_outlined, color: AdminColors.error, onTap: onArchiveContent!),
+                  _SmallActionButton(
+                    label: 'Archiver le contenu',
+                    icon: Icons.archive_outlined,
+                    color: AdminColors.error,
+                    onTap: onArchiveContent!,
+                  ),
               ],
             ),
           ],

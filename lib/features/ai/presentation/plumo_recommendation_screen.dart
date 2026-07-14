@@ -381,10 +381,7 @@ class _PlumoResults extends StatelessWidget {
             FigmaCard(
               child: Row(
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    color: context.colors.destructive,
-                  ),
+                  Icon(Icons.error_outline, color: context.colors.destructive),
                   const SizedBox(width: 10),
                   Expanded(child: Text(error!)),
                   TextButton(

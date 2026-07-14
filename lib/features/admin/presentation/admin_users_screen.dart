@@ -10,7 +10,12 @@ import 'widgets/admin_widgets.dart';
 
 /// Real backend `RoleName` values — the maquette's dropdown mockup listed a
 /// non-existent "USER" role; this uses the actual enum instead.
-const List<String> _assignableRoles = ['AUTHOR', 'READER', 'BETA_READER', 'ADMIN'];
+const List<String> _assignableRoles = [
+  'AUTHOR',
+  'READER',
+  'BETA_READER',
+  'ADMIN',
+];
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
   const AdminUsersScreen({super.key});
@@ -114,7 +119,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
   bool _matches(AdminUser user) {
     final query = _search.trim().toLowerCase();
-    final matchesSearch = query.isEmpty ||
+    final matchesSearch =
+        query.isEmpty ||
         user.displayName.toLowerCase().contains(query) ||
         user.email.toLowerCase().contains(query);
     final matchesRole = _roleFilter == null || user.roles.contains(_roleFilter);
@@ -178,16 +184,22 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     ),
                     Text(
                       detail.email,
-                      style: const TextStyle(color: AdminColors.muted, fontSize: 12),
+                      style: const TextStyle(
+                        color: AdminColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
                       children: [
-                        for (final role in detail.roles) AdminRoleBadge(role: role),
+                        for (final role in detail.roles)
+                          AdminRoleBadge(role: role),
                         AdminBadge(
                           label: detail.status.label,
-                          color: detail.active ? AdminColors.success : AdminColors.error,
+                          color: detail.active
+                              ? AdminColors.success
+                              : AdminColors.error,
                         ),
                       ],
                     ),
@@ -197,16 +209,25 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          AdminDetailRow(label: 'Inscription', value: Text(_formatDate(detail.createdAt))),
+          AdminDetailRow(
+            label: 'Inscription',
+            value: Text(_formatDate(detail.createdAt)),
+          ),
           if (detail.booksCount != null)
             AdminDetailRow(
               label: 'Livres publiés',
-              value: Text('${detail.booksCount}', style: const TextStyle(color: AdminColors.text)),
+              value: Text(
+                '${detail.booksCount}',
+                style: const TextStyle(color: AdminColors.text),
+              ),
             ),
           if (detail.reportsCount != null)
             AdminDetailRow(
               label: 'Signalements reçus',
-              value: Text('${detail.reportsCount}', style: const TextStyle(color: AdminColors.text)),
+              value: Text(
+                '${detail.reportsCount}',
+                style: const TextStyle(color: AdminColors.text),
+              ),
             ),
         ],
       ),
@@ -214,7 +235,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   }
 
   Future<void> _openRoleEditor(AdminUser user) async {
-    var selectedRole = user.roles.isNotEmpty ? user.roles.first.toUpperCase() : _assignableRoles.first;
+    var selectedRole = user.roles.isNotEmpty
+        ? user.roles.first.toUpperCase()
+        : _assignableRoles.first;
     if (!_assignableRoles.contains(selectedRole)) {
       selectedRole = _assignableRoles.first;
     }
@@ -229,21 +252,35 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             children: [
               RichText(
                 text: TextSpan(
-                  style: const TextStyle(color: AdminColors.muted, fontSize: 13),
+                  style: const TextStyle(
+                    color: AdminColors.muted,
+                    fontSize: 13,
+                  ),
                   children: [
                     const TextSpan(text: 'Rôle actuel de '),
                     TextSpan(
                       text: user.displayName,
-                      style: const TextStyle(color: AdminColors.text, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        color: AdminColors.text,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const TextSpan(text: ' : '),
                   ],
                 ),
               ),
               const SizedBox(height: 6),
-              Wrap(spacing: 6, children: [for (final role in user.roles) AdminRoleBadge(role: role)]),
+              Wrap(
+                spacing: 6,
+                children: [
+                  for (final role in user.roles) AdminRoleBadge(role: role),
+                ],
+              ),
               const SizedBox(height: 16),
-              const Text('Nouveau rôle', style: TextStyle(color: AdminColors.muted, fontSize: 12)),
+              const Text(
+                'Nouveau rôle',
+                style: TextStyle(color: AdminColors.muted, fontSize: 12),
+              ),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -260,8 +297,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       for (final role in _assignableRoles)
                         DropdownMenuItem(value: role, child: Text(role)),
                     ],
-                    onChanged: (value) => setModalState(() => selectedRole = value!),
-                    style: const TextStyle(color: AdminColors.text, fontSize: 13),
+                    onChanged: (value) =>
+                        setModalState(() => selectedRole = value!),
+                    style: const TextStyle(
+                      color: AdminColors.text,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
@@ -299,17 +340,24 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
     setState(() => _busyIds.add(user.id));
     try {
-      await ref.read(adminRepositoryProvider).updateUserRole(user.id, selectedRole);
+      await ref
+          .read(adminRepositoryProvider)
+          .updateUserRole(user.id, selectedRole);
       ref.invalidate(adminUsersProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Rôle de ${user.displayName} modifié en $selectedRole.')),
+          SnackBar(
+            content: Text(
+              'Rôle de ${user.displayName} modifié en $selectedRole.',
+            ),
+          ),
         );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
       }
     } finally {
       if (mounted) {
@@ -335,24 +383,35 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               decoration: BoxDecoration(
                 color: AdminColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AdminColors.error.withValues(alpha: 0.25)),
+                border: Border.all(
+                  color: AdminColors.error.withValues(alpha: 0.25),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.warning_amber_rounded, size: 15, color: AdminColors.error),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 15,
+                    color: AdminColors.error,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: RichText(
                       text: TextSpan(
-                        style: const TextStyle(color: AdminColors.error, fontSize: 12.5, height: 1.4),
+                        style: const TextStyle(
+                          color: AdminColors.error,
+                          fontSize: 12.5,
+                          height: 1.4,
+                        ),
                         children: [
                           TextSpan(
                             text: user.displayName,
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           const TextSpan(
-                            text: ' ne pourra plus se connecter ni accéder à la plateforme.',
+                            text:
+                                ' ne pourra plus se connecter ni accéder à la plateforme.',
                           ),
                         ],
                       ),
@@ -370,7 +429,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               ),
             ),
           if (!activating) ...[
-            const Text('Raison (facultatif)', style: TextStyle(color: AdminColors.muted, fontSize: 12)),
+            const Text(
+              'Raison (facultatif)',
+              style: TextStyle(color: AdminColors.muted, fontSize: 12),
+            ),
             const SizedBox(height: 6),
             TextField(
               controller: reasonController,
@@ -436,13 +498,18 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       ref.invalidate(adminDashboardProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(activating ? 'Compte réactivé.' : 'Compte désactivé.')),
+          SnackBar(
+            content: Text(
+              activating ? 'Compte réactivé.' : 'Compte désactivé.',
+            ),
+          ),
         );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
       }
     } finally {
       if (mounted) {
@@ -484,7 +551,11 @@ class _Filters extends StatelessWidget {
             onChanged: onSearchChanged,
           ),
         ),
-        AdminFilterChip(label: 'Tous', selected: roleFilter == null, onTap: () => onRoleChanged(null)),
+        AdminFilterChip(
+          label: 'Tous',
+          selected: roleFilter == null,
+          onTap: () => onRoleChanged(null),
+        ),
         for (final role in _assignableRoles)
           AdminFilterChip(
             label: role,
@@ -523,7 +594,11 @@ class _StatusDropdown extends StatelessWidget {
           ],
           onChanged: onChanged,
           style: const TextStyle(color: AdminColors.text, fontSize: 12),
-          icon: const Icon(Icons.keyboard_arrow_down, color: AdminColors.muted, size: 16),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: AdminColors.muted,
+            size: 16,
+          ),
         ),
       ),
     );
@@ -560,7 +635,14 @@ class _UsersTable extends StatelessWidget {
             ),
             child: Row(
               children: [
-                for (final entry in ['Nom', 'Email', 'Rôle', 'Statut', 'Inscription', ''].asMap().entries)
+                for (final entry in [
+                  'Nom',
+                  'Email',
+                  'Rôle',
+                  'Statut',
+                  'Inscription',
+                  '',
+                ].asMap().entries)
                   Expanded(
                     flex: _columns[entry.key],
                     child: Text(
@@ -584,7 +666,8 @@ class _UsersTable extends StatelessWidget {
               onRole: () => onRole(users[i]),
               onToggleActive: () => onToggleActive(users[i]),
             ),
-            if (i != users.length - 1) const Divider(color: AdminColors.border, height: 1),
+            if (i != users.length - 1)
+              const Divider(color: AdminColors.border, height: 1),
           ],
         ],
       ),
@@ -627,7 +710,11 @@ class _UserRow extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     user.initials,
-                    style: const TextStyle(color: AdminColors.primary, fontSize: 11, fontWeight: FontWeight.w800),
+                    style: const TextStyle(
+                      color: AdminColors.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -636,7 +723,11 @@ class _UserRow extends StatelessWidget {
                     user.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AdminColors.text, fontSize: 13, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AdminColors.text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -666,7 +757,10 @@ class _UserRow extends StatelessWidget {
           ),
           Expanded(
             flex: 1,
-            child: Text(_formatDate(user.createdAt), style: const TextStyle(color: AdminColors.muted, fontSize: 11)),
+            child: Text(
+              _formatDate(user.createdAt),
+              style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+            ),
           ),
           Expanded(
             flex: 1,
@@ -684,20 +778,32 @@ class _UserRow extends StatelessWidget {
                         IconButton(
                           tooltip: 'Voir le détail',
                           onPressed: onDetail,
-                          icon: const Icon(Icons.visibility_outlined, size: 15, color: AdminColors.muted),
+                          icon: const Icon(
+                            Icons.visibility_outlined,
+                            size: 15,
+                            color: AdminColors.muted,
+                          ),
                         ),
                         IconButton(
                           tooltip: 'Changer le rôle',
                           onPressed: onRole,
-                          icon: const Icon(Icons.edit_outlined, size: 15, color: AdminColors.muted),
+                          icon: const Icon(
+                            Icons.edit_outlined,
+                            size: 15,
+                            color: AdminColors.muted,
+                          ),
                         ),
                         IconButton(
                           tooltip: user.active ? 'Désactiver' : 'Réactiver',
                           onPressed: onToggleActive,
                           icon: Icon(
-                            user.active ? Icons.person_off_outlined : Icons.person_outline,
+                            user.active
+                                ? Icons.person_off_outlined
+                                : Icons.person_outline,
                             size: 15,
-                            color: user.active ? AdminColors.error : AdminColors.success,
+                            color: user.active
+                                ? AdminColors.error
+                                : AdminColors.success,
                           ),
                         ),
                       ],
@@ -744,7 +850,11 @@ class _UserCard extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   user.initials,
-                  style: const TextStyle(color: AdminColors.primary, fontSize: 13, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    color: AdminColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -754,18 +864,31 @@ class _UserCard extends StatelessWidget {
                   children: [
                     Text(
                       user.displayName,
-                      style: const TextStyle(color: AdminColors.text, fontSize: 14, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        color: AdminColors.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    Text(user.email, style: const TextStyle(color: AdminColors.muted, fontSize: 12)),
+                    Text(
+                      user.email,
+                      style: const TextStyle(
+                        color: AdminColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        if (user.roles.isNotEmpty) AdminRoleBadge(role: user.roles.first),
+                        if (user.roles.isNotEmpty)
+                          AdminRoleBadge(role: user.roles.first),
                         AdminBadge(
                           label: user.status.label,
-                          color: user.active ? AdminColors.success : AdminColors.error,
+                          color: user.active
+                              ? AdminColors.success
+                              : AdminColors.error,
                         ),
                       ],
                     ),
@@ -776,7 +899,13 @@ class _UserCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (busy)
-            const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))
+            const Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
           else
             Row(
               children: [
@@ -785,7 +914,10 @@ class _UserCard extends StatelessWidget {
                     onPressed: onDetail,
                     icon: const Icon(Icons.visibility_outlined, size: 13),
                     label: const Text('Détail', style: TextStyle(fontSize: 12)),
-                    style: OutlinedButton.styleFrom(foregroundColor: AdminColors.text, side: const BorderSide(color: AdminColors.border)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AdminColors.text,
+                      side: const BorderSide(color: AdminColors.border),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -794,18 +926,31 @@ class _UserCard extends StatelessWidget {
                     onPressed: onRole,
                     icon: const Icon(Icons.edit_outlined, size: 13),
                     label: const Text('Rôle', style: TextStyle(fontSize: 12)),
-                    style: OutlinedButton.styleFrom(foregroundColor: AdminColors.text, side: const BorderSide(color: AdminColors.border)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AdminColors.text,
+                      side: const BorderSide(color: AdminColors.border),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: user.active
-                      ? AdminDangerButton(label: 'Désactiver', onPressed: onToggleActive, icon: Icons.person_off_outlined)
+                      ? AdminDangerButton(
+                          label: 'Désactiver',
+                          onPressed: onToggleActive,
+                          icon: Icons.person_off_outlined,
+                        )
                       : OutlinedButton.icon(
                           onPressed: onToggleActive,
                           icon: const Icon(Icons.person_outline, size: 13),
-                          label: const Text('Réactiver', style: TextStyle(fontSize: 12)),
-                          style: OutlinedButton.styleFrom(foregroundColor: AdminColors.success, side: const BorderSide(color: AdminColors.success)),
+                          label: const Text(
+                            'Réactiver',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AdminColors.success,
+                            side: const BorderSide(color: AdminColors.success),
+                          ),
                         ),
                 ),
               ],
