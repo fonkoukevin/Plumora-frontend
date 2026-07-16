@@ -85,7 +85,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     return RefreshIndicator(
       onRefresh: () => ref.refresh(myBooksProvider.future),
       child: FigmaScreen(
-        maxWidth: 896,
+        maxWidth: 1280,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 88),
         physics: const AlwaysScrollableScrollPhysics(),
         child: booksAsync.when(
@@ -113,42 +113,77 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Mes histoires',
-                            style: GoogleFonts.playfairDisplay(
-                              color: context.colors.textPrimary,
-                              fontSize: 21,
-                              fontWeight: FontWeight.w900,
-                              height: 1.05,
-                            ),
+                Builder(
+                  builder: (context) {
+                    final width = MediaQuery.sizeOf(context).width;
+                    final isDesktop = width >= 1024;
+                    final showFullButtonLabel = width >= 640;
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              isDesktop
+                                  ? ShaderMask(
+                                      shaderCallback: (bounds) =>
+                                          LinearGradient(
+                                            colors: [
+                                              _writeAccent,
+                                              context.colors.plumoAccent,
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ).createShader(bounds),
+                                      child: Text(
+                                        '✍️ Mes manuscrits',
+                                        style: GoogleFonts.playfairDisplay(
+                                          color: Colors.white,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w900,
+                                          height: 1.05,
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                      '✍️ Mes manuscrits',
+                                      style: GoogleFonts.playfairDisplay(
+                                        color: context.colors.textPrimary,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        height: 1.05,
+                                      ),
+                                    ),
+                              const SizedBox(height: 3),
+                              Text(
+                                isDesktop
+                                    ? '${books.length} histoires · '
+                                          '$totalChapters chapitres · '
+                                          '${_compactNumber(totalWords)} mots'
+                                    : '${books.length} histoires · '
+                                          '$totalChapters chapitres',
+                                style: TextStyle(
+                                  color: context.colors.textSecondary,
+                                  fontSize: 10,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            '${books.length} histoires - $totalChapters '
-                            'chapitres - ${_compactNumber(totalWords)} mots',
-                            style: TextStyle(
-                              color: context.colors.textSecondary,
-                              fontSize: 10,
-                              height: 1.1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    _GradientActionButton(
-                      icon: Icons.add,
-                      label: 'Nouvelle histoire',
-                      onPressed: () => context.go(AppRoutes.createBook),
-                    ),
-                  ],
+                        ),
+                        const SizedBox(width: 12),
+                        _GradientActionButton(
+                          icon: Icons.add,
+                          label: showFullButtonLabel
+                              ? 'Nouvelle histoire'
+                              : 'Créer',
+                          onPressed: () => context.go(AppRoutes.createBook),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 17),
                 Row(
@@ -203,11 +238,15 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                     onCreate: () => context.go(AppRoutes.createBook),
                   )
                 else
-                  for (final book in filtered) ...[
-                    _StoryCard(book: book, onArchive: _confirmArchive),
-                    const SizedBox(height: 12),
-                  ],
-                const SizedBox(height: 8),
+                  FigmaResponsiveGrid(
+                    minTileWidth: 380,
+                    maxColumns: 2,
+                    children: [
+                      for (final book in filtered)
+                        _StoryCard(book: book, onArchive: _confirmArchive),
+                    ],
+                  ),
+                const SizedBox(height: 20),
                 _WriteCta(
                   icon: Icons.auto_awesome,
                   iconColors: const [_writeAccent, _writeAccentLight],

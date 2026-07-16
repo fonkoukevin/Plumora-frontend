@@ -157,12 +157,15 @@ class _PublicDomainCatalogScreenState
 
     return Column(
       children: [
-        for (final book in _books) ...[
-          _ExternalBookCard(book: book),
-          const SizedBox(height: 14),
-        ],
+        FigmaResponsiveGrid(
+          minTileWidth: 460,
+          maxColumns: 2,
+          children: [
+            for (final book in _books) _ExternalBookCard(book: book),
+          ],
+        ),
         if (_error != null) ...[
-          const SizedBox(height: 2),
+          const SizedBox(height: 14),
           _InlineError(message: _error!, onRetry: () => _load(reset: false)),
         ],
         if (!_last) ...[
