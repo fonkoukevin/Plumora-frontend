@@ -335,7 +335,8 @@ class _ReadingsTab extends StatelessWidget {
                 minTileWidth: 420,
                 maxColumns: 2,
                 children: [
-                  for (final reading in filtered) _ReadingTile(reading: reading),
+                  for (final reading in filtered)
+                    _ReadingTile(reading: reading),
                 ],
               ),
           ],

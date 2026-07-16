@@ -604,10 +604,7 @@ class _AdminTopBar extends ConsumerWidget {
               ),
             ),
           ),
-          if (compact)
-            const _AdminMobileLogoutButton()
-          else
-            _AdminBellButton(),
+          if (compact) const _AdminMobileLogoutButton() else _AdminBellButton(),
           SizedBox(width: compact ? 8 : 12),
           _AdminAvatar(initials: _initialsFor(session?.user?.displayName)),
         ],

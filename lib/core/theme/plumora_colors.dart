@@ -56,6 +56,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
   final Color textPrimary;
   final Color textSecondary;
   final Color plumoAccent;
+
   /// Bold accent reserved for Plumora-native work badges/icons (book covers,
   /// section headers, chapter tiles) -- kept distinct from [secondary],
   /// which became a pale tint and is no longer legible for that role.

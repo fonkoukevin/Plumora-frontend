@@ -214,10 +214,10 @@ class FigmaResponsiveGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = ((constraints.maxWidth + spacing) /
-                (minTileWidth + spacing))
-            .floor()
-            .clamp(1, maxColumns);
+        final columns =
+            ((constraints.maxWidth + spacing) / (minTileWidth + spacing))
+                .floor()
+                .clamp(1, maxColumns);
 
         if (columns == 1) {
           return Column(

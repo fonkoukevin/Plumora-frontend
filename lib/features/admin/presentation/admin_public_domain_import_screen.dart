@@ -104,7 +104,8 @@ class _AdminPublicDomainImportScreenState
                   minTileWidth: 440,
                   maxColumns: 2,
                   children: [
-                    for (final book in page.content) _ExternalBookCard(book: book),
+                    for (final book in page.content)
+                      _ExternalBookCard(book: book),
                   ],
                 );
               },
