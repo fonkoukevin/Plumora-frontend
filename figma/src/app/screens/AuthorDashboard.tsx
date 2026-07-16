@@ -1,7 +1,7 @@
+import { AppHeader } from '../components/AppHeader';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
-import { MobileNav } from '../components/MobileNav';
 import { Plus, Clock, MessageSquare, CheckCircle, ArrowLeft } from 'lucide-react';
 
 interface AuthorDashboardProps {
@@ -34,28 +34,28 @@ export function AuthorDashboard({ onNavigate }: AuthorDashboardProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <button
-          onClick={() => onNavigate('home')}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Retour à l'accueil
-        </button>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground">Espace Auteur</h1>
-            <p className="text-muted-foreground mt-2">
-              Gérez vos manuscrits et suivez votre progression
-            </p>
-          </div>
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+      <AppHeader
+        title="Espace Auteur"
+        subtitle="Gérez vos manuscrits et suivez votre progression"
+        emoji="🖊️"
+        gradient={['#7C5CFF', '#D6B25E']}
+        onNavigate={onNavigate}
+        action={
           <Button size="lg" onClick={() => onNavigate('create-book')}>
             <Plus className="w-5 h-5" />
             Nouveau livre
           </Button>
-        </div>
+        }
+      />
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        <button
+          onClick={() => onNavigate('write')}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors lg:hidden"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Retour
+        </button>
 
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold">Mes manuscrits</h2>
@@ -155,7 +155,6 @@ export function AuthorDashboard({ onNavigate }: AuthorDashboardProps) {
         </div>
       </div>
 
-      <MobileNav currentPage="author-dashboard" onNavigate={onNavigate} />
     </div>
   );
 }

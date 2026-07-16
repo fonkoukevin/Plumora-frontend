@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../catalog/data/models/external_book_model.dart';
 import '../../catalog/data/repositories/external_book_repository.dart';
 import '../data/repositories/admin_repository.dart';
@@ -99,12 +100,12 @@ class _AdminPublicDomainImportScreenState
                   );
                 }
 
-                return Column(
+                return FigmaResponsiveGrid(
+                  minTileWidth: 440,
+                  maxColumns: 2,
                   children: [
-                    for (final book in page.content) ...[
+                    for (final book in page.content)
                       _ExternalBookCard(book: book),
-                      const SizedBox(height: 10),
-                    ],
                   ],
                 );
               },

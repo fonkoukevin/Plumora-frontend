@@ -128,6 +128,122 @@ class FigmaCard extends StatelessWidget {
   }
 }
 
+/// Renders [itemCount] tiles as a horizontal scrolling rail below
+/// [wideBreakpoint] (the mobile/tablet behaviour), and as a wrapping
+/// multi-column grid above it -- so wide desktop windows lay tiles out
+/// using the extra width instead of forcing a mobile-style horizontal
+/// scroll with empty space left and right.
+class FigmaAdaptiveRail extends StatelessWidget {
+  const FigmaAdaptiveRail({
+    required this.itemCount,
+    required this.itemBuilder,
+    required this.railHeight,
+    this.spacing = 12,
+    this.runSpacing = 20,
+    this.wideBreakpoint = 560,
+    super.key,
+  });
+
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+  final double railHeight;
+  final double spacing;
+  final double runSpacing;
+  final double wideBreakpoint;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < wideBreakpoint) {
+          return SizedBox(
+            height: railHeight,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: itemCount,
+              separatorBuilder: (_, _) => SizedBox(width: spacing),
+              itemBuilder: itemBuilder,
+            ),
+          );
+        }
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: runSpacing,
+          children: [
+            for (var i = 0; i < itemCount; i++)
+              // Tiles built for the horizontal rail get a bounded cross-axis
+              // extent for free from the ListView's viewport; some (e.g.
+              // recommendation cards) rely on that bound for an internal
+              // Expanded/Spacer. Wrap gives unbounded height, so pin it back
+              // to railHeight to keep those tiles laying out identically.
+              SizedBox(height: railHeight, child: itemBuilder(context, i)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Lays [children] out as a single column on narrow (mobile) widths, and as
+/// a wrapping grid of as many [minTileWidth]-wide columns (up to
+/// [maxColumns]) as fit above that -- for card lists that read fine as a
+/// full-width column on a phone but shouldn't stay a single stretched
+/// column on a wide desktop window.
+class FigmaResponsiveGrid extends StatelessWidget {
+  const FigmaResponsiveGrid({
+    required this.children,
+    this.spacing = 14,
+    this.runSpacing = 14,
+    this.minTileWidth = 320,
+    this.maxColumns = 3,
+    super.key,
+  });
+
+  final List<Widget> children;
+  final double spacing;
+  final double runSpacing;
+  final double minTileWidth;
+  final int maxColumns;
+
+  @override
+  Widget build(BuildContext context) {
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns =
+            ((constraints.maxWidth + spacing) / (minTileWidth + spacing))
+                .floor()
+                .clamp(1, maxColumns);
+
+        if (columns == 1) {
+          return Column(
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                children[i],
+                if (i != children.length - 1) SizedBox(height: runSpacing),
+              ],
+            ],
+          );
+        }
+
+        final width =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: runSpacing,
+          children: [
+            for (final child in children) SizedBox(width: width, child: child),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class FigmaGradientIcon extends StatelessWidget {
   const FigmaGradientIcon({
     required this.icon,
@@ -353,7 +469,7 @@ class FigmaBookCover extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: rank! <= 3
                       ? context.colors.orange
-                      : context.colors.secondary,
+                      : context.colors.plumora,
                   shape: BoxShape.circle,
                 ),
                 child: Center(

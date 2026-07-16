@@ -1,7 +1,7 @@
+import { AppHeader } from '../components/AppHeader';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { MobileNav } from '../components/MobileNav';
 import { ArrowLeft, Clock, MessageSquare, Star, ThumbsUp, AlertCircle } from 'lucide-react';
 
 interface BetaTestPageProps {
@@ -43,22 +43,15 @@ export function BetaTestPage({ onNavigate }: BetaTestPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+      <AppHeader
+        title="Bêta-retours"
+        subtitle="Aidez les auteurs avant publication et gagnez en expérience"
+        emoji="📖"
+        gradient={['#3FBF7F', '#7C5CFF']}
+        onNavigate={onNavigate}
+      />
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <button
-          onClick={() => onNavigate('home')}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Retour à l'accueil
-        </button>
-
-        <div>
-          <h1 className="text-4xl font-bold text-foreground">Bêta-tests</h1>
-          <p className="text-muted-foreground mt-2">
-            Lisez des manuscrits avant publication et aidez les auteurs avec vos retours
-          </p>
-        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
@@ -183,7 +176,6 @@ export function BetaTestPage({ onNavigate }: BetaTestPageProps) {
         </Card>
       </div>
 
-      <MobileNav currentPage="home" onNavigate={onNavigate} />
     </div>
   );
 }
