@@ -4,11 +4,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../ai/data/models/plumo_ai_models.dart';
@@ -100,7 +100,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                           _PlumoraAsyncRail(
                             title: 'Oeuvres Plumora',
                             icon: Icons.auto_stories_outlined,
-                            iconColor: context.colors.secondary,
+                            iconColor: context.colors.plumora,
                             query: plumoraQuery,
                           ),
                           const SizedBox(height: 32),
@@ -123,7 +123,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                           _PlumoraAsyncRail(
                             title: 'Oeuvres Plumora',
                             icon: Icons.auto_stories_outlined,
-                            iconColor: context.colors.secondary,
+                            iconColor: context.colors.plumora,
                             query: plumoraQuery,
                           ),
                           const SizedBox(height: 32),
@@ -248,7 +248,7 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback onSearch;
   final VoidCallback onPlumoTap;
 
-  static const _height = 218.0;
+  static const _height = 234.0;
 
   @override
   double get minExtent => _height;
@@ -287,14 +287,14 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Decouvrir',
-                      style: GoogleFonts.playfairDisplay(
-                        color: context.colors.textPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        height: 1.1,
-                      ),
+                    PlumoraAppHeader(
+                      title: 'Découvrir',
+                      subtitle: "Explorez des milliers d'histoires inédites",
+                      emoji: '🔍',
+                      gradient: [
+                        context.colors.plumora,
+                        context.colors.primary,
+                      ],
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
@@ -533,7 +533,7 @@ class _PlumoraAsyncRail extends ConsumerWidget {
         FigmaSectionHeader(
           title: title,
           icon: icon,
-          iconColor: iconColor ?? context.colors.secondary,
+          iconColor: iconColor ?? context.colors.plumora,
         ),
         const SizedBox(height: 14),
         booksAsync.when(
@@ -564,14 +564,10 @@ class _PlumoraBookRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 262,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: books.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) => _PlumoraBookTile(book: books[index]),
-      ),
+    return FigmaAdaptiveRail(
+      itemCount: books.length,
+      railHeight: 262,
+      itemBuilder: (context, index) => _PlumoraBookTile(book: books[index]),
     );
   }
 }
@@ -615,7 +611,7 @@ class _PlumoraBookTile extends ConsumerWidget {
                     right: 8,
                     child: _CoverBadge(
                       label: 'Plumora',
-                      backgroundColor: context.colors.secondary.withValues(
+                      backgroundColor: context.colors.plumora.withValues(
                         alpha: 0.9,
                       ),
                     ),
@@ -699,15 +695,11 @@ class _PlumoRecommendationsSection extends ConsumerWidget {
               );
             }
 
-            return SizedBox(
-              height: 262,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: items.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (context, index) =>
-                    _PlumoRecommendationTile(item: items[index]),
-              ),
+            return FigmaAdaptiveRail(
+              itemCount: items.length,
+              railHeight: 262,
+              itemBuilder: (context, index) =>
+                  _PlumoRecommendationTile(item: items[index]),
             );
           },
         ),
@@ -1021,20 +1013,16 @@ class _ExternalBookRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 262,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: books.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          return _ExternalBookTile(
-            book: books[index],
-            rank: rankItems ? index + 1 : null,
-            badge: badge,
-          );
-        },
-      ),
+    return FigmaAdaptiveRail(
+      itemCount: books.length,
+      railHeight: 262,
+      itemBuilder: (context, index) {
+        return _ExternalBookTile(
+          book: books[index],
+          rank: rankItems ? index + 1 : null,
+          badge: badge,
+        );
+      },
     );
   }
 }
@@ -1239,33 +1227,29 @@ class _LoadingRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 262,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: 6,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) => SizedBox(
-          width: 112,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 112,
-                height: 160,
-                decoration: BoxDecoration(
-                  color: context.colors.muted,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+    return FigmaAdaptiveRail(
+      itemCount: 6,
+      railHeight: 262,
+      itemBuilder: (context, index) => SizedBox(
+        width: 112,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 112,
+              height: 160,
+              decoration: BoxDecoration(
+                color: context.colors.muted,
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(height: 9),
-              const _SkeletonLine(width: 96),
-              const SizedBox(height: 5),
-              const _SkeletonLine(width: 72),
-              const SizedBox(height: 5),
-              const _SkeletonLine(width: 58),
-            ],
-          ),
+            ),
+            const SizedBox(height: 9),
+            const _SkeletonLine(width: 96),
+            const SizedBox(height: 5),
+            const _SkeletonLine(width: 72),
+            const SizedBox(height: 5),
+            const _SkeletonLine(width: 58),
+          ],
         ),
       ),
     );
