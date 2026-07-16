@@ -17,6 +17,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     required this.textPrimary,
     required this.textSecondary,
     required this.plumoAccent,
+    required this.plumora,
     required this.secondary,
     required this.muted,
     required this.border,
@@ -55,6 +56,11 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
   final Color textPrimary;
   final Color textSecondary;
   final Color plumoAccent;
+
+  /// Bold accent reserved for Plumora-native work badges/icons (book covers,
+  /// section headers, chapter tiles) -- kept distinct from [secondary],
+  /// which became a pale tint and is no longer legible for that role.
+  final Color plumora;
   final Color secondary;
   final Color muted;
   final Color border;
@@ -84,37 +90,43 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
   final Color brandGold;
   final Color brandGoldLight;
 
+  /// Matches the updated (violet) `figma/src/styles/theme.css` `:root`
+  /// tokens exactly. `brandXxx` fields are intentionally left on the old
+  /// ink-violet/navy/gold palette: the Figma update kept those specific
+  /// decorative gradients (Home quick actions, continue-reading card)
+  /// hardcoded to their original hex values rather than retheming them.
   static const PlumoraColors light = PlumoraColors(
-    primary: Color(0xFF4B2E83),
-    primaryDark: Color(0xFF3A2268),
-    primaryLight: Color(0xFF6B44B8),
-    background: Color(0xFFF8F7F3),
+    primary: Color(0xFF7C5CFF),
+    primaryDark: Color(0xFF5B3EDD),
+    primaryLight: Color(0xFF9B7FFF),
+    background: Color(0xFFF5F3FF),
     cards: Color(0xFFFFFFFF),
-    textPrimary: Color(0xFF1F1F1F),
-    textSecondary: Color(0xFF6B6B6B),
-    plumoAccent: Color(0xFF6B44B8),
-    secondary: Color(0xFF16213E),
-    muted: Color(0xFFF0EDE6),
-    border: Color(0xFFE5E2DA),
-    accent: Color(0xFFC9A227),
+    textPrimary: Color(0xFF1A1040),
+    textSecondary: Color(0xFF7167A0),
+    plumoAccent: Color(0xFFA67CFF),
+    plumora: Color(0xFF9B6FD4),
+    secondary: Color(0xFFEDE9FF),
+    muted: Color(0xFFF0EEFF),
+    border: Color(0xFFDDD8FF),
+    accent: Color(0xFFD6B25E),
     orange: Color(0xFFFF6B35),
     orangeLight: Color(0xFFFF8C5A),
-    destructive: Color(0xFFD94F4F),
-    warning: Color(0xFFC9A227),
-    success: Color(0xFF2E8B57),
-    info: Color(0xFF16213E),
+    destructive: Color(0xFFE05252),
+    warning: Color(0xFFD97706),
+    success: Color(0xFF2EA87A),
+    info: Color(0xFF7C5CFF),
     appOutside: Color(0xFFF3F3F3),
     darkBackground: Color(0xFF111111),
     darkSurface: Color(0xFF1F1F1F),
     onPrimary: Color(0xFFFFFFFF),
-    onSecondary: Color(0xFFFFFFFF),
-    onAccent: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFF1A1040),
+    onAccent: Color(0xFF1A1040),
     onDestructive: Color(0xFFFFFFFF),
     inputBackground: Color(0xFFFFFFFF),
-    switchBackground: Color(0xFFE5E2DA),
-    ring: Color(0xFF4B2E83),
-    sidebar: Color(0xFFF8F7F3),
-    sidebarForeground: Color(0xFF1F1F1F),
+    switchBackground: Color(0xFFDDD8FF),
+    ring: Color(0xFF7C5CFF),
+    sidebar: Color(0xFFF5F3FF),
+    sidebarForeground: Color(0xFF1A1040),
     brandPrimary: Color(0xFF4B2E83),
     brandPrimaryLight: Color(0xFF6B44B8),
     brandNavy: Color(0xFF16213E),
@@ -133,6 +145,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     textPrimary: Color(0xFFF4F1EA),
     textSecondary: Color(0xFFA8A8B3),
     plumoAccent: Color(0xFF7C5CFF),
+    plumora: Color(0xFF9B6FD4),
     secondary: Color(0xFF161B22),
     muted: Color(0xFF1A2030),
     border: Color(0xFF2A3142),
@@ -173,6 +186,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
     Color? textPrimary,
     Color? textSecondary,
     Color? plumoAccent,
+    Color? plumora,
     Color? secondary,
     Color? muted,
     Color? border,
@@ -211,6 +225,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
       plumoAccent: plumoAccent ?? this.plumoAccent,
+      plumora: plumora ?? this.plumora,
       secondary: secondary ?? this.secondary,
       muted: muted ?? this.muted,
       border: border ?? this.border,
@@ -257,6 +272,7 @@ class PlumoraColors extends ThemeExtension<PlumoraColors> {
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
       plumoAccent: Color.lerp(plumoAccent, other.plumoAccent, t)!,
+      plumora: Color.lerp(plumora, other.plumora, t)!,
       secondary: Color.lerp(secondary, other.secondary, t)!,
       muted: Color.lerp(muted, other.muted, t)!,
       border: Color.lerp(border, other.border, t)!,

@@ -142,8 +142,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // The shared AppHeader only shows the Plumora brand lockup on mobile
+    // (no greeting text) -- the "Bonjour" subtitle is desktop-only, matching
+    // the updated Figma `AppHeader` component.
     expect(find.text('Plumora'), findsOneWidget);
-    expect(find.text('Bonjour, Plumora'), findsOneWidget);
     expect(find.text('— Victor Hugo'), findsOneWidget);
     expect(find.text('Continuer la lecture'), findsOneWidget);
     expect(find.text('La Nuit Rouge'), findsOneWidget);

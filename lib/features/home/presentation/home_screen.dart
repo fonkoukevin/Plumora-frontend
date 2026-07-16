@@ -8,8 +8,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/theme/theme_mode_controller.dart';
+import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
-import '../../../core/widgets/plumora_logo_mark.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../beta_reading/data/repositories/beta_reading_repository.dart';
@@ -35,8 +35,6 @@ class HomeScreen extends ConsumerWidget {
     final readingsAsync = ref.watch(myReadingProgressProvider);
     final betaAsync = ref.watch(betaInvitationsProvider);
     final notificationsAsync = ref.watch(myNotificationsProvider);
-    final unreadCount =
-        ref.watch(unreadNotificationsCountProvider).valueOrNull ?? 0;
 
     return ColoredBox(
       color: context.colors.background,
@@ -46,10 +44,7 @@ class HomeScreen extends ConsumerWidget {
           slivers: [
             SliverPersistentHeader(
               pinned: true,
-              delegate: _HomeHeaderDelegate(
-                unreadCount: unreadCount,
-                displayName: displayName,
-              ),
+              delegate: _HomeHeaderDelegate(displayName: displayName),
             ),
             SliverToBoxAdapter(
               child: Center(
@@ -168,12 +163,8 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _HomeHeaderDelegate({
-    required this.unreadCount,
-    required this.displayName,
-  });
+  const _HomeHeaderDelegate({required this.displayName});
 
-  final int unreadCount;
   final String displayName;
 
   static const _height = 78.0;
@@ -211,31 +202,15 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1280),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 7),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _HomeHeader(unreadCount: unreadCount),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'Bonjour, $displayName',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: context.colors.textPrimary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        const Text('👋', style: TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  ],
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                child: PlumoraAppHeader(
+                  title: 'Tableau de bord',
+                  subtitle:
+                      'Bonjour $displayName 👋 — Que voulez-vous '
+                      "faire aujourd'hui ?",
+                  emoji: '✨',
+                  gradient: [context.colors.primary, context.colors.plumora],
+                  trailing: const _ThemeToggleButton(),
                 ),
               ),
             ),
@@ -247,164 +222,54 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _HomeHeaderDelegate oldDelegate) {
-    return oldDelegate.unreadCount != unreadCount ||
-        oldDelegate.displayName != displayName;
+    return oldDelegate.displayName != displayName;
   }
 }
 
-class _HomeHeader extends ConsumerWidget {
-  const _HomeHeader({required this.unreadCount});
-
-  final int unreadCount;
+class _ThemeToggleButton extends ConsumerWidget {
+  const _ThemeToggleButton();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeControllerProvider);
     final isDark = themeMode == ThemeMode.dark;
 
-    return Row(
-      children: [
-        const Expanded(child: _HomeBrand()),
-        Semantics(
-          button: true,
-          label: isDark ? 'Activer le theme clair' : 'Activer le theme sombre',
-          child: Tooltip(
-            message: isDark ? 'Thème clair' : 'Thème sombre',
-            child: InkWell(
-              onTap: () async {
-                try {
-                  await ref.read(themeModeControllerProvider.notifier).toggle();
-                } catch (_) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Impossible d’enregistrer le thème.'),
-                      ),
-                    );
-                  }
-                }
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 36,
-                height: 36,
-                child: Icon(
-                  isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                  size: 20,
-                  color: context.colors.textSecondary,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 2),
-        Semantics(
-          button: true,
-          label: unreadCount > 0
-              ? '$unreadCount notifications non lues'
-              : 'Notifications',
+    return Semantics(
+      button: true,
+      label: isDark ? 'Activer le theme clair' : 'Activer le theme sombre',
+      child: Tooltip(
+        message: isDark ? 'Thème clair' : 'Thème sombre',
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
           child: InkWell(
-            onTap: () => context.go(AppRoutes.notifications),
-            borderRadius: BorderRadius.circular(999),
-            child: SizedBox(
-              width: 34,
-              height: 34,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    Icons.notifications_none_rounded,
-                    size: 20,
-                    color: context.colors.textSecondary,
-                  ),
-                  if (unreadCount > 0)
-                    Positioned(
-                      top: 5,
-                      right: 7,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: context.colors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const SizedBox(width: 6, height: 6),
-                      ),
+            customBorder: const CircleBorder(),
+            hoverColor: context.colors.muted.withValues(alpha: 0.6),
+            onTap: () async {
+              try {
+                await ref.read(themeModeControllerProvider.notifier).toggle();
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Impossible d’enregistrer le thème.'),
                     ),
-                ],
+                  );
+                }
+              }
+            },
+            child: SizedBox(
+              width: 36,
+              height: 36,
+              child: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                size: 20,
+                color: context.colors.textSecondary,
               ),
             ),
           ),
         ),
-        const SizedBox(width: 5),
-        InkWell(
-          onTap: () => context.go(AppRoutes.profile),
-          borderRadius: BorderRadius.circular(999),
-          child: Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [context.colors.brandPrimary, context.colors.brandNavy],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x26000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.person_outline_rounded,
-              size: 16,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HomeBrand extends StatelessWidget {
-  const _HomeBrand();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: context.colors.primary,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: const PlumoraLogoMark(
-            size: 18,
-            color: Colors.white,
-            strokeWidth: 2,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            'Plumora',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.playfairDisplay(
-              color: context.colors.textPrimary,
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-              height: 1,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -865,20 +730,16 @@ class _BookRail extends StatelessWidget {
                 icon: Icons.menu_book_outlined,
               );
             }
-            return SizedBox(
-              height: _homeBookRailHeight,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: books.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final book = books[index];
-                  return _BookTile(
-                    book: book,
-                    rank: rankItems ? index + 1 : null,
-                  );
-                },
-              ),
+            return FigmaAdaptiveRail(
+              itemCount: books.length,
+              railHeight: _homeBookRailHeight,
+              itemBuilder: (context, index) {
+                final book = books[index];
+                return _BookTile(
+                  book: book,
+                  rank: rankItems ? index + 1 : null,
+                );
+              },
             );
           },
         ),
@@ -1075,7 +936,7 @@ class _BetaSummaryCard extends StatelessWidget {
         children: [
           FigmaGradientIcon(
             icon: Icons.chat_bubble_outline,
-            colors: [context.colors.secondary, context.colors.primary],
+            colors: [context.colors.plumora, context.colors.primary],
           ),
           const SizedBox(width: 14),
           Expanded(
