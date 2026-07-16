@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../auth/data/models/role_model.dart';
 import '../../auth/data/models/user_model.dart';
@@ -72,6 +73,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          PlumoraAppHeader(
+            title: 'Mon profil',
+            subtitle: '${user.displayName} · ${_roleLabel(roles)}',
+            emoji: '👤',
+            gradient: [context.colors.plumora, context.colors.accent],
+          ),
+          const SizedBox(height: 18),
           FigmaCard(
             padding: const EdgeInsets.all(28),
             borderColor: Colors.transparent,
