@@ -648,14 +648,21 @@ class _UsersTable extends StatelessWidget {
                 ].asMap().entries)
                   Expanded(
                     flex: _columns[entry.key],
-                    child: Text(
-                      entry.value,
-                      textAlign: entry.key == 5 ? TextAlign.right : TextAlign.left,
-                      style: const TextStyle(
-                        color: AdminColors.muted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: entry.key >= 2 && entry.key <= 4 ? 8 : 0,
+                      ),
+                      child: Text(
+                        entry.value,
+                        textAlign: entry.key == 5
+                            ? TextAlign.right
+                            : TextAlign.left,
+                        style: const TextStyle(
+                          color: AdminColors.muted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                        ),
                       ),
                     ),
                   ),
@@ -697,7 +704,7 @@ class _UserRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
           Expanded(
@@ -748,23 +755,33 @@ class _UserRow extends StatelessWidget {
           ),
           Expanded(
             flex: 1,
-            child: user.roles.isEmpty
-                ? const Text('—', style: TextStyle(color: AdminColors.muted))
-                : AdminRoleBadge(role: user.roles.first),
-          ),
-          Expanded(
-            flex: 1,
-            child: AdminBadge(
-              label: user.status.label,
-              color: user.active ? AdminColors.success : AdminColors.error,
-              icon: user.active ? Icons.check_circle : Icons.cancel,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: user.roles.isEmpty
+                  ? const Text('—', style: TextStyle(color: AdminColors.muted))
+                  : AdminRoleBadge(role: user.roles.first, compact: true),
             ),
           ),
           Expanded(
             flex: 1,
-            child: Text(
-              _formatDate(user.createdAt),
-              style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: AdminBadge(
+                label: user.status.label,
+                color: user.active ? AdminColors.success : AdminColors.error,
+                icon: user.active ? Icons.check_circle : Icons.cancel,
+                compact: true,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                _formatDate(user.createdAt),
+                style: const TextStyle(color: AdminColors.muted, fontSize: 11),
+              ),
             ),
           ),
           Expanded(

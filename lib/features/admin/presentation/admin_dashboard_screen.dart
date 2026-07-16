@@ -274,7 +274,10 @@ class _SidePanel extends ConsumerWidget {
       children: [
         aiAsync.maybeWhen(
           data: (ai) => AdminCard(
-            borderColor: AdminColors.plumo.withValues(alpha: 0.3),
+            padding: const EdgeInsets.all(16),
+            radius: 18,
+            backgroundColor: AdminColors.plumo.withValues(alpha: 0.08),
+            borderColor: AdminColors.plumo.withValues(alpha: 0.28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -294,51 +297,82 @@ class _SidePanel extends ConsumerWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     AdminBadge(
                       label: ai.enabled ? 'Actif' : 'Désactivé',
                       color: ai.enabled
                           ? AdminColors.success
                           : AdminColors.error,
                       icon: ai.enabled ? Icons.check_circle : Icons.cancel,
+                      compact: true,
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Fournisseur : ${ai.providerName} ${ai.modelName}',
-                  style: const TextStyle(
-                    color: AdminColors.muted,
-                    fontSize: 11,
+                const SizedBox(height: 10),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'Fournisseur : ',
+                        style: TextStyle(color: AdminColors.muted),
+                      ),
+                      TextSpan(
+                        text: _formatAiModel(ai.providerName, ai.modelName),
+                        style: const TextStyle(color: AdminColors.text),
+                      ),
+                    ],
                   ),
+                  style: const TextStyle(fontSize: 11),
+                ),
+                const SizedBox(height: 5),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'Dernière erreur : ',
+                        style: TextStyle(color: AdminColors.muted),
+                      ),
+                      TextSpan(
+                        text: ai.lastError ?? 'Aucune',
+                        style: TextStyle(
+                          color: ai.lastError == null
+                              ? AdminColors.success
+                              : AdminColors.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11),
                 ),
               ],
             ),
           ),
           orElse: () => const SizedBox.shrink(),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         const Text(
           'Actions rapides',
           style: TextStyle(
             color: AdminColors.text,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 16),
         _QuickActionButton(
           label: 'Gérer les utilisateurs',
           icon: Icons.people_outline,
           onTap: () => context.go(AppRoutes.adminUsers),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         _QuickActionButton(
           label: 'Consulter le catalogue',
           icon: Icons.menu_book_outlined,
           onTap: () => context.go(AppRoutes.adminCatalog),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         _QuickActionButton(
           label: 'Voir les signalements',
           icon: Icons.flag_outlined,
@@ -363,12 +397,13 @@ class _QuickActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AdminCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      radius: 18,
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 15, color: AdminColors.primary),
-          const SizedBox(width: 10),
+          Icon(icon, size: 16, color: AdminColors.primary),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
@@ -384,6 +419,31 @@ class _QuickActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatAiModel(String providerName, String modelName) {
+  final provider = providerName.trim();
+  final model = modelName.trim();
+  final normalizedModel = model.toLowerCase().replaceAll('_', '-');
+
+  if (normalizedModel == 'gemini-flash-lite-latest' ||
+      normalizedModel == 'gemini-2.5-flash-lite' ||
+      normalizedModel == 'gemini-2.5-flash-lite-latest') {
+    return 'Gemini 2.5 Flash-Lite';
+  }
+
+  if (provider.toLowerCase() == 'mock' &&
+      normalizedModel == 'local-heuristic') {
+    return 'Mode de démonstration local';
+  }
+
+  if (model.isNotEmpty) {
+    return model;
+  }
+  if (provider.isNotEmpty) {
+    return provider;
+  }
+  return 'Non configuré';
 }
 
 String _relativeDate(DateTime? date) {

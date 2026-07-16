@@ -136,7 +136,7 @@ class _AdminSidebar extends ConsumerWidget {
     final session = ref.watch(authControllerProvider).valueOrNull;
 
     return Container(
-      width: 232,
+      width: 240,
       decoration: const BoxDecoration(
         color: AdminColors.surface,
         border: Border(right: BorderSide(color: AdminColors.border)),
@@ -176,10 +176,11 @@ class _AdminSidebar extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AdminColors.mutedBg,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     children: [
@@ -202,7 +203,9 @@ class _AdminSidebar extends ConsumerWidget {
                               ),
                             ),
                             const Text(
-                              'ADMIN',
+                              'Administrateur',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: AdminColors.muted,
                                 fontSize: 11,
@@ -214,7 +217,7 @@ class _AdminSidebar extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 _QuitAdminButton(),
               ],
             ),
@@ -338,44 +341,55 @@ class _AdminBrand extends StatelessWidget {
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AdminColors.border)),
       ),
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: AdminColors.primary,
-                  borderRadius: BorderRadius.circular(8),
+                  gradient: const LinearGradient(
+                    colors: [AdminColors.primary, AdminColors.plumora],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AdminColors.primary.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: const Icon(
                   Icons.edit_note,
                   color: Colors.white,
-                  size: 16,
+                  size: 14,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Text(
                 'Plumora',
                 style: GoogleFonts.playfairDisplay(
                   color: AdminColors.text,
-                  fontSize: 17,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: AdminColors.error.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AdminColors.error.withValues(alpha: 0.27),
+                color: AdminColors.error.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -383,12 +397,12 @@ class _AdminBrand extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.shield_outlined,
-                  size: 11,
+                  size: 10,
                   color: AdminColors.error,
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Administration',
+                  'Espace Administration',
                   style: TextStyle(
                     color: AdminColors.error,
                     fontSize: 11,
@@ -428,15 +442,14 @@ class _AdminNavTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => context.go(item.path),
+          hoverColor: active ? null : AdminColors.mutedBg,
           child: Container(
             padding: EdgeInsets.symmetric(
               horizontal: 12,
               vertical: compact ? 9 : 11,
             ),
             decoration: BoxDecoration(
-              color: active
-                  ? AdminColors.primary.withValues(alpha: 0.12)
-                  : null,
+              color: active ? AdminColors.primaryBg : null,
               borderRadius: BorderRadius.circular(10),
               border: Border(
                 left: BorderSide(
@@ -501,15 +514,19 @@ class _AdminAvatar extends StatelessWidget {
     return Container(
       width: 32,
       height: 32,
-      decoration: BoxDecoration(
-        color: AdminColors.plumora.withValues(alpha: 0.28),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AdminColors.plumora, AdminColors.primary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
       child: Text(
         initials,
         style: const TextStyle(
-          color: AdminColors.plumora,
+          color: Colors.white,
           fontSize: 11,
           fontWeight: FontWeight.w800,
         ),
@@ -521,22 +538,35 @@ class _AdminAvatar extends StatelessWidget {
 class _QuitAdminButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return OutlinedButton.icon(
-      onPressed: () async {
-        await ref.read(authControllerProvider.notifier).logout();
-        if (context.mounted) {
-          context.go(AppRoutes.landing);
-        }
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AdminColors.muted,
-        side: const BorderSide(color: AdminColors.border),
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        minimumSize: const Size(double.infinity, 0),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        hoverColor: AdminColors.mutedBg,
+        onTap: () async {
+          await ref.read(authControllerProvider.notifier).logout();
+          if (context.mounted) {
+            context.go(AppRoutes.landing);
+          }
+        },
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Icon(Icons.logout, size: 13, color: AdminColors.muted),
+              SizedBox(width: 8),
+              Text(
+                "Quitter l'administration",
+                style: TextStyle(
+                  color: AdminColors.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      icon: const Icon(Icons.logout, size: 13),
-      label: const Text("Quitter l'admin", style: TextStyle(fontSize: 12)),
     );
   }
 }
@@ -553,8 +583,8 @@ class _AdminTopBar extends ConsumerWidget {
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 14 : 16,
-        vertical: compact ? 8 : 12,
+        horizontal: compact ? 14 : 20,
+        vertical: compact ? 8 : 14,
       ),
       decoration: const BoxDecoration(
         color: AdminColors.surface,
@@ -567,21 +597,104 @@ class _AdminTopBar extends ConsumerWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: GoogleFonts.playfairDisplay(
                 color: AdminColors.text,
-                fontSize: compact ? 12 : 14,
-                fontWeight: FontWeight.w700,
+                fontSize: compact ? 12 : 16,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
-          Icon(
-            Icons.notifications_outlined,
-            size: compact ? 16 : 18,
-            color: AdminColors.muted.withValues(alpha: 0.7),
-          ),
+          if (compact) const _AdminMobileLogoutButton() else _AdminBellButton(),
           SizedBox(width: compact ? 8 : 12),
           _AdminAvatar(initials: _initialsFor(session?.user?.displayName)),
         ],
+      ),
+    );
+  }
+}
+
+class _AdminBellButton extends StatelessWidget {
+  const _AdminBellButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Notifications',
+      child: Material(
+        color: AdminColors.mutedBg,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          hoverColor: AdminColors.primaryBg,
+          onTap: () {},
+          child: const Padding(
+            padding: EdgeInsets.all(8),
+            child: Icon(
+              Icons.notifications_outlined,
+              size: 15,
+              color: AdminColors.muted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminMobileLogoutButton extends ConsumerWidget {
+  const _AdminMobileLogoutButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final radius = BorderRadius.circular(999);
+
+    return Tooltip(
+      message: 'Se déconnecter',
+      child: Semantics(
+        button: true,
+        label: 'Se déconnecter de Plumora',
+        child: Material(
+          color: AdminColors.primary.withValues(alpha: 0.1),
+          borderRadius: radius,
+          child: InkWell(
+            onTap: () async {
+              await ref.read(authControllerProvider.notifier).logout();
+              if (context.mounted) {
+                context.go(AppRoutes.landing);
+              }
+            },
+            borderRadius: radius,
+            child: Container(
+              height: 30,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.all(
+                  color: AdminColors.primary.withValues(alpha: 0.28),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.logout_rounded,
+                    size: 13,
+                    color: AdminColors.primary,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Déconnexion',
+                    style: TextStyle(
+                      color: AdminColors.primary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

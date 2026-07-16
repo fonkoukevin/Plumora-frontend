@@ -3,11 +3,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../beta_reading/data/models/beta_campaign_model.dart';
@@ -160,7 +160,7 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback onSearchChanged;
   final ValueChanged<String> onTabSelected;
 
-  static const _height = 180.0;
+  static const _height = 196.0;
 
   @override
   double get minExtent => _height;
@@ -199,14 +199,11 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Bibliotheque',
-                      style: GoogleFonts.playfairDisplay(
-                        color: context.colors.textPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        height: 1.1,
-                      ),
+                    PlumoraAppHeader(
+                      title: 'Bibliothèque',
+                      subtitle: 'Vos lectures, vos favoris, votre univers',
+                      emoji: '📚',
+                      gradient: [context.colors.accent, context.colors.plumora],
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
@@ -334,10 +331,14 @@ class _ReadingsTab extends StatelessWidget {
                 icon: Icons.menu_book_outlined,
               )
             else
-              for (final reading in filtered) ...[
-                _ReadingTile(reading: reading),
-                const SizedBox(height: 12),
-              ],
+              FigmaResponsiveGrid(
+                minTileWidth: 420,
+                maxColumns: 2,
+                children: [
+                  for (final reading in filtered)
+                    _ReadingTile(reading: reading),
+                ],
+              ),
           ],
         );
       },
@@ -467,7 +468,7 @@ class _BetaTab extends ConsumerWidget {
               title: 'Espace Beta-lecture',
               subtitle: 'Aidez les auteurs avec vos retours',
               icon: Icons.chat_bubble_outline,
-              colors: [context.colors.secondary, context.colors.primary],
+              colors: [context.colors.plumora, context.colors.primary],
               backgroundGradientColors: [Color(0xFF5BA8FF), Color(0xFFC084FC)],
             ),
             if (pendingCount > 0) ...[
@@ -483,10 +484,14 @@ class _BetaTab extends ConsumerWidget {
                 icon: Icons.edit_note_outlined,
               )
             else
-              for (final entry in filtered) ...[
-                _BetaTile(entry: entry),
-                const SizedBox(height: 12),
-              ],
+              FigmaResponsiveGrid(
+                minTileWidth: 420,
+                maxColumns: 2,
+                children: [
+                  for (final entry in filtered) _BetaTile(entry: entry),
+                ],
+              ),
+            const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(

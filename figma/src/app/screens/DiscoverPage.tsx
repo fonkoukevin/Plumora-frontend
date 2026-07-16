@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MobileNav } from '../components/MobileNav';
+import { AppHeader } from '../components/AppHeader';
 import { Search, Star, Heart, Flame, Sparkles, BookMarked, TrendingUp, Zap } from 'lucide-react';
 
 interface DiscoverPageProps {
@@ -63,19 +63,20 @@ export function DiscoverPage({ onNavigate }: DiscoverPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
-      {/* Sticky header */}
+    <div className="min-h-screen bg-background pb-24 lg:pb-0">
+      <AppHeader
+        title="Découvrir"
+        subtitle="Explorez des milliers d'histoires inédites"
+        emoji="🔍"
+        gradient={['#9B6FD4', '#7C5CFF']}
+        onNavigate={onNavigate}
+      />
+      {/* Search + filters */}
       <div
-        className="sticky top-0 z-30 px-4 pt-5 pb-3 border-b border-border bg-background/95"
+        className="sticky top-[65px] z-20 px-4 pt-3 pb-3 border-b border-border bg-background/95"
         style={{ backdropFilter: 'blur(12px)' }}
       >
         <div className="max-w-7xl mx-auto">
-          <h1
-            className="text-xl font-bold text-foreground mb-3"
-            style={{ fontFamily: 'var(--font-family-display)' }}
-          >
-            Decouvrir
-          </h1>
           <div className="relative mb-3">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -267,7 +268,6 @@ export function DiscoverPage({ onNavigate }: DiscoverPageProps) {
 
       </div>
 
-      <MobileNav currentPage="discover" onNavigate={onNavigate} />
     </div>
   );
 }

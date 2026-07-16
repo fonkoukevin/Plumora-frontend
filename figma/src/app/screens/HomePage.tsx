@@ -1,7 +1,7 @@
-import { MobileNav } from '../components/MobileNav';
+import { AppHeader } from '../components/AppHeader';
 import {
-  Bell, User, Star, ChevronRight, Clock, Flame, Sparkles,
-  BookOpen, PenTool, MessageSquare, Zap, Quote, Feather,
+  Star, ChevronRight, Clock, Flame, Sparkles,
+  BookOpen, PenTool, MessageSquare, Zap, Quote,
 } from 'lucide-react';
 
 interface HomePageProps {
@@ -39,41 +39,14 @@ const ACTIVITY = [
 
 export function HomePage({ onNavigate }: HomePageProps) {
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
-      {/* Sticky header */}
-      <header
-        className="sticky top-0 z-30 px-4 pt-5 pb-3 border-b border-border bg-background/95"
-        style={{ backdropFilter: 'blur(12px)' }}
-      >
-        <div className="max-w-7xl mx-auto space-y-1">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-2.5">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #4B2E83, #6B44B8)' }}
-              >
-                <Feather className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-foreground" style={{ fontFamily: 'var(--font-family-display)' }}>Plumora</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="w-9 h-9 rounded-xl hover:bg-muted flex items-center justify-center transition-colors relative">
-                <Bell className="w-5 h-5 text-muted-foreground" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
-              </button>
-              <button
-                onClick={() => onNavigate('profile')}
-                className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
-                style={{ background: 'linear-gradient(135deg, #4B2E83, #16213E)' }}
-              >
-                <User className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          </div>
-          <p className="text-base font-semibold text-foreground">Bonjour, Kevin 👋</p>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background pb-24 lg:pb-0">
+      <AppHeader
+        title="Tableau de bord"
+        subtitle="Bonjour Kevin 👋 — Que voulez-vous faire aujourd'hui ?"
+        emoji="✨"
+        gradient={['#7C5CFF', '#9B6FD4']}
+        onNavigate={onNavigate}
+      />
 
       <div className="max-w-7xl mx-auto px-4 space-y-7 pt-5">
 
@@ -257,7 +230,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
       </div>
 
-      <MobileNav currentPage="home" onNavigate={onNavigate} />
     </div>
   );
 }
