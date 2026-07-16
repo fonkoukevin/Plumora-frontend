@@ -8,6 +8,7 @@ class AdminAiStatus {
     required this.modelName,
     required this.totalWritingRequests,
     required this.totalRecommendationRequests,
+    this.lastError,
     this.updatedAt,
   });
 
@@ -16,12 +17,19 @@ class AdminAiStatus {
   final String modelName;
   final int totalWritingRequests;
   final int totalRecommendationRequests;
+  final String? lastError;
   final DateTime? updatedAt;
 
   int get totalCalls => totalWritingRequests + totalRecommendationRequests;
 
   factory AdminAiStatus.fromJson(Object? value) {
     final json = _readMap(value);
+    final lastError = _readString(json, [
+      'lastError',
+      'last_error',
+      'lastErrorMessage',
+      'last_error_message',
+    ]);
     return AdminAiStatus(
       enabled: _readBool(json['enabled']) ?? false,
       providerName: _readString(json, ['providerName', 'provider_name']),
@@ -34,6 +42,7 @@ class AdminAiStatus {
         'totalRecommendationRequests',
         'total_recommendation_requests',
       ]),
+      lastError: lastError.isEmpty ? null : lastError,
       updatedAt: _readDate(json, ['updatedAt', 'updated_at']),
     );
   }

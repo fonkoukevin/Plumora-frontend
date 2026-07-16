@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_error.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../data/models/admin_report_model.dart';
 import '../data/repositories/admin_repository.dart';
 import 'admin_colors.dart';
@@ -83,9 +84,11 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                         icon: Icons.check_circle_outline,
                       )
                     else
-                      Column(
+                      FigmaResponsiveGrid(
+                        minTileWidth: 440,
+                        maxColumns: 2,
                         children: [
-                          for (final report in filtered) ...[
+                          for (final report in filtered)
                             _ReportCard(
                               report: report,
                               busy: _busyIds.contains(report.id),
@@ -97,8 +100,6 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
                                   ? () => _archiveContent(report)
                                   : null,
                             ),
-                            const SizedBox(height: 10),
-                          ],
                         ],
                       ),
                   ],

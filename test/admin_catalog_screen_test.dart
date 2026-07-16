@@ -81,8 +81,8 @@ void main() {
     expect(find.text('4 signalements'), findsOneWidget);
     expect(find.text('Détail'), findsNWidgets(2));
     expect(find.text('Archiver'), findsNWidgets(2));
-    expect(find.text('Déconnexion'), findsNothing);
-    expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
+    expect(find.text('Déconnexion'), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_outlined), findsNothing);
 
     final searchField = tester.widget<TextField>(find.byType(TextField));
     expect(searchField.decoration?.filled, isTrue);

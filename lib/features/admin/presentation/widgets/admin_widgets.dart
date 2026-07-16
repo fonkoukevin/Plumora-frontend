@@ -174,6 +174,7 @@ class AdminCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(20),
     this.onTap,
     this.borderColor,
+    this.backgroundColor,
     this.radius = 16,
     super.key,
   });
@@ -182,6 +183,7 @@ class AdminCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
   final Color? borderColor;
+  final Color? backgroundColor;
   final double radius;
 
   @override
@@ -190,7 +192,7 @@ class AdminCard extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: AdminColors.card,
+        color: backgroundColor ?? AdminColors.card,
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: borderColor ?? AdminColors.border),
       ),
@@ -296,17 +298,22 @@ class AdminBadge extends StatelessWidget {
     required this.label,
     this.color = AdminColors.primary,
     this.icon,
+    this.compact = false,
     super.key,
   });
 
   final String label;
   final Color color;
   final IconData? icon;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 3 : 6,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(999),
@@ -316,14 +323,14 @@ class AdminBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 5),
+            Icon(icon, size: compact ? 10 : 12, color: color),
+            SizedBox(width: compact ? 4 : 5),
           ],
           Text(
             label,
             style: TextStyle(
               color: color,
-              fontSize: 12,
+              fontSize: compact ? 11 : 12,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -334,9 +341,10 @@ class AdminBadge extends StatelessWidget {
 }
 
 class AdminRoleBadge extends StatelessWidget {
-  const AdminRoleBadge({required this.role, super.key});
+  const AdminRoleBadge({required this.role, this.compact = false, super.key});
 
   final String role;
+  final bool compact;
 
   static Color colorFor(String role) {
     switch (role.trim().toUpperCase()) {
@@ -353,7 +361,7 @@ class AdminRoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AdminBadge(label: role, color: colorFor(role));
+    return AdminBadge(label: role, color: colorFor(role), compact: compact);
   }
 }
 

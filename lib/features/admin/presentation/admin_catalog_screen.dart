@@ -38,7 +38,7 @@ class _AdminCatalogScreenState extends ConsumerState<AdminCatalogScreen> {
       title: 'Catalogue',
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < 700;
+          final compact = constraints.maxWidth < 900;
 
           return SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
@@ -83,21 +83,30 @@ class _AdminCatalogScreenState extends ConsumerState<AdminCatalogScreen> {
                                 setState(() => _search = value),
                           )
                         else
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                          Row(
                             children: [
-                              for (final tab in _CatalogTab.values)
+                              for (
+                                var index = 0;
+                                index < _CatalogTab.values.length;
+                                index++
+                              ) ...[
                                 AdminFilterChip(
-                                  label: _tabLabel(tab),
-                                  selected: _tab == tab,
-                                  onTap: () => setState(() => _tab = tab),
+                                  label: _tabLabel(_CatalogTab.values[index]),
+                                  selected: _tab == _CatalogTab.values[index],
+                                  compact: true,
+                                  onTap: () => setState(
+                                    () => _tab = _CatalogTab.values[index],
+                                  ),
                                 ),
+                                if (index != _CatalogTab.values.length - 1)
+                                  const SizedBox(width: 8),
+                              ],
+                              const Spacer(),
                               SizedBox(
-                                width: 200,
+                                width: 176,
                                 child: AdminSearchField(
                                   controller: _searchController,
+                                  compact: true,
                                   hintText: 'Rechercher...',
                                   onChanged: (value) =>
                                       setState(() => _search = value),
@@ -138,6 +147,7 @@ class _AdminCatalogScreenState extends ConsumerState<AdminCatalogScreen> {
                             padding: EdgeInsets.zero,
                             child: Column(
                               children: [
+                                const _BookTableHeader(),
                                 for (var i = 0; i < filtered.length; i++) ...[
                                   _BookRow(
                                     book: filtered[i],
@@ -582,18 +592,20 @@ class _CoverThumb extends ConsumerWidget {
     required this.book,
     required this.width,
     required this.height,
+    this.radius = 8,
   });
 
   final AdminBook book;
   final double width;
   final double height;
+  final double radius;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PlumoraBookCover(
       width: width,
       height: height,
-      radius: 8,
+      radius: radius,
       colors: _coverColors(book),
       imageUrl: book.coverUrl,
     );
@@ -856,6 +868,59 @@ class _CompactCatalogAction extends StatelessWidget {
   }
 }
 
+class _BookTableHeader extends StatelessWidget {
+  const _BookTableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AdminColors.border)),
+      ),
+      child: const Row(
+        children: [
+          Expanded(flex: 18, child: _BookHeaderLabel('TITRE')),
+          Expanded(flex: 22, child: _BookHeaderLabel('AUTEUR', centered: true)),
+          Expanded(flex: 19, child: _BookHeaderLabel('TYPE', centered: true)),
+          Expanded(flex: 19, child: _BookHeaderLabel('STATUT', centered: true)),
+          SizedBox(
+            width: 90,
+            child: _BookHeaderLabel('SIGNALEMENTS', centered: true),
+          ),
+          SizedBox(
+            width: 78,
+            child: _BookHeaderLabel('ACTIONS', centered: true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookHeaderLabel extends StatelessWidget {
+  const _BookHeaderLabel(this.label, {this.centered = false});
+
+  final String label;
+  final bool centered;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: centered ? TextAlign.center : TextAlign.left,
+      style: const TextStyle(
+        color: AdminColors.muted,
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.25,
+      ),
+    );
+  }
+}
+
 class _BookRow extends StatelessWidget {
   const _BookRow({
     required this.book,
@@ -873,59 +938,97 @@ class _BookRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isReported = !book.isArchived && book.reportsCount > 0;
+    final statusLabel = isReported ? 'Signalé' : _statusLabel(book.status);
+    final statusColor = isReported
+        ? AdminColors.error
+        : _statusColor(book.status);
+    final statusIcon = isReported
+        ? Icons.warning_amber_rounded
+        : _statusIcon(book.status);
+
     return Opacity(
       opacity: book.isArchived ? 0.65 : 1,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            _CoverThumb(book: book, width: 34, height: 46),
-            const SizedBox(width: 12),
             Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              flex: 18,
+              child: Row(
                 children: [
-                  Text(
-                    book.title.isEmpty ? 'Livre sans titre' : book.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AdminColors.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    book.authorLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AdminColors.muted,
-                      fontSize: 11,
+                  _CoverThumb(book: book, width: 32, height: 44, radius: 4),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      book.title.isEmpty ? 'Livre sans titre' : book.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AdminColors.text,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             Expanded(
-              child: AdminBadge(
-                label: book.isPublicDomain ? 'Public' : 'Plumora',
-                color: book.isPublicDomain
-                    ? AdminColors.primary
-                    : AdminColors.plumora,
+              flex: 22,
+              child: Text(
+                book.authorLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AdminColors.muted, fontSize: 11),
               ),
             ),
             Expanded(
-              child: AdminBadge(
-                label: book.status,
-                color: _statusColor(book.status),
-                icon: _statusIcon(book.status),
+              flex: 19,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Align(
+                  alignment: Alignment.center,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 190),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: AdminBadge(
+                        label: book.isPublicDomain ? 'Public' : 'Plumora',
+                        color: book.isPublicDomain
+                            ? AdminColors.primary
+                            : AdminColors.plumora,
+                        compact: true,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 19,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Align(
+                  alignment: Alignment.center,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 190),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: AdminBadge(
+                        label: statusLabel,
+                        color: statusColor,
+                        icon: statusIcon,
+                        compact: true,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             SizedBox(
-              width: 60,
+              width: 90,
               child: Text(
                 book.reportsCount > 0 ? '${book.reportsCount}' : '—',
                 textAlign: TextAlign.center,
@@ -933,13 +1036,13 @@ class _BookRow extends StatelessWidget {
                   color: book.reportsCount > 0
                       ? AdminColors.error
                       : AdminColors.muted,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
                 ),
               ),
             ),
             SizedBox(
-              width: 96,
+              width: 78,
               child: busy
                   ? const Align(
                       alignment: Alignment.centerRight,
@@ -952,34 +1055,25 @@ class _BookRow extends StatelessWidget {
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        IconButton(
+                        _BookTableAction(
                           tooltip: 'Voir le détail',
                           onPressed: onDetail,
-                          icon: const Icon(
-                            Icons.visibility_outlined,
-                            size: 15,
-                            color: AdminColors.muted,
-                          ),
+                          icon: Icons.visibility_outlined,
+                          color: AdminColors.muted,
                         ),
                         if (onArchive != null)
-                          IconButton(
+                          _BookTableAction(
                             tooltip: 'Archiver',
-                            onPressed: onArchive,
-                            icon: const Icon(
-                              Icons.archive_outlined,
-                              size: 15,
-                              color: AdminColors.error,
-                            ),
+                            onPressed: onArchive!,
+                            icon: Icons.archive_outlined,
+                            color: AdminColors.error,
                           ),
                         if (onRestore != null)
-                          IconButton(
+                          _BookTableAction(
                             tooltip: 'Restaurer',
-                            onPressed: onRestore,
-                            icon: const Icon(
-                              Icons.restore,
-                              size: 15,
-                              color: AdminColors.success,
-                            ),
+                            onPressed: onRestore!,
+                            icon: Icons.restore,
+                            color: AdminColors.success,
                           ),
                       ],
                     ),
@@ -987,6 +1081,32 @@ class _BookRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BookTableAction extends StatelessWidget {
+  const _BookTableAction({
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+    required this.color,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+      visualDensity: VisualDensity.compact,
+      icon: Icon(icon, size: 13, color: color),
     );
   }
 }
