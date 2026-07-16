@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { AppHeader } from '../components/AppHeader';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { MobileNav } from '../components/MobileNav';
 import {
   User, Mail, Calendar, BookOpen, Feather, Settings, LogOut,
   Shield, Bell, Sparkles, Clock, CreditCard, Edit3, Award,
@@ -52,7 +52,7 @@ function PersonalInfoPage({ onBack }: { onBack: () => void }) {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <div className="min-h-screen bg-background pb-24 lg:pb-0">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/95 border-b border-border px-4 pt-5 pb-3" style={{ backdropFilter: 'blur(12px)' }}>
         <div className="max-w-lg mx-auto flex items-center justify-between">
@@ -192,13 +192,19 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
     return (
       <>
         <PersonalInfoPage onBack={() => setShowPersonalInfo(false)} />
-        <MobileNav currentPage="profile" onNavigate={onNavigate} />
       </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+      <AppHeader
+        title="Mon profil"
+        subtitle="Kevin Fonkou · Auteur Pro"
+        emoji="👤"
+        gradient={['#9B6FD4', '#D6B25E']}
+        onNavigate={onNavigate}
+      />
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {/* Hero profil */}
         <div className="rounded-3xl p-8 text-white relative overflow-hidden shadow-md" style={{ background: 'linear-gradient(135deg, #8B5E3C, #6D3A5D)' }}>
@@ -291,7 +297,6 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
         </div>
       </div>
 
-      <MobileNav currentPage="profile" onNavigate={onNavigate} />
     </div>
   );
 }

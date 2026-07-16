@@ -5,61 +5,61 @@
   --font-family: 'Nunito', system-ui, sans-serif;
   --font-family-display: 'Playfair Display', Georgia, serif;
 
-  /* Fond principal — blanc cassé */
-  --background: #F8F7F3;
-  /* Texte principal — noir doux */
-  --foreground: #1F1F1F;
+  /* Fond principal — violet très clair */
+  --background: #F5F3FF;
+  /* Texte principal — violet nuit */
+  --foreground: #1A1040;
   /* Cartes — blanc pur */
   --card: #FFFFFF;
-  --card-foreground: #1F1F1F;
+  --card-foreground: #1A1040;
   --popover: #FFFFFF;
-  --popover-foreground: #1F1F1F;
-  /* Couleur de marque — violet encre */
-  --primary: #4B2E83;
+  --popover-foreground: #1A1040;
+  /* Couleur de marque — violet électrique */
+  --primary: #7C5CFF;
   --primary-foreground: #FFFFFF;
-  /* Couleur secondaire — bleu nuit */
-  --secondary: #16213E;
-  --secondary-foreground: #FFFFFF;
+  /* Couleur secondaire — violet pâle */
+  --secondary: #EDE9FF;
+  --secondary-foreground: #1A1040;
   /* Muted */
-  --muted: #F0EDE6;
-  /* Textes secondaires — gris foncé */
-  --muted-foreground: #6B6B6B;
+  --muted: #F0EEFF;
+  /* Textes secondaires — violet gris */
+  --muted-foreground: #7167A0;
   /* Accent — doré doux */
-  --accent: #C9A227;
-  --accent-foreground: #FFFFFF;
+  --accent: #D6B25E;
+  --accent-foreground: #1A1040;
   /* Destructive */
-  --destructive: #D94F4F;
+  --destructive: #E05252;
   --destructive-foreground: #FFFFFF;
-  /* Bordures — gris clair */
-  --border: #E5E2DA;
+  /* Bordures — violet très clair */
+  --border: #DDD8FF;
   --input: transparent;
   --input-background: #FFFFFF;
-  --switch-background: #E5E2DA;
+  --switch-background: #DDD8FF;
   --font-weight-medium: 600;
   --font-weight-normal: 400;
   /* Ring */
-  --ring: #4B2E83;
+  --ring: #7C5CFF;
   /* Couleurs supplémentaires */
-  --primary-dark: #3A2268;
-  --primary-light: #6B44B8;
-  --success: #2E8B57;
-  --warning: #C9A227;
-  --info: #16213E;
-  --mukeme: #6B44B8;
-  --chart-1: #4B2E83;
-  --chart-2: #C9A227;
-  --chart-3: #16213E;
-  --chart-4: #2E8B57;
-  --chart-5: #D94F4F;
+  --primary-dark: #5B3EDD;
+  --primary-light: #9B7FFF;
+  --success: #2EA87A;
+  --warning: #D97706;
+  --info: #7C5CFF;
+  --mukeme: #A67CFF;
+  --chart-1: #7C5CFF;
+  --chart-2: #D6B25E;
+  --chart-3: #9B6FD4;
+  --chart-4: #2EA87A;
+  --chart-5: #E05252;
   --radius: 0.875rem;
-  --sidebar: #F8F7F3;
-  --sidebar-foreground: #1F1F1F;
-  --sidebar-primary: #4B2E83;
+  --sidebar: #F5F3FF;
+  --sidebar-foreground: #1A1040;
+  --sidebar-primary: #7C5CFF;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F0EDE6;
-  --sidebar-accent-foreground: #1F1F1F;
-  --sidebar-border: #E5E2DA;
-  --sidebar-ring: #4B2E83;
+  --sidebar-accent: #EDE9FF;
+  --sidebar-accent-foreground: #1A1040;
+  --sidebar-border: #DDD8FF;
+  --sidebar-ring: #7C5CFF;
 }
 
 .dark {

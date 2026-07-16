@@ -26,26 +26,29 @@ import { MukemeResultsPage } from './screens/MukemeResultsPage';
 import { BookDetailPage } from './screens/BookDetailPage';
 import { BookReviewPage } from './screens/BookReviewPage';
 import { MyBookDetailPage } from './screens/MyBookDetailPage';
+import { AdminPage } from './screens/AdminPage';
+import { AppLayout } from './components/AppLayout';
 import { STORIES } from './data/stories';
 
+// Pages that get the app sidebar layout
+const APP_PAGES = new Set([
+  'home', 'write', 'author-dashboard', 'create-book', 'editor', 'mobile-editor',
+  'discover', 'library', 'royalties', 'profile', 'mukeme', 'beta-tests',
+  'beta-submission', 'beta-reading', 'beta-feedback', 'publication-prep',
+  'admin-publication', 'mukeme-recommendation', 'mukeme-results',
+  'book-detail', 'book-review',
+  'my-book-detail-1', 'my-book-detail-2', 'my-book-detail-3',
+]);
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<string>('landing');
+  const [currentPage, setCurrentPage] = useState<string>('home');
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
 
-  const renderPage = () => {
+  const renderInner = () => {
     switch (currentPage) {
-      case 'landing':
-        return <LandingPage onNavigate={handleNavigate} />;
-      case 'login':
-        return <LoginPage onNavigate={handleNavigate} />;
-      case 'signup':
-        return <SignupPage onNavigate={handleNavigate} />;
-      case 'role-selection':
-        return <RoleSelectionPage onNavigate={handleNavigate} />;
       case 'home':
         return <HomePage onNavigate={handleNavigate} />;
       case 'write':
@@ -66,8 +69,6 @@ export default function App() {
         return <RoyaltiesPage onNavigate={handleNavigate} />;
       case 'profile':
         return <ProfilePage onNavigate={handleNavigate} />;
-      case 'book-reader':
-        return <BookReaderPage onNavigate={handleNavigate} />;
       case 'mukeme':
         return <MukemeAssistantPage onNavigate={handleNavigate} />;
       case 'beta-tests':
@@ -97,9 +98,33 @@ export default function App() {
       case 'my-book-detail-3':
         return <MyBookDetailPage book={STORIES[2]} onNavigate={handleNavigate} />;
       default:
-        return <LandingPage onNavigate={handleNavigate} />;
+        return null;
     }
   };
 
-  return <div className="size-full">{renderPage()}</div>;
+  // Full-screen pages (no sidebar/nav)
+  if (!APP_PAGES.has(currentPage)) {
+    switch (currentPage) {
+      case 'admin':
+        return <AdminPage onNavigate={handleNavigate} />;
+      case 'book-reader':
+        return <BookReaderPage onNavigate={handleNavigate} />;
+      case 'landing':
+        return <LandingPage onNavigate={handleNavigate} />;
+      case 'login':
+        return <LoginPage onNavigate={handleNavigate} />;
+      case 'signup':
+        return <SignupPage onNavigate={handleNavigate} />;
+      case 'role-selection':
+        return <RoleSelectionPage onNavigate={handleNavigate} />;
+      default:
+        return <LandingPage onNavigate={handleNavigate} />;
+    }
+  }
+
+  return (
+    <AppLayout currentPage={currentPage} onNavigate={handleNavigate}>
+      {renderInner()}
+    </AppLayout>
+  );
 }

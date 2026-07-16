@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MobileNav } from '../components/MobileNav';
+import { AppHeader } from '../components/AppHeader';
 import { Star, Clock, BookmarkCheck, Heart, MessageSquare, Search, ChevronRight, BarChart3 } from 'lucide-react';
 
 interface LibraryPageProps {
@@ -45,19 +45,20 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
   const filteredBeta = filterBooks(betaReadings) as typeof betaReadings;
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 lg:pb-0">
+      <AppHeader
+        title="Bibliothèque"
+        subtitle="Vos lectures, vos favoris, votre univers"
+        emoji="📚"
+        gradient={['#D6B25E', '#9B6FD4']}
+        onNavigate={onNavigate}
+      />
+      {/* Search + tabs */}
       <div
-        className="sticky top-0 z-30 px-4 pt-5 pb-3 border-b border-border bg-background/95"
+        className="sticky top-[65px] z-20 px-4 pt-3 pb-3 border-b border-border bg-background/95"
         style={{ backdropFilter: 'blur(12px)' }}
       >
         <div className="max-w-7xl mx-auto">
-          <h1
-            className="text-xl font-bold text-foreground mb-3"
-            style={{ fontFamily: 'var(--font-family-display)' }}
-          >
-            Bibliotheque
-          </h1>
           <div className="relative mb-3">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -295,7 +296,6 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
         )}
       </div>
 
-      <MobileNav currentPage="library" onNavigate={onNavigate} />
     </div>
   );
 }
