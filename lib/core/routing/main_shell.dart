@@ -279,8 +279,7 @@ class _DesktopShell extends StatelessWidget {
                     child: ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
-                        for (final destination
-                            in MainShell.desktopDestinations)
+                        for (final destination in MainShell.desktopDestinations)
                           _SidebarItem(
                             destination: destination,
                             selected: _isSelected(location, destination.path),

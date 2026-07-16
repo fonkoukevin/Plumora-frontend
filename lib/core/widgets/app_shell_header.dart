@@ -229,10 +229,7 @@ class _DesktopTitle extends StatelessWidget {
             subtitle!,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
           ),
         ],
       ],

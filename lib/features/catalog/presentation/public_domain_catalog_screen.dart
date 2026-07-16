@@ -160,9 +160,7 @@ class _PublicDomainCatalogScreenState
         FigmaResponsiveGrid(
           minTileWidth: 460,
           maxColumns: 2,
-          children: [
-            for (final book in _books) _ExternalBookCard(book: book),
-          ],
+          children: [for (final book in _books) _ExternalBookCard(book: book)],
         ),
         if (_error != null) ...[
           const SizedBox(height: 14),

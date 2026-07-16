@@ -205,7 +205,8 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                 child: PlumoraAppHeader(
                   title: 'Tableau de bord',
-                  subtitle: 'Bonjour $displayName 👋 — Que voulez-vous '
+                  subtitle:
+                      'Bonjour $displayName 👋 — Que voulez-vous '
                       "faire aujourd'hui ?",
                   emoji: '✨',
                   gradient: [context.colors.primary, context.colors.plumora],
@@ -734,7 +735,10 @@ class _BookRail extends StatelessWidget {
               railHeight: _homeBookRailHeight,
               itemBuilder: (context, index) {
                 final book = books[index];
-                return _BookTile(book: book, rank: rankItems ? index + 1 : null);
+                return _BookTile(
+                  book: book,
+                  rank: rankItems ? index + 1 : null,
+                );
               },
             );
           },
