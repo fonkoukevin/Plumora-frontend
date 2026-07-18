@@ -246,11 +246,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.royalties,
             name: 'royalties',
-            builder: (context, state) => const PlumoraPlaceholderScreen(
+            builder: (context, state) => PlumoraPlaceholderScreen(
               title: 'Revenus & Statistiques',
               subtitle:
                   'Les royalties réelles ne font pas partie du MVP actuel.',
               icon: Icons.trending_up_outlined,
+              onBack: () => returnToPreviousOr(context, AppRoutes.write),
             ),
           ),
           GoRoute(
@@ -429,6 +430,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+void returnToPreviousOr(BuildContext context, String fallbackLocation) {
+  if (context.canPop()) {
+    context.pop();
+    return;
+  }
+
+  context.go(fallbackLocation);
+}
 
 abstract final class AppRoutes {
   static const String landing = '/';

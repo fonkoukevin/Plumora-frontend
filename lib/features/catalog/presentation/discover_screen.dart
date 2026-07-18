@@ -11,9 +11,6 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
-import '../../ai/data/models/plumo_ai_models.dart';
-import '../../ai/data/plumo_ai_error.dart';
-import '../../ai/data/repositories/plumo_ai_repository.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/catalog_book_model.dart';
 import '../data/models/external_book_model.dart';
@@ -39,7 +36,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     _DiscoverFilter(label: 'Romance', search: 'romance'),
     _DiscoverFilter(label: 'Thriller', search: 'thriller'),
     _DiscoverFilter(label: 'Sci-Fi', search: 'science fiction'),
-    _DiscoverFilter(label: 'Mystere', search: 'mystery'),
+    _DiscoverFilter(label: 'Mystère', search: 'mystery'),
     _DiscoverFilter(label: 'Aventure', search: 'adventure'),
     _DiscoverFilter(label: 'Horreur', search: 'horror'),
   ];
@@ -58,147 +55,159 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final plumoraQuery = PlumoraCatalogQuery(
       search: searchQuery,
       genre: hasCategory ? _plumoraGenreForFilter(_activeFilter) : '',
+      language: _language ?? '',
     );
 
-    return ColoredBox(
-      color: context.colors.background,
-      child: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
-          slivers: [
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _DiscoverHeaderDelegate(
-                searchController: _searchController,
-                onSearch: _submitSearch,
-                onPlumoTap: () => context.go(AppRoutes.plumoRecommendation),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1280),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 92),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _DiscoverFilterTabs(
-                          filters: _filters,
-                          activeFilter: _activeFilter,
-                          onSelected: (filter) =>
-                              setState(() => _activeFilter = filter),
-                        ),
-                        const SizedBox(height: 12),
-                        _LanguageTabs(
-                          language: _language,
-                          onSelected: (language) =>
-                              setState(() => _language = language),
-                        ),
-                        const SizedBox(height: 30),
-                        if (hasCategory) ...[
-                          _PlumoraAsyncRail(
-                            title: 'Oeuvres Plumora',
-                            icon: Icons.auto_stories_outlined,
-                            iconColor: context.colors.plumora,
-                            query: plumoraQuery,
-                          ),
-                          const SizedBox(height: 32),
-                          _ExternalAsyncRail(
-                            title: _activeFilter.label,
-                            icon: _iconForFilter(_activeFilter),
-                            iconColor: _activeFilter.label == 'Romance'
-                                ? context.colors.orange
-                                : context.colors.primary,
-                            query: _queryForCategory(
-                              searchQuery,
-                              activeCategory,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final inlineHeaderControls = constraints.maxWidth >= 900;
+
+        return ColoredBox(
+          color: context.colors.background,
+          child: SafeArea(
+            bottom: false,
+            child: CustomScrollView(
+              slivers: [
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _DiscoverHeaderDelegate(
+                    searchController: _searchController,
+                    onSearch: _submitSearch,
+                    onPlumoTap: () =>
+                        context.push(AppRoutes.plumoRecommendation),
+                    inlineControls: inlineHeaderControls,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1280),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 92),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _DiscoverFilterTabs(
+                              filters: _filters,
+                              activeFilter: _activeFilter,
+                              onSelected: (filter) =>
+                                  setState(() => _activeFilter = filter),
                             ),
-                            rankItems: true,
-                            subtitle: _language == null
-                                ? 'Gutendex'
-                                : _language!.toUpperCase(),
-                          ),
-                        ] else ...[
-                          _PlumoraAsyncRail(
-                            title: 'Oeuvres Plumora',
-                            icon: Icons.auto_stories_outlined,
-                            iconColor: context.colors.plumora,
-                            query: plumoraQuery,
-                          ),
-                          const SizedBox(height: 32),
-                          if (searchQuery.isEmpty) ...[
-                            const _PlumoRecommendationsSection(),
-                            const SizedBox(height: 32),
-                          ],
-                          if (searchQuery.isNotEmpty) ...[
-                            _ExternalAsyncRail(
-                              title: 'Resultats',
-                              icon: Icons.search,
-                              query: ExternalBookSearchQuery(
-                                search: searchQuery,
-                                language: _language,
+                            const SizedBox(height: 12),
+                            _LanguageTabs(
+                              language: _language,
+                              onSelected: (language) =>
+                                  setState(() => _language = language),
+                            ),
+                            const SizedBox(height: 30),
+                            if (hasCategory) ...[
+                              _PlumoraAsyncRail(
+                                title: 'Œuvres Plumora',
+                                icon: Icons.auto_stories_outlined,
+                                iconColor: context.colors.plumora,
+                                query: plumoraQuery,
                               ),
-                              rankItems: true,
-                              subtitle: 'Gutendex',
-                            ),
-                            const SizedBox(height: 32),
+                              const SizedBox(height: 32),
+                              _ExternalAsyncRail(
+                                title: _activeFilter.label,
+                                icon: _iconForFilter(_activeFilter),
+                                iconColor: _activeFilter.label == 'Romance'
+                                    ? const Color(0xFFEC4899)
+                                    : context.colors.primary,
+                                query: _queryForCategory(
+                                  searchQuery,
+                                  activeCategory,
+                                ),
+                                rankItems: true,
+                                subtitle: _language == null
+                                    ? 'Gutendex'
+                                    : _language!.toUpperCase(),
+                              ),
+                            ] else ...[
+                              _PlumoraAsyncRail(
+                                title: 'Œuvres Plumora',
+                                icon: Icons.auto_stories_outlined,
+                                iconColor: context.colors.plumora,
+                                query: plumoraQuery,
+                              ),
+                              const SizedBox(height: 32),
+                              if (searchQuery.isNotEmpty) ...[
+                                _ExternalAsyncRail(
+                                  title: 'Résultats',
+                                  icon: Icons.search,
+                                  query: ExternalBookSearchQuery(
+                                    search: searchQuery,
+                                    language: _language,
+                                  ),
+                                  rankItems: true,
+                                  subtitle: 'Gutendex',
+                                ),
+                                const SizedBox(height: 32),
+                              ],
+                              _ExternalAsyncRail(
+                                title: 'Tendances',
+                                icon: Icons.trending_up,
+                                query: ExternalBookSearchQuery(
+                                  language: _language,
+                                ),
+                                rankItems: true,
+                                subtitle: "Mis à jour aujourd'hui",
+                              ),
+                              const SizedBox(height: 32),
+                              _ExternalAsyncRail(
+                                title: 'Nouveautés',
+                                icon: Icons.bolt_outlined,
+                                iconColor: context.colors.accent,
+                                query: ExternalBookSearchQuery(
+                                  language: _language,
+                                  page: 1,
+                                ),
+                                badge: 'NOUVEAU',
+                                loadDelay: const Duration(milliseconds: 250),
+                              ),
+                              const SizedBox(height: 32),
+                              _ExternalAsyncRail(
+                                title: 'Fantasy',
+                                icon: Icons.auto_awesome,
+                                query: ExternalBookSearchQuery(
+                                  search: 'fantasy',
+                                  language: _language,
+                                ),
+                                loadDelay: const Duration(milliseconds: 650),
+                              ),
+                              const SizedBox(height: 32),
+                              _ExternalAsyncRail(
+                                title: 'Romance',
+                                icon: Icons.favorite,
+                                iconColor: const Color(0xFFEC4899),
+                                query: ExternalBookSearchQuery(
+                                  search: 'romance',
+                                  language: _language,
+                                ),
+                                loadDelay: const Duration(milliseconds: 950),
+                              ),
+                            ],
                           ],
-                          _ExternalAsyncRail(
-                            title: 'Tendances',
-                            icon: Icons.trending_up,
-                            query: ExternalBookSearchQuery(language: _language),
-                            rankItems: true,
-                            subtitle: "Mis a jour aujourd'hui",
-                          ),
-                          const SizedBox(height: 32),
-                          _ExternalAsyncRail(
-                            title: 'Nouveautes',
-                            icon: Icons.bolt_outlined,
-                            iconColor: context.colors.accent,
-                            query: ExternalBookSearchQuery(
-                              language: _language,
-                              page: 1,
-                            ),
-                            badge: 'NOUVEAU',
-                            loadDelay: const Duration(milliseconds: 250),
-                          ),
-                          const SizedBox(height: 32),
-                          _ExternalAsyncRail(
-                            title: 'Fantasy',
-                            icon: Icons.auto_awesome,
-                            query: ExternalBookSearchQuery(
-                              search: 'fantasy',
-                              language: _language,
-                            ),
-                            loadDelay: const Duration(milliseconds: 650),
-                          ),
-                          const SizedBox(height: 32),
-                          _ExternalAsyncRail(
-                            title: 'Romance',
-                            icon: Icons.favorite_border,
-                            iconColor: context.colors.orange,
-                            query: ExternalBookSearchQuery(
-                              search: 'romance',
-                              language: _language,
-                            ),
-                            loadDelay: const Duration(milliseconds: 950),
-                          ),
-                        ],
-                      ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
   String _plumoraGenreForFilter(_DiscoverFilter filter) {
-    return filter.label == 'Tous' ? '' : filter.label;
+    return switch (filter.label) {
+      'Tous' => '',
+      'Sci-Fi' => 'Science-Fiction',
+      'Mystère' => 'Mystère',
+      _ => filter.label,
+    };
   }
 
   void _submitSearch() {
@@ -220,12 +229,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   IconData _iconForFilter(_DiscoverFilter filter) {
     switch (filter.label) {
       case 'Romance':
-        return Icons.favorite_border;
+        return Icons.favorite;
       case 'Thriller':
         return Icons.local_fire_department_outlined;
       case 'Sci-Fi':
         return Icons.rocket_launch_outlined;
-      case 'Mystere':
+      case 'Mystère':
         return Icons.search;
       case 'Aventure':
         return Icons.explore_outlined;
@@ -242,13 +251,15 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.searchController,
     required this.onSearch,
     required this.onPlumoTap,
+    required this.inlineControls,
   });
 
   final TextEditingController searchController;
   final VoidCallback onSearch;
   final VoidCallback onPlumoTap;
+  final bool inlineControls;
 
-  static const _height = 234.0;
+  double get _height => inlineControls ? 150 : 234;
 
   @override
   double get minExtent => _height;
@@ -262,7 +273,27 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    final searchField = SizedBox(
+      key: const ValueKey('discover_search_field'),
+      height: 50,
+      child: TextField(
+        controller: searchController,
+        textInputAction: TextInputAction.search,
+        onSubmitted: (_) => onSearch(),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search),
+          hintText: 'Titre, auteur, genre...',
+          suffixIcon: IconButton(
+            tooltip: 'Rechercher',
+            onPressed: onSearch,
+            icon: const Icon(Icons.arrow_forward, size: 18),
+          ),
+        ),
+      ),
+    );
+
     return ClipRect(
+      key: const ValueKey('discover_header'),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: DecoratedBox(
@@ -297,25 +328,39 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      height: 50,
-                      child: TextField(
-                        controller: searchController,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => onSearch(),
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search),
-                          hintText: 'Titre, auteur, genre...',
-                          suffixIcon: IconButton(
-                            tooltip: 'Rechercher',
-                            onPressed: onSearch,
-                            icon: const Icon(Icons.arrow_forward, size: 18),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _PlumoHeaderCard(onTap: onPlumoTap),
+                    if (inlineControls)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          const gap = 12.0;
+                          final controlWidth = (constraints.maxWidth - gap) / 2;
+
+                          return SizedBox(
+                            height: 50,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  width: controlWidth,
+                                  child: searchField,
+                                ),
+                                const SizedBox(width: gap),
+                                SizedBox(
+                                  width: controlWidth,
+                                  child: _PlumoHeaderCard(
+                                    onTap: onPlumoTap,
+                                    compact: true,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      )
+                    else ...[
+                      searchField,
+                      const SizedBox(height: 12),
+                      _PlumoHeaderCard(onTap: onPlumoTap),
+                    ],
                   ],
                 ),
               ),
@@ -330,21 +375,27 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _DiscoverHeaderDelegate oldDelegate) {
     return oldDelegate.searchController != searchController ||
         oldDelegate.onSearch != onSearch ||
-        oldDelegate.onPlumoTap != onPlumoTap;
+        oldDelegate.onPlumoTap != onPlumoTap ||
+        oldDelegate.inlineControls != inlineControls;
   }
 }
 
 class _PlumoHeaderCard extends StatelessWidget {
-  const _PlumoHeaderCard({required this.onTap});
+  const _PlumoHeaderCard({required this.onTap, this.compact = false});
 
   final VoidCallback onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return FigmaCard(
+      key: const ValueKey('discover_plumo_banner'),
       onTap: onTap,
-      padding: const EdgeInsets.all(14),
-      radius: 16,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 14,
+        vertical: compact ? 6 : 14,
+      ),
+      radius: compact ? 14 : 16,
       color: context.colors.brandPrimary.withValues(alpha: 0.05),
       borderColor: context.colors.border,
       shadow: false,
@@ -352,13 +403,15 @@ class _PlumoHeaderCard extends StatelessWidget {
         children: [
           FigmaGradientIcon(
             icon: Icons.auto_awesome,
-            size: 48,
+            size: compact ? 36 : 48,
+            iconSize: compact ? 18 : 24,
+            radius: compact ? 11 : 16,
             colors: [
               context.colors.brandPrimary,
               context.colors.brandPrimaryLight,
             ],
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: compact ? 10 : 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,27 +423,27 @@ class _PlumoHeaderCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: context.colors.textPrimary,
-                    fontSize: 16,
+                    fontSize: compact ? 13 : 16,
                     fontWeight: FontWeight.w900,
                     height: 1.15,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: compact ? 2 : 4),
                 Text(
-                  'Recommandations personnalisees par IA',
+                  'Recommandations personnalisées par IA',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: context.colors.textSecondary,
-                    fontSize: 13,
+                    fontSize: compact ? 10 : 13,
                     height: 1.2,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          _PlumoTryButton(onTap: onTap),
+          SizedBox(width: compact ? 8 : 12),
+          _PlumoTryButton(onTap: onTap, compact: compact),
         ],
       ),
     );
@@ -398,9 +451,10 @@ class _PlumoHeaderCard extends StatelessWidget {
 }
 
 class _PlumoTryButton extends StatelessWidget {
-  const _PlumoTryButton({required this.onTap});
+  const _PlumoTryButton({required this.onTap, required this.compact});
 
   final VoidCallback onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -412,20 +466,23 @@ class _PlumoTryButton extends StatelessWidget {
             context.colors.brandPrimaryLight,
           ],
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(compact ? 10 : 12),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          borderRadius: BorderRadius.circular(compact ? 10 : 12),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 12 : 16,
+              vertical: compact ? 7 : 10,
+            ),
             child: Text(
               'Essayer',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 14,
+                fontSize: compact ? 12 : 14,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -511,6 +568,95 @@ class _LanguageTabs extends StatelessWidget {
   }
 }
 
+class _RomanceHeaderIcon extends StatelessWidget {
+  const _RomanceHeaderIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 20,
+      height: 18,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 1,
+            child: Icon(Icons.favorite, size: 9, color: Color(0xFFF43F5E)),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Icon(Icons.favorite, size: 14, color: Color(0xFFEC4899)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FantasyHeaderIcon extends StatelessWidget {
+  const _FantasyHeaderIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text('🧙', style: TextStyle(fontSize: 18, height: 1));
+  }
+}
+
+Widget? _categoryHeaderIcon(String title) {
+  return switch (title) {
+    'Romance' => const _RomanceHeaderIcon(),
+    'Fantasy' => const _FantasyHeaderIcon(),
+    _ => null,
+  };
+}
+
+bool _showCategoryHeaderAccent(String title) {
+  return title != 'Romance' && title != 'Fantasy';
+}
+
+class _DiscoverSectionFrame extends StatelessWidget {
+  const _DiscoverSectionFrame({
+    required this.title,
+    required this.icon,
+    required this.child,
+    this.iconColor,
+    this.subtitle,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color? iconColor;
+  final String? subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        FigmaSectionHeader(
+          title: title,
+          icon: icon,
+          iconWidget: _categoryHeaderIcon(title),
+          iconColor: iconColor ?? context.colors.primary,
+          showAccent: _showCategoryHeaderAccent(title),
+          trailing: subtitle == null
+              ? null
+              : Text(
+                  subtitle!,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 14),
+        child,
+      ],
+    );
+  }
+}
+
 class _PlumoraAsyncRail extends ConsumerWidget {
   const _PlumoraAsyncRail({
     required this.title,
@@ -527,47 +673,312 @@ class _PlumoraAsyncRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final booksAsync = ref.watch(plumoraCatalogBooksProvider(query));
+    final resolvedIconColor = iconColor ?? context.colors.plumora;
 
-    return Column(
-      children: [
-        FigmaSectionHeader(
+    return booksAsync.when(
+      loading: () => _DiscoverSectionFrame(
+        title: title,
+        icon: icon,
+        iconColor: resolvedIconColor,
+        child: const _LoadingRail(),
+      ),
+      error: (error, _) => _DiscoverSectionFrame(
+        title: title,
+        icon: icon,
+        iconColor: resolvedIconColor,
+        child: _InlineError(
+          message: AppError.messageFor(error),
+          onRetry: () => ref.invalidate(plumoraCatalogBooksProvider(query)),
+        ),
+      ),
+      data: (books) {
+        if (books.isEmpty) {
+          return _DiscoverSectionFrame(
+            title: title,
+            icon: icon,
+            iconColor: resolvedIconColor,
+            child: const _EmptyRail(
+              message: 'Aucune œuvre Plumora trouvée pour ce filtre.',
+            ),
+          );
+        }
+
+        return _PlumoraBookRail(
           title: title,
           icon: icon,
-          iconColor: iconColor ?? context.colors.plumora,
-        ),
-        const SizedBox(height: 14),
-        booksAsync.when(
-          loading: () => const _LoadingRail(),
-          error: (error, _) => _InlineError(
-            message: AppError.messageFor(error),
-            onRetry: () => ref.invalidate(plumoraCatalogBooksProvider(query)),
-          ),
-          data: (books) {
-            if (books.isEmpty) {
-              return const _EmptyRail(
-                message: 'Aucune oeuvre Plumora trouvee pour ce filtre.',
-              );
-            }
-
-            return _PlumoraBookRail(books: books.take(12).toList());
-          },
-        ),
-      ],
+          iconColor: resolvedIconColor,
+          books: books,
+        );
+      },
     );
   }
 }
 
 class _PlumoraBookRail extends StatelessWidget {
-  const _PlumoraBookRail({required this.books});
+  const _PlumoraBookRail({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.books,
+  });
 
+  final String title;
+  final IconData icon;
+  final Color iconColor;
   final List<CatalogBookModel> books;
 
   @override
   Widget build(BuildContext context) {
-    return FigmaAdaptiveRail(
+    return _DiscoverCarouselRail(
+      title: title,
+      icon: icon,
+      iconColor: iconColor,
       itemCount: books.length,
-      railHeight: 262,
+      keyPrefix: 'plumora_books',
       itemBuilder: (context, index) => _PlumoraBookTile(book: books[index]),
+    );
+  }
+}
+
+class _DiscoverCarouselRail extends StatefulWidget {
+  const _DiscoverCarouselRail({
+    required this.title,
+    required this.icon,
+    required this.itemCount,
+    required this.itemBuilder,
+    this.iconColor,
+    this.subtitle,
+    this.keyPrefix,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color? iconColor;
+  final String? subtitle;
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+  final String? keyPrefix;
+
+  @override
+  State<_DiscoverCarouselRail> createState() => _DiscoverCarouselRailState();
+}
+
+class _DiscoverCarouselRailState extends State<_DiscoverCarouselRail> {
+  final ScrollController _scrollController = ScrollController();
+  bool _canScrollBack = false;
+  bool _canScrollForward = false;
+  bool _hovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_updateScrollButtons);
+    _scheduleScrollButtonUpdate();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DiscoverCarouselRail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _scheduleScrollButtonUpdate();
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_updateScrollButtons)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _scheduleScrollButtonUpdate() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _updateScrollButtons();
+      }
+    });
+  }
+
+  void _updateScrollButtons() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final canScrollBack = position.pixels > position.minScrollExtent + 1;
+    final canScrollForward = position.pixels < position.maxScrollExtent - 1;
+    if (canScrollBack == _canScrollBack &&
+        canScrollForward == _canScrollForward) {
+      return;
+    }
+
+    setState(() {
+      _canScrollBack = canScrollBack;
+      _canScrollForward = canScrollForward;
+    });
+  }
+
+  Future<void> _scrollByPage(double direction) async {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final target =
+        (position.pixels + position.viewportDimension * 0.82 * direction)
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble();
+    await _scrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _setHovered(bool hovered) {
+    if (_hovered == hovered) {
+      return;
+    }
+    setState(() => _hovered = hovered);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showClickControls = constraints.maxWidth >= 560;
+        final showPrevious = showClickControls && _canScrollBack;
+        final showNext = showClickControls && _canScrollForward;
+
+        return Column(
+          children: [
+            FigmaSectionHeader(
+              title: widget.title,
+              icon: widget.icon,
+              iconWidget: _categoryHeaderIcon(widget.title),
+              iconColor: widget.iconColor ?? context.colors.primary,
+              showAccent: _showCategoryHeaderAccent(widget.title),
+              trailing: widget.subtitle == null
+                  ? null
+                  : Text(
+                      widget.subtitle!,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 262,
+              child: MouseRegion(
+                onEnter: (_) => _setHovered(true),
+                onExit: (_) => _setHovered(false),
+                child: Stack(
+                  children: [
+                    ListView.separated(
+                      key: widget.keyPrefix == null
+                          ? null
+                          : ValueKey('${widget.keyPrefix}_scroll'),
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.itemCount,
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
+                      itemBuilder: widget.itemBuilder,
+                    ),
+                    if (showPrevious)
+                      Positioned(
+                        top: 0,
+                        bottom: 0,
+                        left: 0,
+                        width: 48,
+                        child: AnimatedOpacity(
+                          key: widget.keyPrefix == null
+                              ? null
+                              : ValueKey('${widget.keyPrefix}_previous'),
+                          opacity: _hovered ? 1 : 0,
+                          duration: const Duration(milliseconds: 180),
+                          child: IgnorePointer(
+                            ignoring: !_hovered,
+                            child: _DiscoverRailButton(
+                              icon: Icons.chevron_left_rounded,
+                              tooltip: 'Livres précédents',
+                              onTap: () => _scrollByPage(-1),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (showNext)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: 48,
+                        child: AnimatedOpacity(
+                          key: widget.keyPrefix == null
+                              ? null
+                              : ValueKey('${widget.keyPrefix}_next'),
+                          opacity: _hovered ? 1 : 0,
+                          duration: const Duration(milliseconds: 180),
+                          child: IgnorePointer(
+                            ignoring: !_hovered,
+                            child: _DiscoverRailButton(
+                              icon: Icons.chevron_right_rounded,
+                              tooltip: 'Livres suivants',
+                              onTap: () => _scrollByPage(1),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DiscoverRailButton extends StatelessWidget {
+  const _DiscoverRailButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: Center(
+        child: SizedBox.square(
+          dimension: 40,
+          child: IconButton(
+            onPressed: onTap,
+            padding: EdgeInsets.zero,
+            icon: Icon(
+              icon,
+              size: 32,
+              color: Colors.white,
+              shadows: const [
+                Shadow(
+                  color: Color(0xB3000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            hoverColor: Colors.white.withValues(alpha: 0.10),
+            highlightColor: Colors.white.withValues(alpha: 0.16),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -583,7 +994,7 @@ class _PlumoraBookTile extends ConsumerWidget {
     final genre = book.genre?.trim();
 
     return InkWell(
-      onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
       child: SizedBox(
         width: 112,
         child: Column(
@@ -663,175 +1074,6 @@ class _PlumoraBookTile extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _PlumoRecommendationsSection extends ConsumerWidget {
-  const _PlumoRecommendationsSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recommendationsAsync = ref.watch(plumoBookRecommendationsProvider);
-
-    return Column(
-      children: [
-        FigmaSectionHeader(
-          title: 'Pour vous',
-          icon: Icons.auto_awesome,
-          iconColor: context.colors.primary,
-        ),
-        const SizedBox(height: 14),
-        recommendationsAsync.when(
-          loading: () => const _LoadingRail(),
-          error: (error, _) => _InlineError(
-            message: plumoAiErrorMessage(error),
-            onRetry: () => ref.invalidate(plumoBookRecommendationsProvider),
-          ),
-          data: (items) {
-            if (items.isEmpty) {
-              return const _EmptyRail(
-                message: "Plumo n'a pas encore de recommandation pour toi.",
-              );
-            }
-
-            return FigmaAdaptiveRail(
-              itemCount: items.length,
-              railHeight: 262,
-              itemBuilder: (context, index) =>
-                  _PlumoRecommendationTile(item: items[index]),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _PlumoRecommendationTile extends ConsumerWidget {
-  const _PlumoRecommendationTile({required this.item});
-
-  final BookRecommendationItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(catalogBookDetailProvider(item.bookId));
-
-    return detailAsync.when(
-      loading: () => const SizedBox(
-        width: 220,
-        height: 262,
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      // The recommendation references a book the catalog can't resolve
-      // (removed/unpublished since) -- skip it rather than show a broken
-      // card; Plumo must never appear to invent a book.
-      error: (_, _) => const SizedBox.shrink(),
-      data: (book) {
-        final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
-
-        return Container(
-          width: 220,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: context.colors.cards,
-            border: Border.all(color: context.colors.border),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  PlumoraBookCover(
-                    width: 62,
-                    height: 92,
-                    radius: 10,
-                    colors: _coverColors(book.id),
-                    imageUrl: book.coverUrl,
-                    imageBytes: cachedCover,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          book.title.isEmpty ? 'Livre sans titre' : book.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.colors.textPrimary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            height: 1.15,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          book.authorName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.colors.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (item.reason.trim().isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Expanded(
-                  child: Text(
-                    item.reason,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: context.colors.textSecondary,
-                      fontSize: 11,
-                      fontStyle: FontStyle.italic,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ] else
-                const Spacer(),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () =>
-                          context.go(AppRoutes.catalogBookDetailPath(book.id)),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        textStyle: const TextStyle(fontSize: 11),
-                      ),
-                      child: const Text('Détail'),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () =>
-                          context.go(AppRoutes.readingPath(book.id)),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        textStyle: const TextStyle(fontSize: 11),
-                      ),
-                      child: const Text('Lire'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
@@ -938,55 +1180,72 @@ class _ExternalAsyncRailState extends ConsumerState<_ExternalAsyncRail> {
     final booksAsync = _ready
         ? ref.watch(externalBookSearchProvider(widget.query))
         : null;
+    final iconColor = widget.iconColor ?? context.colors.primary;
 
-    return Column(
-      children: [
-        FigmaSectionHeader(
+    if (booksAsync == null) {
+      return _DiscoverSectionFrame(
+        title: widget.title,
+        icon: widget.icon,
+        iconColor: iconColor,
+        subtitle: widget.subtitle,
+        child: const _LoadingRail(),
+      );
+    }
+
+    return booksAsync.when(
+      loading: () => _DiscoverSectionFrame(
+        title: widget.title,
+        icon: widget.icon,
+        iconColor: iconColor,
+        subtitle: widget.subtitle,
+        child: const _LoadingRail(),
+      ),
+      error: (error, _) {
+        if (_retryCount < 3) {
+          _scheduleAutoRetry();
+          return _DiscoverSectionFrame(
+            title: widget.title,
+            icon: widget.icon,
+            iconColor: iconColor,
+            subtitle: widget.subtitle,
+            child: const _LoadingRail(),
+          );
+        }
+
+        return _DiscoverSectionFrame(
           title: widget.title,
           icon: widget.icon,
-          iconColor: widget.iconColor ?? context.colors.primary,
-          trailing: widget.subtitle == null
-              ? null
-              : Text(
-                  widget.subtitle!,
-                  style: TextStyle(
-                    color: context.colors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-        ),
-        const SizedBox(height: 14),
-        if (booksAsync == null)
-          const _LoadingRail()
-        else
-          booksAsync.when(
-            loading: () => const _LoadingRail(),
-            error: (error, _) {
-              if (_retryCount < 3) {
-                _scheduleAutoRetry();
-                return const _LoadingRail();
-              }
-
-              return _InlineError(
-                message: _externalCatalogErrorMessage(error),
-                onRetry: _retryNow,
-              );
-            },
-            data: (page) {
-              _retryTimer?.cancel();
-              _retryTimer = null;
-              if (page.content.isEmpty) {
-                return const _EmptyRail();
-              }
-
-              return _ExternalBookRail(
-                books: page.content.take(12).toList(),
-                badge: widget.badge,
-                rankItems: widget.rankItems,
-              );
-            },
+          iconColor: iconColor,
+          subtitle: widget.subtitle,
+          child: _InlineError(
+            message: _externalCatalogErrorMessage(error),
+            onRetry: _retryNow,
           ),
-      ],
+        );
+      },
+      data: (page) {
+        _retryTimer?.cancel();
+        _retryTimer = null;
+        if (page.content.isEmpty) {
+          return _DiscoverSectionFrame(
+            title: widget.title,
+            icon: widget.icon,
+            iconColor: iconColor,
+            subtitle: widget.subtitle,
+            child: const _EmptyRail(),
+          );
+        }
+
+        return _ExternalBookRail(
+          title: widget.title,
+          icon: widget.icon,
+          iconColor: iconColor,
+          subtitle: widget.subtitle,
+          books: page.content.take(12).toList(),
+          badge: widget.badge,
+          rankItems: widget.rankItems,
+        );
+      },
     );
   }
 }
@@ -994,7 +1253,7 @@ class _ExternalAsyncRailState extends ConsumerState<_ExternalAsyncRail> {
 String _externalCatalogErrorMessage(Object error) {
   final message = AppError.messageFor(error);
   if (message.toLowerCase().contains('gutendex')) {
-    return 'Catalogue externe momentanement indisponible.';
+    return 'Catalogue externe momentanément indisponible.';
   }
 
   return message;
@@ -1002,20 +1261,31 @@ String _externalCatalogErrorMessage(Object error) {
 
 class _ExternalBookRail extends StatelessWidget {
   const _ExternalBookRail({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
     required this.books,
     required this.rankItems,
+    this.subtitle,
     this.badge,
   });
 
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final String? subtitle;
   final List<ExternalBook> books;
   final String? badge;
   final bool rankItems;
 
   @override
   Widget build(BuildContext context) {
-    return FigmaAdaptiveRail(
+    return _DiscoverCarouselRail(
+      title: title,
+      icon: icon,
+      iconColor: iconColor,
+      subtitle: subtitle,
       itemCount: books.length,
-      railHeight: 262,
       itemBuilder: (context, index) {
         return _ExternalBookTile(
           book: books[index],
@@ -1037,8 +1307,14 @@ class _ExternalBookTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () =>
-          context.go(AppRoutes.publicDomainBookDetailPath(book.externalId)),
+      onTap: () {
+        final internalBookId = book.internalBookId?.trim();
+        context.push(
+          book.imported && internalBookId != null && internalBookId.isNotEmpty
+              ? AppRoutes.catalogBookDetailPath(internalBookId)
+              : AppRoutes.publicDomainBookDetailPath(book.externalId),
+        );
+      },
       child: SizedBox(
         width: 112,
         child: Column(
@@ -1075,17 +1351,6 @@ class _ExternalBookTile extends StatelessWidget {
                 fontSize: 10,
               ),
             ),
-            const SizedBox(height: 5),
-            Text(
-              'Details',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: context.colors.primary,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
           ],
         ),
       ),
@@ -1103,7 +1368,7 @@ class _ExternalCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveBadge = book.imported
-        ? 'Importe'
+        ? 'Importé'
         : badge ?? 'Domaine public';
 
     return SizedBox(
@@ -1170,7 +1435,7 @@ class _CoverBadge extends StatelessWidget {
 }
 
 class _EmptyRail extends StatelessWidget {
-  const _EmptyRail({this.message = 'Aucun livre trouve pour ce filtre.'});
+  const _EmptyRail({this.message = 'Aucun livre trouvé pour ce filtre.'});
 
   final String message;
 
@@ -1205,7 +1470,7 @@ class _RoundBadge extends StatelessWidget {
       width: 22,
       height: 22,
       decoration: BoxDecoration(
-        color: context.colors.orange,
+        color: context.colors.primary,
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -1295,7 +1560,7 @@ class _InlineError extends StatelessWidget {
               style: TextStyle(color: context.colors.textSecondary),
             ),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Reessayer')),
+          TextButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

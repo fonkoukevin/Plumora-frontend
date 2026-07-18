@@ -73,6 +73,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       bottomPadding: 32,
       child: Column(
         children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FigmaBackButton(
+              label: 'Retour',
+              onTap: () => returnToPreviousOr(context, AppRoutes.login),
+            ),
+          ),
+          const SizedBox(height: 18),
           const AppWordmark(iconSize: 32, textSize: 36, gap: 8),
           const SizedBox(height: 16),
           Text(
@@ -107,7 +115,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         return 'Nom complet requis';
                       }
                       if (!trimmed.contains(RegExp(r'\s'))) {
-                        return 'Indiquez votre prenom et votre nom';
+                        return 'Indiquez votre prénom et votre nom';
                       }
                       return null;
                     },
@@ -140,7 +148,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     validator: (value) {
                       final password = value ?? '';
                       if (password.length < 8) {
-                        return '8 caracteres minimum';
+                        return '8 caractères minimum';
                       }
                       return null;
                     },
