@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Fixed light-violet control-room palette for the Administration space,
-/// matching `figma_administration/src/app/screens/AdminPage.tsx` exactly
-/// (the `C` object). Unlike the rest of the app, Administration does not
-/// follow the user's light/dark preference — it always renders in this
-/// palette, which is what the Figma source of truth specifies.
+/// Fixed light control-room palette for the Administration space. Unlike the
+/// rest of the app, Administration does not follow the user's light/dark
+/// preference. Its main surface stays white while violet remains the accent.
 abstract final class AdminColors {
-  static const background = Color(0xFFF5F3FF);
+  static const background = Color(0xFFFFFFFF);
   static const surface = Color(0xFFFFFFFF);
   static const card = Color(0xFFFFFFFF);
   static const border = Color(0xFFDDD8FF);
