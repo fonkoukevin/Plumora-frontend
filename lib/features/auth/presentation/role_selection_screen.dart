@@ -43,7 +43,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
 
   Future<void> _submit() async {
     if (_selectedRoles.isEmpty) {
-      setState(() => _localError = 'Selectionne au moins un role.');
+      setState(() => _localError = 'Sélectionne au moins un rôle.');
       return;
     }
 
@@ -93,10 +93,8 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: FigmaBackButton(
-                    label: 'Profil',
-                    onTap: () => context.canPop()
-                        ? context.pop()
-                        : context.go(AppRoutes.profile),
+                    label: 'Retour',
+                    onTap: () => returnToPreviousOr(context, AppRoutes.profile),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -104,7 +102,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
               Text(
                 widget.isOnboarding
                     ? 'Comment veux-tu utiliser Plumora ?'
-                    : 'Modifier mes roles',
+                    : 'Modifier mes rôles',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: context.colors.textPrimary,
@@ -116,8 +114,8 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
               const SizedBox(height: 14),
               Text(
                 widget.isOnboarding
-                    ? 'Selectionne un ou plusieurs roles pour personnaliser ton experience'
-                    : 'Ajoute ou retire des roles a tout moment',
+                    ? 'Sélectionne un ou plusieurs rôles pour personnaliser ton expérience'
+                    : 'Ajoute ou retire des rôles à tout moment',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: context.colors.textSecondary,
@@ -159,7 +157,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
               if (widget.isOnboarding) ...[
                 const SizedBox(height: 16),
                 Text(
-                  'Tu pourras modifier tes roles plus tard dans ton profil',
+                  'Tu pourras modifier tes rôles plus tard dans ton profil',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.colors.textSecondary,
@@ -248,7 +246,7 @@ List<_RoleChoice> _roleChoices(BuildContext context) => [
   _RoleChoice(
     value: 'AUTHOR',
     label: 'Auteur',
-    description: 'Ecrire, organiser et publier mes livres',
+    description: 'Écrire, organiser et publier mes livres',
     icon: Icons.edit_outlined,
     iconBackground: context.colors.primary.withValues(alpha: 0.14),
     iconColor: context.colors.primary,
@@ -256,14 +254,14 @@ List<_RoleChoice> _roleChoices(BuildContext context) => [
   _RoleChoice(
     value: 'READER',
     label: 'Lecteur',
-    description: 'Decouvrir, lire et sauvegarder des livres',
+    description: 'Découvrir, lire et sauvegarder des livres',
     icon: Icons.menu_book_outlined,
     iconBackground: context.colors.accent.withValues(alpha: 0.14),
     iconColor: context.colors.accent,
   ),
   _RoleChoice(
     value: 'BETA_READER',
-    label: 'Beta-testeur',
+    label: 'Bêta-testeur',
     description: 'Lire des manuscrits avant publication et donner mon avis',
     icon: Icons.science_outlined,
     iconBackground: context.colors.success.withValues(alpha: 0.14),
