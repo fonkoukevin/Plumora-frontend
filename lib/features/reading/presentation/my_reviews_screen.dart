@@ -21,6 +21,11 @@ class MyReviewsScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        FigmaBackButton(
+          label: 'Retour',
+          onTap: () => returnToPreviousOr(context, AppRoutes.library),
+        ),
+        const SizedBox(height: 18),
         PlumoraCard(
           borderColor: context.colors.warning.withValues(alpha: 0.35),
           child: Row(
@@ -121,7 +126,7 @@ class _MyReviewCardState extends ConsumerState<_MyReviewCard> {
       padding: const EdgeInsets.all(16),
       onTap: book == null || book.id.isEmpty
           ? null
-          : () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+          : () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
