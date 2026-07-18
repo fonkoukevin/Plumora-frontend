@@ -16,7 +16,7 @@ class LandingScreen extends StatelessWidget {
       angle: -0.10,
     ),
     _LandingCover(
-      title: 'Au-dela des Etoiles',
+      title: 'Au-delà des Étoiles',
       colors: [Color(0xFF1E40AF), Color(0xFF3730A3), Color(0xFF0F172A)],
       angle: 0.04,
       top: 16,
@@ -33,7 +33,7 @@ class LandingScreen extends StatelessWidget {
       top: 16,
     ),
     _LandingCover(
-      title: 'La Prophetie',
+      title: 'La Prophétie',
       colors: [Color(0xFF059669), Color(0xFF0F766E), Color(0xFF155E75)],
       angle: -0.06,
     ),
@@ -44,7 +44,7 @@ class LandingScreen extends StatelessWidget {
     'Romance',
     'Thriller',
     'Sci-Fi',
-    'Mystere',
+    'Mystère',
     'Aventure',
   ];
 
@@ -88,7 +88,7 @@ class LandingScreen extends StatelessWidget {
                         const Spacer(),
                         _GradientPillButton(
                           label: 'Se connecter',
-                          onPressed: () => context.go(AppRoutes.login),
+                          onPressed: () => context.push(AppRoutes.login),
                           radius: 12,
                           minHeight: 42,
                           horizontalPadding: 20,
@@ -109,7 +109,7 @@ class LandingScreen extends StatelessWidget {
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 448),
                             child: Text(
-                              "Ecrivez, publiez, lisez et collaborez avec une communaute passionnee. L'IA Plumo vous accompagne a chaque etape.",
+                              "Écrivez, publiez, lisez et collaborez avec une communauté passionnée. L'IA Plumo vous accompagne à chaque étape.",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: context.colors.textSecondary,
@@ -127,7 +127,8 @@ class LandingScreen extends StatelessWidget {
                             children: [
                               _GradientPillButton(
                                 label: 'Rejoindre gratuitement',
-                                onPressed: () => context.go(AppRoutes.register),
+                                onPressed: () =>
+                                    context.push(AppRoutes.register),
                                 trailingIcon: Icons.arrow_forward,
                                 radius: 16,
                                 minHeight: 56,
@@ -310,7 +311,7 @@ class _HeroTitle extends StatelessWidget {
         children: [
           const TextSpan(text: 'Votre prochaine\n'),
           TextSpan(
-            text: 'aventure litteraire\n',
+            text: 'aventure littéraire\n',
             style: TextStyle(
               foreground: Paint()
                 ..shader = LinearGradient(
@@ -442,21 +443,21 @@ class _FeatureGrid extends StatelessWidget {
     final features = [
       _LandingFeature(
         emoji: '✍️',
-        title: 'Ecrire',
+        title: 'Écrire',
         description:
-            'Editeur puissant avec IA pour creer vos histoires sans limites',
+            'Éditeur puissant avec IA pour créer vos histoires sans limites',
         color: context.colors.brandPrimary,
       ),
       _LandingFeature(
         emoji: '🔍',
-        title: 'Decouvrir',
+        title: 'Découvrir',
         description:
-            'Plumo vous recommande les livres parfaits selon vos gouts',
+            'Plumo vous recommande les livres parfaits selon vos goûts',
         color: context.colors.brandNavy,
       ),
       _LandingFeature(
         emoji: '📚',
-        title: 'Beta-lire',
+        title: 'Bêta-lire',
         description:
             'Aidez les auteurs et recevez des retours sur vos manuscrits',
         color: context.colors.brandGold,
@@ -481,7 +482,7 @@ class _FeatureGrid extends StatelessWidget {
                 SizedBox(
                   width: width,
                   child: FigmaCard(
-                    onTap: () => context.go(AppRoutes.register),
+                    onTap: () => context.push(AppRoutes.register),
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

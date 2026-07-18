@@ -139,21 +139,36 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
         : const AsyncValue.data(null);
 
     return bookAsync.when(
-      loading: () => const FigmaScreen(
+      loading: () => FigmaScreen(
         maxWidth: _formMaxWidth,
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(48),
-            child: CircularProgressIndicator(),
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FigmaBackButton(
+              label: 'Retour',
+              onTap: () => returnToPreviousOr(context, AppRoutes.write),
+            ),
+            const SizedBox(height: 48),
+            const Center(child: CircularProgressIndicator()),
+          ],
         ),
       ),
       error: (error, _) => FigmaScreen(
         maxWidth: _formMaxWidth,
         padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
-        child: _ErrorPanel(
-          message: AppError.messageFor(error),
-          onRetry: () => ref.invalidate(authorBookProvider(widget.bookId!)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FigmaBackButton(
+              label: 'Retour',
+              onTap: () => returnToPreviousOr(context, AppRoutes.write),
+            ),
+            const SizedBox(height: 18),
+            _ErrorPanel(
+              message: AppError.messageFor(error),
+              onRetry: () => ref.invalidate(authorBookProvider(widget.bookId!)),
+            ),
+          ],
         ),
       ),
       data: (book) {
@@ -171,7 +186,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                 editing: _editing,
                 canSubmit: canSubmit,
                 submitting: _isSubmitting,
-                onBack: () => context.go(AppRoutes.write),
+                onBack: () => returnToPreviousOr(context, AppRoutes.write),
                 onSubmit: _submit,
               ),
               Expanded(
@@ -453,7 +468,7 @@ class _Header extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onBack,
                     icon: const Icon(Icons.arrow_back, size: 16),
-                    label: const Text('Mes histoires'),
+                    label: const Text('Retour'),
                     style: TextButton.styleFrom(
                       foregroundColor: _writeAccent,
                       padding: EdgeInsets.zero,
@@ -1099,7 +1114,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

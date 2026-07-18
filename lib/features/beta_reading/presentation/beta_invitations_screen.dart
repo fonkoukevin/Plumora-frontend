@@ -77,14 +77,8 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!widget.embedded)
-              FigmaBackButton(
-                label: "Retour a l'accueil",
-                onTap: () => context.go(AppRoutes.home),
-              ),
-            if (!widget.embedded) const SizedBox(height: 18),
             Text(
-              'Beta-tests',
+              'Bêta-tests',
               style: TextStyle(
                 color: context.colors.textPrimary,
                 fontSize: 38,
@@ -125,7 +119,7 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              "Tout beta-lecteur peut rejoindre l'une de ces campagnes et "
+              "Tout bêta-lecteur peut rejoindre l'une de ces campagnes et "
               'commenter directement, sans invitation.',
               style: TextStyle(
                 color: context.colors.textSecondary,
@@ -137,7 +131,7 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
               const FigmaEmptyState(
                 title: 'Aucune campagne active',
                 message:
-                    'Les campagnes de beta-lecture ouvertes par les auteurs apparaitront ici.',
+                    'Les campagnes de bêta-lecture ouvertes par les auteurs apparaîtront ici.',
                 icon: Icons.edit_note_outlined,
               )
             else
@@ -157,8 +151,8 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                "Une invitation ne conditionne plus l'acces a la campagne : "
-                "elle sert juste a signaler a l'auteur ta participation.",
+                "Une invitation ne conditionne plus l'accès à la campagne : "
+                "elle sert juste à signaler à l'auteur ta participation.",
                 style: TextStyle(
                   color: context.colors.textSecondary,
                   fontSize: 13,
@@ -189,7 +183,17 @@ class _BetaInvitationsScreenState extends ConsumerState<BetaInvitationsScreen> {
     return FigmaScreen(
       maxWidth: 1120,
       padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
-      child: content,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FigmaBackButton(
+            label: 'Retour',
+            onTap: () => returnToPreviousOr(context, AppRoutes.library),
+          ),
+          const SizedBox(height: 18),
+          content,
+        ],
+      ),
     );
   }
 
@@ -325,7 +329,7 @@ class _OpenCampaignCard extends ConsumerWidget {
                 ],
                 const SizedBox(height: 14),
                 FilledButton.icon(
-                  onPressed: () => context.go(
+                  onPressed: () => context.push(
                     AppRoutes.betaChaptersPath(
                       campaign.id,
                       bookId: campaign.bookId,
@@ -455,7 +459,7 @@ class _TipsCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Conseils pour un bon beta-test',
+                  'Conseils pour un bon bêta-test',
                   style: TextStyle(
                     color: context.colors.textPrimary,
                     fontWeight: FontWeight.w900,
@@ -463,7 +467,7 @@ class _TipsCard extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  "Soyez constructif et bienveillant, notez les incoherences, partagez ce que vous avez aime et respectez les delais fixes par l'auteur.",
+                  "Soyez constructif et bienveillant, notez les incohérences, partagez ce que vous avez aimé et respectez les délais fixés par l'auteur.",
                   style: TextStyle(
                     color: context.colors.textSecondary,
                     height: 1.4,
@@ -497,7 +501,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

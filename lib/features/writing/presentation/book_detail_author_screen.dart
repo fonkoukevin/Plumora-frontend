@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/models/chapter_model.dart';
@@ -42,16 +43,38 @@ class _BookDetailAuthorScreenState
     return ColoredBox(
       color: context.colors.background,
       child: bookAsync.when(
-        loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(48),
-            child: CircularProgressIndicator(),
+        loading: () => FigmaScreen(
+          maxWidth: 768,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FigmaBackButton(
+                label: 'Retour',
+                onTap: () => returnToPreviousOr(context, AppRoutes.write),
+              ),
+              const SizedBox(height: 48),
+              const Center(child: CircularProgressIndicator()),
+            ],
           ),
         ),
-        error: (error, _) => _ErrorPanel(
-          title: 'Livre introuvable',
-          message: AppError.messageFor(error),
-          onRetry: () => ref.invalidate(authorBookProvider(widget.bookId)),
+        error: (error, _) => FigmaScreen(
+          maxWidth: 768,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FigmaBackButton(
+                label: 'Retour',
+                onTap: () => returnToPreviousOr(context, AppRoutes.write),
+              ),
+              const SizedBox(height: 18),
+              _ErrorPanel(
+                title: 'Livre introuvable',
+                message: AppError.messageFor(error),
+                onRetry: () =>
+                    ref.invalidate(authorBookProvider(widget.bookId)),
+              ),
+            ],
+          ),
         ),
         data: (book) => _BookDetailBody(
           book: book,
@@ -189,9 +212,9 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           TextButton.icon(
-            onPressed: () => context.go(AppRoutes.write),
+            onPressed: () => returnToPreviousOr(context, AppRoutes.write),
             icon: const Icon(Icons.arrow_back, size: 16),
-            label: const Text('Mes histoires'),
+            label: const Text('Retour'),
             style: TextButton.styleFrom(
               foregroundColor: context.colors.primary,
               padding: EdgeInsets.zero,
@@ -207,7 +230,7 @@ class _TopBar extends StatelessWidget {
           _GradientPillButton(
             icon: Icons.energy_savings_leaf_outlined,
             label: _primaryActionLabel(book),
-            onPressed: () => context.go(AppRoutes.chapterEditorPath(book.id)),
+            onPressed: () => context.push(AppRoutes.chapterEditorPath(book.id)),
           ),
         ],
       ),
@@ -261,7 +284,7 @@ class _BookHero extends ConsumerWidget {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => context.go(AppRoutes.editBookPath(book.id)),
+                    onTap: () => context.push(AppRoutes.editBookPath(book.id)),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       width: 30,
@@ -443,7 +466,7 @@ class _ActionGrid extends StatelessWidget {
               selected: true,
               onTap: isMutating
                   ? null
-                  : () => context.go(AppRoutes.chapterEditorPath(book.id)),
+                  : () => context.push(AppRoutes.chapterEditorPath(book.id)),
             ),
           ),
           const SizedBox(width: 8),
@@ -453,8 +476,9 @@ class _ActionGrid extends StatelessWidget {
               label: 'Bêta-test',
               onTap: isMutating
                   ? null
-                  : () =>
-                        context.go(AppRoutes.authorBetaCampaignsPath(book.id)),
+                  : () => context.push(
+                      AppRoutes.authorBetaCampaignsPath(book.id),
+                    ),
             ),
           ),
           const SizedBox(width: 8),
@@ -464,7 +488,7 @@ class _ActionGrid extends StatelessWidget {
               label: 'Publier',
               onTap: isMutating
                   ? null
-                  : () => context.go(AppRoutes.publishBookPath(book.id)),
+                  : () => context.push(AppRoutes.publishBookPath(book.id)),
             ),
           ),
         ],
@@ -666,7 +690,7 @@ class _OverviewTab extends StatelessWidget {
           _DetailSectionCard(
             title: 'Résumé',
             actionLabel: 'Modifier',
-            onAction: () => context.go(AppRoutes.editBookPath(book.id)),
+            onAction: () => context.push(AppRoutes.editBookPath(book.id)),
             child: Text(
               _bookSummary(book),
               style: TextStyle(
@@ -801,7 +825,7 @@ class _PlumoHint extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.go(AppRoutes.plumoWritingPath()),
+        onTap: () => context.push(AppRoutes.plumoWritingPath()),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(14),
@@ -893,7 +917,7 @@ class _ChaptersTab extends ConsumerWidget {
           if (chapters.isEmpty) {
             return _EmptyChapters(
               onOpenEditor: () =>
-                  context.go(AppRoutes.chapterEditorPath(book.id)),
+                  context.push(AppRoutes.chapterEditorPath(book.id)),
             );
           }
 
@@ -918,7 +942,7 @@ class _ChaptersTab extends ConsumerWidget {
                     icon: Icons.add,
                     label: 'Nouveau chapitre',
                     onPressed: () =>
-                        context.go(AppRoutes.chapterEditorPath(book.id)),
+                        context.push(AppRoutes.chapterEditorPath(book.id)),
                   ),
                 ],
               ),
@@ -928,7 +952,7 @@ class _ChaptersTab extends ConsumerWidget {
                 const SizedBox(height: 10),
               ],
               _AddChapterCard(
-                onTap: () => context.go(AppRoutes.chapterEditorPath(book.id)),
+                onTap: () => context.push(AppRoutes.chapterEditorPath(book.id)),
               ),
             ],
           );
@@ -957,7 +981,7 @@ class _ChapterRow extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.go(
+        onTap: () => context.push(
           AppRoutes.authorChapterDetailPath(chapter.id, bookId: book.id),
         ),
         borderRadius: BorderRadius.circular(14),
@@ -1036,7 +1060,7 @@ class _ChapterRow extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () =>
-                    context.go(AppRoutes.chapterEditorPath(book.id)),
+                    context.push(AppRoutes.chapterEditorPath(book.id)),
                 icon: const Icon(Icons.edit_outlined),
                 color: context.colors.primary,
                 iconSize: 18,
@@ -1209,7 +1233,7 @@ class _StatsTab extends StatelessWidget {
                 const SizedBox(height: 10),
                 TextButton(
                   onPressed: () =>
-                      context.go(AppRoutes.publishBookPath(book.id)),
+                      context.push(AppRoutes.publishBookPath(book.id)),
                   style: TextButton.styleFrom(
                     foregroundColor: context.colors.primary,
                     padding: EdgeInsets.zero,
@@ -1315,7 +1339,7 @@ class _SettingsTab extends StatelessWidget {
           _DetailSectionCard(
             title: 'Informations du livre',
             actionLabel: 'Modifier',
-            onAction: () => context.go(AppRoutes.editBookPath(book.id)),
+            onAction: () => context.push(AppRoutes.editBookPath(book.id)),
             child: Column(
               children: [
                 _SettingsRow(label: 'Titre', value: book.title),
@@ -1515,7 +1539,7 @@ class _QuickLinkRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.go(item.route),
+      onTap: () => context.push(item.route),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(

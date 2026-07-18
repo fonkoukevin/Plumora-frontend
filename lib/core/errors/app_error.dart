@@ -44,7 +44,7 @@ abstract final class AppError {
       case DioExceptionType.badCertificate:
         return 'Le certificat du serveur est invalide.';
       case DioExceptionType.unknown:
-        return 'Erreur reseau inattendue.';
+        return 'Erreur réseau inattendue.';
     }
   }
 
@@ -63,7 +63,7 @@ abstract final class AppError {
       case 500:
       case 502:
       case 503:
-        return 'Le serveur Plumora rencontre un probleme.';
+        return 'Le serveur Plumora rencontre un problème.';
       default:
         return 'La requête a échoué.';
     }

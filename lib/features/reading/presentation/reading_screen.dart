@@ -7,8 +7,11 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../catalog/data/models/catalog_book_model.dart';
+import '../../catalog/data/repositories/catalog_repository.dart';
 import '../data/models/reading_progress_model.dart';
 import '../data/repositories/reading_repository.dart';
+import '../data/repositories/review_repository.dart';
+import 'review_dialog.dart';
 
 const List<String> _readerFontFallback = [
   'Georgia',
@@ -28,10 +31,28 @@ class ReadingScreen extends ConsumerStatefulWidget {
 }
 
 class _ReadingScreenState extends ConsumerState<ReadingScreen> {
+  final ScrollController _scrollController = ScrollController();
   int _chapterIndex = 0;
   bool _initialized = false;
   bool _saving = false;
+  bool _reviewSubmitting = false;
+  double _scrollProgress = 0;
+  double _fontScale = 1;
   String? _saveError;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_syncScrollProgress);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_syncScrollProgress)
+      ..dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +62,12 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     return bookAsync.when(
       loading: () => Scaffold(
         backgroundColor: context.colors.background,
+        appBar: _readingBackAppBar(context, widget.bookId),
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Scaffold(
         backgroundColor: context.colors.background,
+        appBar: _readingBackAppBar(context, widget.bookId),
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
@@ -66,7 +89,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                   FilledButton(
                     onPressed: () =>
                         ref.invalidate(readableBookProvider(widget.bookId)),
-                    child: const Text('Reessayer'),
+                    child: const Text('Réessayer'),
                   ),
                 ],
               ),
@@ -90,73 +113,94 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         _ensureInitialChapter(chapters, progressAsync.valueOrNull);
         final safeIndex = _chapterIndex.clamp(0, chapters.length - 1);
         final chapter = chapters[safeIndex];
-        final progress = (safeIndex + 1) / chapters.length;
+        final progress = ((safeIndex + _scrollProgress) / chapters.length)
+            .clamp(0.0, 1.0);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _syncScrollProgress();
+        });
 
         return Scaffold(
           backgroundColor: context.colors.background,
-          appBar: AppBar(
-            backgroundColor: context.colors.cards,
-            surfaceTintColor: Colors.transparent,
-            shape: Border(bottom: BorderSide(color: context.colors.border)),
-            leading: IconButton(
-              onPressed: () => context.go(AppRoutes.library),
-              icon: const Icon(Icons.arrow_back),
+          appBar: _ReaderAppBar(
+            bookTitle: book.title.isEmpty ? 'Livre sans titre' : book.title,
+            chapterTitle: chapter.title.isEmpty
+                ? 'Chapitre ${safeIndex + 1}'
+                : chapter.title,
+            onBack: () => returnToPreviousOr(
+              context,
+              AppRoutes.catalogBookDetailPath(widget.bookId),
             ),
-            title: Column(
-              children: [
-                Text(
-                  book.title.isEmpty ? 'Livre sans titre' : book.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  chapter.title.isEmpty
-                      ? 'Chapitre ${safeIndex + 1}'
-                      : chapter.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: context.colors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            centerTitle: true,
-            actions: [
-              IconButton(
-                tooltip: 'Mes avis',
-                onPressed: () => context.go(AppRoutes.libraryReviews),
-                icon: const Icon(Icons.star_border),
-              ),
-            ],
+            onAppearance: _showAppearanceSettings,
+            onReviews: _openReviewDialog,
           ),
           body: Column(
             children: [
               Expanded(
-                child: ColoredBox(
-                  color: context.colors.background,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: _readerBackdrop(context)),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final compact = constraints.maxWidth < 520;
+                      final compact = constraints.maxWidth < 620;
+                      final wide = constraints.maxWidth >= 900;
                       return SingleChildScrollView(
+                        controller: _scrollController,
                         padding: EdgeInsets.fromLTRB(
-                          compact ? 20 : 42,
-                          compact ? 26 : 42,
-                          compact ? 20 : 42,
-                          46,
+                          compact ? 0 : (wide ? 44 : 28),
+                          compact ? 0 : 30,
+                          compact ? 0 : (wide ? 44 : 28),
+                          compact ? 28 : 52,
                         ),
                         child: Center(
                           child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 680),
-                            child: SelectionArea(
-                              child: _ReaderText(
-                                chapter: chapter,
-                                compact: compact,
+                            constraints: const BoxConstraints(maxWidth: 820),
+                            child: DecoratedBox(
+                              key: const ValueKey('reader_paper'),
+                              decoration: BoxDecoration(
+                                color: _readerPaper(context),
+                                borderRadius: compact
+                                    ? BorderRadius.zero
+                                    : BorderRadius.circular(28),
+                                border: compact
+                                    ? null
+                                    : Border.all(
+                                        color: context.colors.border.withValues(
+                                          alpha: 0.65,
+                                        ),
+                                      ),
+                                boxShadow: compact
+                                    ? const []
+                                    : [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha:
+                                                Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? 0.22
+                                                : 0.07,
+                                          ),
+                                          blurRadius: 34,
+                                          offset: const Offset(0, 16),
+                                        ),
+                                      ],
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  compact ? 24 : 68,
+                                  compact ? 34 : 58,
+                                  compact ? 24 : 68,
+                                  compact ? 54 : 76,
+                                ),
+                                child: SelectionArea(
+                                  child: _ReaderText(
+                                    chapter: chapter,
+                                    compact: compact,
+                                    fontScale: _fontScale,
+                                    chapterNumber: safeIndex + 1,
+                                    readingMinutes: _readingMinutes(
+                                      chapter.content,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -166,106 +210,58 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                   ),
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: context.colors.cards,
-                  border: Border(top: BorderSide(color: context.colors.border)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, -5),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                child: SafeArea(
-                  top: false,
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Chapitre ${safeIndex + 1} sur ${chapters.length}',
-                                style: TextStyle(
-                                  color: context.colors.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                _saving
-                                    ? 'Sauvegarde...'
-                                    : '${(progress * 100).round()}% lu',
-                                style: TextStyle(
-                                  color: context.colors.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          FigmaProgressBar(
-                            value: progress,
-                            colors: [
-                              context.colors.primary,
-                              context.colors.primary,
-                            ],
-                          ),
-                          if (_saveError != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              _saveError!,
-                              style: TextStyle(
-                                color: context.colors.destructive,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: safeIndex == 0 || _saving
-                                    ? null
-                                    : () => _goTo(chapters, safeIndex - 1),
-                                icon: const Icon(Icons.chevron_left),
-                                label: const Text('Precedent'),
-                              ),
-                              const Spacer(),
-                              FilledButton.icon(
-                                onPressed: _saving
-                                    ? null
-                                    : () {
-                                        if (safeIndex == chapters.length - 1) {
-                                          _finish();
-                                        } else {
-                                          _goTo(chapters, safeIndex + 1);
-                                        }
-                                      },
-                                label: Text(
-                                  safeIndex == chapters.length - 1
-                                      ? 'Terminer'
-                                      : 'Suivant',
-                                ),
-                                icon: const Icon(Icons.chevron_right),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+              _ReaderNavigationDock(
+                chapterNumber: safeIndex + 1,
+                chapterCount: chapters.length,
+                progress: progress,
+                saving: _saving,
+                error: _saveError,
+                canGoPrevious: safeIndex > 0 && !_saving,
+                isLastChapter: safeIndex == chapters.length - 1,
+                onPrevious: () => _goTo(chapters, safeIndex - 1),
+                onNext: _saving
+                    ? null
+                    : () {
+                        if (safeIndex == chapters.length - 1) {
+                          _finish();
+                        } else {
+                          _goTo(chapters, safeIndex + 1);
+                        }
+                      },
               ),
             ],
           ),
         );
       },
     );
+  }
+
+  void _syncScrollProgress() {
+    if (!mounted || !_scrollController.hasClients) {
+      return;
+    }
+
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    final next = maxExtent <= 0
+        ? 1.0
+        : (_scrollController.offset / maxExtent).clamp(0.0, 1.0);
+    if ((next - _scrollProgress).abs() < 0.005) {
+      return;
+    }
+
+    setState(() => _scrollProgress = next);
+  }
+
+  Future<void> _showAppearanceSettings() async {
+    final selected = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: context.colors.cards,
+      builder: (context) => _ReadingAppearanceSheet(selectedScale: _fontScale),
+    );
+    if (selected != null && mounted) {
+      setState(() => _fontScale = selected);
+    }
   }
 
   void _ensureInitialChapter(
@@ -303,8 +299,14 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   Future<void> _goTo(List<CatalogChapterModel> chapters, int index) async {
     setState(() {
       _chapterIndex = index;
+      _scrollProgress = 0;
       _saving = true;
       _saveError = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
     });
 
     try {
@@ -343,7 +345,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       ref.invalidate(readingProgressProvider(widget.bookId));
       ref.invalidate(myReadingProgressProvider);
       if (mounted) {
-        context.go(AppRoutes.libraryReviews);
+        context.go(AppRoutes.catalogBookDetailPath(widget.bookId));
       }
     } catch (error) {
       setState(() => _saveError = AppError.messageFor(error));
@@ -353,13 +355,545 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       }
     }
   }
+
+  Future<void> _openReviewDialog() async {
+    if (_reviewSubmitting) {
+      return;
+    }
+
+    final request = await showPlumoraReviewDialog(context);
+    if (request == null || !mounted) {
+      return;
+    }
+
+    setState(() => _reviewSubmitting = true);
+    try {
+      await ref
+          .read(reviewRepositoryProvider)
+          .createReview(widget.bookId, request);
+      ref.invalidate(bookReviewsProvider(widget.bookId));
+      ref.invalidate(myReviewsProvider);
+      ref.invalidate(myReviewForBookProvider(widget.bookId));
+      ref.invalidate(catalogBookDetailProvider(widget.bookId));
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Avis publié.')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppError.messageFor(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _reviewSubmitting = false);
+      }
+    }
+  }
+}
+
+class _ReaderAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _ReaderAppBar({
+    required this.bookTitle,
+    required this.chapterTitle,
+    required this.onBack,
+    required this.onAppearance,
+    required this.onReviews,
+  });
+
+  final String bookTitle;
+  final String chapterTitle;
+  final VoidCallback onBack;
+  final VoidCallback onAppearance;
+  final VoidCallback onReviews;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(70);
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    return AppBar(
+      toolbarHeight: 70,
+      backgroundColor: _readerBackdrop(context),
+      foregroundColor: context.colors.textPrimary,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      shape: Border(
+        bottom: BorderSide(
+          color: context.colors.border.withValues(alpha: 0.72),
+        ),
+      ),
+      leadingWidth: compact ? 98 : 112,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: FigmaBackButton(label: 'Retour', onTap: onBack),
+      ),
+      titleSpacing: 4,
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            bookTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: context.colors.textPrimary,
+              fontFamily: 'Georgia',
+              fontFamilyFallback: _readerFontFallback,
+              fontSize: compact ? 15 : 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            chapterTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+      centerTitle: true,
+      actions: [
+        _ReaderHeaderAction(
+          tooltip: 'Confort de lecture',
+          icon: Icons.text_fields_rounded,
+          onTap: onAppearance,
+        ),
+        _ReaderHeaderAction(
+          tooltip: 'Donner mon avis',
+          icon: Icons.star_border_rounded,
+          onTap: onReviews,
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+}
+
+class _ReaderHeaderAction extends StatelessWidget {
+  const _ReaderHeaderAction({
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        style: IconButton.styleFrom(
+          foregroundColor: context.colors.textPrimary,
+          backgroundColor: context.colors.primary.withValues(alpha: 0.08),
+          minimumSize: const Size(40, 40),
+        ),
+        icon: Icon(icon, size: 20),
+      ),
+    );
+  }
+}
+
+class _ReaderNavigationDock extends StatelessWidget {
+  const _ReaderNavigationDock({
+    required this.chapterNumber,
+    required this.chapterCount,
+    required this.progress,
+    required this.saving,
+    required this.canGoPrevious,
+    required this.isLastChapter,
+    required this.onPrevious,
+    required this.onNext,
+    this.error,
+  });
+
+  final int chapterNumber;
+  final int chapterCount;
+  final double progress;
+  final bool saving;
+  final bool canGoPrevious;
+  final bool isLastChapter;
+  final VoidCallback onPrevious;
+  final VoidCallback? onNext;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: _readerBackdrop(context)),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _readerPaper(context),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: context.colors.border.withValues(alpha: 0.8),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.09),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 680;
+                    final progressPanel = _ReaderProgressPanel(
+                      chapterNumber: chapterNumber,
+                      chapterCount: chapterCount,
+                      progress: progress,
+                      saving: saving,
+                    );
+                    final previous = _ReaderDockButton(
+                      label: 'Précédent',
+                      icon: Icons.chevron_left_rounded,
+                      onTap: canGoPrevious ? onPrevious : null,
+                    );
+                    final next = _ReaderDockButton(
+                      label: isLastChapter ? 'Terminer' : 'Suivant',
+                      icon: saving ? null : Icons.chevron_right_rounded,
+                      trailingIcon: true,
+                      primary: true,
+                      loading: saving,
+                      onTap: onNext,
+                    );
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (compact) ...[
+                          progressPanel,
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(child: previous),
+                              const SizedBox(width: 12),
+                              Expanded(child: next),
+                            ],
+                          ),
+                        ] else
+                          Row(
+                            children: [
+                              SizedBox(width: 142, child: previous),
+                              const SizedBox(width: 22),
+                              Expanded(child: progressPanel),
+                              const SizedBox(width: 22),
+                              SizedBox(width: 142, child: next),
+                            ],
+                          ),
+                        if (error != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            error!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: context.colors.destructive,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReaderProgressPanel extends StatelessWidget {
+  const _ReaderProgressPanel({
+    required this.chapterNumber,
+    required this.chapterCount,
+    required this.progress,
+    required this.saving,
+  });
+
+  final int chapterNumber;
+  final int chapterCount;
+  final double progress;
+  final bool saving;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Progression de lecture ${(progress * 100).round()} pour cent',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  'Chapitre $chapterNumber sur $chapterCount',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: Text(
+                  saving ? 'Sauvegarde...' : '${(progress * 100).round()} %',
+                  key: ValueKey(saving),
+                  style: TextStyle(
+                    color: context.colors.primary,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              color: context.colors.primary,
+              backgroundColor: context.colors.primary.withValues(alpha: 0.12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReaderDockButton extends StatelessWidget {
+  const _ReaderDockButton({
+    required this.label,
+    required this.onTap,
+    this.icon,
+    this.trailingIcon = false,
+    this.primary = false,
+    this.loading = false,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final IconData? icon;
+  final bool trailingIcon;
+  final bool primary;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = loading
+        ? const SizedBox(
+            width: 17,
+            height: 17,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : icon == null
+        ? null
+        : Icon(icon, size: 19);
+    final content = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!trailingIcon && iconWidget != null) ...[
+            iconWidget,
+            const SizedBox(width: 6),
+          ],
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+          if (trailingIcon && iconWidget != null) ...[
+            const SizedBox(width: 6),
+            iconWidget,
+          ],
+        ],
+      ),
+    );
+
+    final style = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size.fromHeight(44)),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
+    if (primary) {
+      return FilledButton(onPressed: onTap, style: style, child: content);
+    }
+    return OutlinedButton(onPressed: onTap, style: style, child: content);
+  }
+}
+
+class _ReadingAppearanceSheet extends StatelessWidget {
+  const _ReadingAppearanceSheet({required this.selectedScale});
+
+  final double selectedScale;
+
+  @override
+  Widget build(BuildContext context) {
+    const choices = [
+      (scale: 0.9, symbol: 'A−', label: 'Petit'),
+      (scale: 1.0, symbol: 'A', label: 'Confort'),
+      (scale: 1.12, symbol: 'A+', label: 'Grand'),
+    ];
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Confort de lecture',
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Choisis la taille de texte qui te convient le mieux.',
+                  style: TextStyle(color: context.colors.textSecondary),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    for (var index = 0; index < choices.length; index++) ...[
+                      if (index > 0) const SizedBox(width: 10),
+                      Expanded(
+                        child: _ReadingScaleChoice(
+                          symbol: choices[index].symbol,
+                          label: choices[index].label,
+                          selected:
+                              (selectedScale - choices[index].scale).abs() <
+                              0.01,
+                          onTap: () =>
+                              Navigator.of(context).pop(choices[index].scale),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReadingScaleChoice extends StatelessWidget {
+  const _ReadingScaleChoice({
+    required this.symbol,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String symbol;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? context.colors.primary.withValues(alpha: 0.12)
+              : context.colors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? context.colors.primary : context.colors.border,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              symbol,
+              style: TextStyle(
+                color: selected
+                    ? context.colors.primary
+                    : context.colors.textPrimary,
+                fontFamily: 'Georgia',
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ReaderText extends StatelessWidget {
-  const _ReaderText({required this.chapter, required this.compact});
+  const _ReaderText({
+    required this.chapter,
+    required this.compact,
+    required this.fontScale,
+    required this.chapterNumber,
+    required this.readingMinutes,
+  });
 
   final CatalogChapterModel chapter;
   final bool compact;
+  final double fontScale;
+  final int chapterNumber;
+  final int readingMinutes;
 
   @override
   Widget build(BuildContext context) {
@@ -372,38 +906,62 @@ class _ReaderText extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Center(
+          child: Text(
+            'CHAPITRE $chapterNumber  •  $readingMinutes MIN DE LECTURE',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: context.colors.primary,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.35,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
         if (shouldShowChapterTitle) ...[
           Center(
             child: Text(
               chapter.title,
               textAlign: TextAlign.center,
-              style: _readerHeadingStyle(context, compact),
+              style: _readerHeadingStyle(context, compact, fontScale),
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 22),
         ],
+        const _ReaderOrnament(),
+        const SizedBox(height: 34),
         if (blocks.isEmpty)
           Text(
             'Ce chapitre ne contient pas encore de texte.',
             style: TextStyle(
               color: context.colors.textSecondary,
-              fontSize: compact ? 17 : 18,
+              fontSize: (compact ? 17 : 18) * fontScale,
               height: 1.65,
             ),
           )
         else
           for (final block in blocks)
-            _ReaderBlockView(block: block, compact: compact),
+            _ReaderBlockView(
+              block: block,
+              compact: compact,
+              fontScale: fontScale,
+            ),
       ],
     );
   }
 }
 
 class _ReaderBlockView extends StatelessWidget {
-  const _ReaderBlockView({required this.block, required this.compact});
+  const _ReaderBlockView({
+    required this.block,
+    required this.compact,
+    required this.fontScale,
+  });
 
   final _ReaderBlock block;
   final bool compact;
+  final double fontScale;
 
   @override
   Widget build(BuildContext context) {
@@ -415,7 +973,7 @@ class _ReaderBlockView extends StatelessWidget {
             child: Text(
               block.text,
               textAlign: TextAlign.center,
-              style: _readerHeadingStyle(context, compact),
+              style: _readerHeadingStyle(context, compact, fontScale),
             ),
           ),
         );
@@ -425,7 +983,7 @@ class _ReaderBlockView extends StatelessWidget {
           child: Text(
             block.text,
             textAlign: block.center ? TextAlign.center : TextAlign.left,
-            style: _readerMetadataStyle(context, compact),
+            style: _readerMetadataStyle(context, compact, fontScale),
           ),
         );
       case _ReaderBlockType.preformatted:
@@ -435,7 +993,7 @@ class _ReaderBlockView extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Text(
               block.text,
-              style: _readerPreformattedStyle(context, compact),
+              style: _readerPreformattedStyle(context, compact, fontScale),
             ),
           ),
         );
@@ -444,7 +1002,7 @@ class _ReaderBlockView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 22),
           child: Center(
             child: SizedBox(
-              width: 260,
+              width: compact ? 112 : 168,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   border: Border(
@@ -459,11 +1017,11 @@ class _ReaderBlockView extends StatelessWidget {
         );
       case _ReaderBlockType.paragraph:
         return Padding(
-          padding: const EdgeInsets.only(bottom: 18),
+          padding: const EdgeInsets.only(bottom: 22),
           child: Text(
             block.text,
-            textAlign: TextAlign.left,
-            style: _readerParagraphStyle(context, compact),
+            textAlign: compact ? TextAlign.left : TextAlign.justify,
+            style: _readerParagraphStyle(context, compact, fontScale),
           ),
         );
     }
@@ -571,52 +1129,130 @@ class _ReaderBlock {
 
 enum _ReaderBlockType { heading, metadata, paragraph, preformatted, separator }
 
-TextStyle _readerHeadingStyle(BuildContext context, bool compact) {
+class _ReaderOrnament extends StatelessWidget {
+  const _ReaderOrnament();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 116,
+        child: Row(
+          children: [
+            Expanded(
+              child: Divider(
+                color: context.colors.primary.withValues(alpha: 0.32),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Icon(
+                Icons.auto_stories_outlined,
+                size: 17,
+                color: context.colors.primary,
+              ),
+            ),
+            Expanded(
+              child: Divider(
+                color: context.colors.primary.withValues(alpha: 0.32),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+TextStyle _readerHeadingStyle(
+  BuildContext context,
+  bool compact,
+  double fontScale,
+) {
   return TextStyle(
     color: context.colors.textPrimary,
     fontFamily: 'Georgia',
     fontFamilyFallback: _readerFontFallback,
-    fontSize: compact ? 24 : 28,
-    fontWeight: FontWeight.w800,
-    height: 1.18,
-    letterSpacing: 0,
+    fontSize: (compact ? 25 : 31) * fontScale,
+    fontWeight: FontWeight.w700,
+    height: 1.24,
+    letterSpacing: -0.35,
   );
 }
 
-TextStyle _readerParagraphStyle(BuildContext context, bool compact) {
+TextStyle _readerParagraphStyle(
+  BuildContext context,
+  bool compact,
+  double fontScale,
+) {
   return TextStyle(
     color: context.colors.textPrimary,
     fontFamily: 'Georgia',
     fontFamilyFallback: _readerFontFallback,
-    fontSize: compact ? 18 : 19,
+    fontSize: (compact ? 18 : 19.5) * fontScale,
     fontWeight: FontWeight.w400,
-    height: 1.55,
-    letterSpacing: 0,
+    height: compact ? 1.66 : 1.72,
+    letterSpacing: 0.05,
   );
 }
 
-TextStyle _readerMetadataStyle(BuildContext context, bool compact) {
+TextStyle _readerMetadataStyle(
+  BuildContext context,
+  bool compact,
+  double fontScale,
+) {
   return TextStyle(
     color: context.colors.textSecondary,
     fontFamily: 'Georgia',
     fontFamilyFallback: _readerFontFallback,
-    fontSize: compact ? 16 : 17,
+    fontSize: (compact ? 15.5 : 16.5) * fontScale,
     fontWeight: FontWeight.w400,
-    height: 1.5,
+    height: 1.58,
     letterSpacing: 0,
   );
 }
 
-TextStyle _readerPreformattedStyle(BuildContext context, bool compact) {
+TextStyle _readerPreformattedStyle(
+  BuildContext context,
+  bool compact,
+  double fontScale,
+) {
   return TextStyle(
     color: context.colors.textPrimary,
     fontFamily: 'Georgia',
     fontFamilyFallback: _readerFontFallback,
-    fontSize: compact ? 16 : 17,
+    fontSize: (compact ? 16 : 17) * fontScale,
     fontWeight: FontWeight.w400,
     height: 1.45,
     letterSpacing: 0,
   );
+}
+
+Color _readerBackdrop(BuildContext context) {
+  if (Theme.of(context).brightness == Brightness.dark) {
+    return context.colors.background;
+  }
+  return const Color(0xFFF5F1EA);
+}
+
+Color _readerPaper(BuildContext context) {
+  if (Theme.of(context).brightness == Brightness.dark) {
+    return Color.alphaBlend(
+      context.colors.primary.withValues(alpha: 0.025),
+      context.colors.cards,
+    );
+  }
+  return const Color(0xFFFFFDF9);
+}
+
+int _readingMinutes(String content) {
+  final prepared = _prepareReaderContent(content);
+  if (prepared.isEmpty) {
+    return 1;
+  }
+  final words = RegExp(r'\S+').allMatches(prepared).length;
+  final minutes = (words / 220).ceil();
+  return minutes < 1 ? 1 : minutes;
 }
 
 String _prepareReaderContent(String value) {
@@ -634,6 +1270,7 @@ String _prepareReaderContent(String value) {
       .replaceAll(RegExp(r'<[^>]+>'), ' ');
 
   text = _decodeHtmlEntities(text);
+  text = _stripGutenbergBoilerplate(text);
 
   return text
       .split('\n')
@@ -641,6 +1278,29 @@ String _prepareReaderContent(String value) {
       .join('\n')
       .replaceAll(RegExp(r'\n{4,}'), '\n\n\n')
       .trim();
+}
+
+String _stripGutenbergBoilerplate(String value) {
+  var text = value;
+  final startMarker = RegExp(
+    r'^\s*\*{0,3}\s*START OF (?:THE|THIS) PROJECT GUTENBERG EBOOK[^\n]*$',
+    caseSensitive: false,
+    multiLine: true,
+  ).firstMatch(text);
+  if (startMarker != null) {
+    text = text.substring(startMarker.end);
+  }
+
+  final endMarker = RegExp(
+    r'^\s*\*{0,3}\s*END OF (?:THE|THIS) PROJECT GUTENBERG EBOOK[^\n]*$',
+    caseSensitive: false,
+    multiLine: true,
+  ).firstMatch(text);
+  if (endMarker != null) {
+    text = text.substring(0, endMarker.start);
+  }
+
+  return text.trim();
 }
 
 String _decodeHtmlEntities(String value) {
@@ -827,9 +1487,16 @@ class _EmptyReader extends StatelessWidget {
       backgroundColor: context.colors.background,
       appBar: AppBar(
         backgroundColor: context.colors.cards,
-        leading: IconButton(
-          onPressed: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
-          icon: const Icon(Icons.arrow_back),
+        leadingWidth: 104,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: FigmaBackButton(
+            label: 'Retour',
+            onTap: () => returnToPreviousOr(
+              context,
+              AppRoutes.catalogBookDetailPath(book.id),
+            ),
+          ),
         ),
         title: Text(book.title.isEmpty ? 'Lecture' : book.title),
       ),
@@ -842,4 +1509,21 @@ class _EmptyReader extends StatelessWidget {
       ),
     );
   }
+}
+
+PreferredSizeWidget _readingBackAppBar(BuildContext context, String bookId) {
+  return AppBar(
+    backgroundColor: context.colors.cards,
+    leadingWidth: 104,
+    leading: Padding(
+      padding: const EdgeInsets.only(left: 12),
+      child: FigmaBackButton(
+        label: 'Retour',
+        onTap: () => returnToPreviousOr(
+          context,
+          AppRoutes.catalogBookDetailPath(bookId),
+        ),
+      ),
+    ),
+  );
 }

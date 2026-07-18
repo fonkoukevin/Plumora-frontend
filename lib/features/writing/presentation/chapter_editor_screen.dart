@@ -67,16 +67,28 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
     return Scaffold(
       backgroundColor: context.colors.background,
       body: bookAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _CenteredError(
-          message: AppError.messageFor(error),
-          onRetry: () => ref.invalidate(authorBookProvider(bookId)),
+        loading: () => _EditorStateWithBack(
+          onBack: () => returnToPreviousOr(context, AppRoutes.write),
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => _EditorStateWithBack(
+          onBack: () => returnToPreviousOr(context, AppRoutes.write),
+          child: _CenteredError(
+            message: AppError.messageFor(error),
+            onRetry: () => ref.invalidate(authorBookProvider(bookId)),
+          ),
         ),
         data: (book) => chaptersAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => _CenteredError(
-            message: AppError.messageFor(error),
-            onRetry: () => ref.invalidate(bookChaptersProvider(bookId)),
+          loading: () => _EditorStateWithBack(
+            onBack: () => returnToPreviousOr(context, AppRoutes.write),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => _EditorStateWithBack(
+            onBack: () => returnToPreviousOr(context, AppRoutes.write),
+            child: _CenteredError(
+              message: AppError.messageFor(error),
+              onRetry: () => ref.invalidate(bookChaptersProvider(bookId)),
+            ),
           ),
           data: (chapters) {
             final sorted = [...chapters]
@@ -317,7 +329,7 @@ class _BookSelectionView extends StatelessWidget {
         children: [
           FigmaBackButton(
             label: 'Retour',
-            onTap: () => context.go(AppRoutes.write),
+            onTap: () => returnToPreviousOr(context, AppRoutes.write),
           ),
           const SizedBox(height: 18),
           Text(
@@ -347,15 +359,15 @@ class _BookSelectionView extends StatelessWidget {
                     children: [
                       const FigmaEmptyState(
                         title: 'Aucun manuscrit',
-                        message: "Cree un livre avant d'ouvrir l'editeur.",
+                        message: "Crée un livre avant d'ouvrir l'éditeur.",
                         icon: Icons.edit_outlined,
                       ),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: () => context.go(AppRoutes.createBook),
+                          onPressed: () => context.push(AppRoutes.createBook),
                           icon: const Icon(Icons.add),
-                          label: const Text('Creer un livre'),
+                          label: const Text('Créer un livre'),
                         ),
                       ),
                     ],
@@ -586,9 +598,9 @@ class _FigmaBookNavigationRail extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextButton.icon(
-                  onPressed: () => context.go(AppRoutes.write),
+                  onPressed: () => returnToPreviousOr(context, AppRoutes.write),
                   icon: const Icon(Icons.arrow_back, size: 15),
-                  label: const Text('Mes histoires'),
+                  label: const Text('Retour'),
                   style: TextButton.styleFrom(
                     foregroundColor: context.colors.textSecondary,
                     padding: EdgeInsets.zero,
@@ -637,65 +649,7 @@ class _FigmaBookNavigationRail extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                _FigmaBookNavButton(
-                  icon: Icons.menu_book_outlined,
-                  label: "Vue d'ensemble",
-                  onTap: () =>
-                      context.go(AppRoutes.authorBookDetailPath(book.id)),
-                ),
-                _FigmaBookNavButton(
-                  icon: Icons.edit_outlined,
-                  label: 'Éditeur',
-                  selected: true,
-                  onTap: () => context.go(AppRoutes.chapterEditorPath(book.id)),
-                ),
-                _FigmaBookNavButton(
-                  icon: Icons.forum_outlined,
-                  label: 'Retours bêta',
-                  onTap: () =>
-                      context.go(AppRoutes.authorBetaCommentsPath(book.id)),
-                ),
-                _FigmaBookNavButton(
-                  icon: Icons.upload_outlined,
-                  label: 'Bêta-test',
-                  onTap: () =>
-                      context.go(AppRoutes.authorBetaCampaignsPath(book.id)),
-                ),
-                _FigmaBookNavButton(
-                  icon: Icons.trending_up,
-                  label: 'Royalties',
-                  onTap: () => context.go(AppRoutes.royalties),
-                ),
-                _FigmaBookNavButton(
-                  icon: Icons.settings_outlined,
-                  label: 'Paramètres',
-                  onTap: () => context.go(AppRoutes.editBookPath(book.id)),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: context.colors.border)),
-            ),
-            child: _FigmaBookNavButton(
-              icon: Icons.smartphone_outlined,
-              label: 'Vue mobile',
-              compact: true,
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    "La vue mobile s'active sur les petits écrans.",
-                  ),
-                ),
-              ),
-            ),
-          ),
+          const Spacer(),
         ],
       ),
     );
@@ -1076,10 +1030,9 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _FigmaSquareIconButton(
-                  icon: Icons.arrow_back,
-                  tooltip: 'Mes histoires',
-                  onTap: () => context.go(AppRoutes.write),
+                FigmaBackButton(
+                  label: 'Retour',
+                  onTap: () => returnToPreviousOr(context, AppRoutes.write),
                 ),
                 const SizedBox(width: 4),
                 const _FigmaToolbarIcon(
@@ -1588,10 +1541,9 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _FigmaSquareIconButton(
-                  icon: Icons.arrow_back,
-                  tooltip: 'Mes histoires',
-                  onTap: () => context.go(AppRoutes.write),
+                FigmaBackButton(
+                  label: 'Retour',
+                  onTap: () => returnToPreviousOr(context, AppRoutes.write),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1987,67 +1939,6 @@ class _FigmaBookMiniCover extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FigmaBookNavButton extends StatelessWidget {
-  const _FigmaBookNavButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.selected = false,
-    this.compact = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool selected;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: compact ? 9 : 10,
-          ),
-          decoration: BoxDecoration(
-            gradient: selected ? _figmaWriteGradient : null,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: compact ? 16 : 18,
-                color: selected ? Colors.white : context.colors.textSecondary,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: selected
-                        ? Colors.white
-                        : context.colors.textSecondary,
-                    fontSize: compact ? 12 : 14,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -3943,6 +3834,27 @@ List<Color> _figmaBookCoverColors(BookModel book) {
   return palettes[index];
 }
 
+class _EditorStateWithBack extends StatelessWidget {
+  const _EditorStateWithBack({required this.onBack, required this.child});
+
+  final VoidCallback onBack;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: FigmaBackButton(label: 'Retour', onTap: onBack),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
 class _CenteredError extends StatelessWidget {
   const _CenteredError({required this.message, required this.onRetry});
 
@@ -3974,13 +3886,13 @@ class _ErrorCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Editeur indisponible',
+            'Éditeur indisponible',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

@@ -45,7 +45,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Connecte-toi pour afficher les donnees de ton compte.',
+                'Connecte-toi pour afficher les données de ton compte.',
                 style: TextStyle(color: context.colors.textSecondary),
               ),
               const SizedBox(height: 16),
@@ -140,7 +140,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const _ProfileStats(),
           const SizedBox(height: 24),
           Text(
-            'A propos',
+            'À propos',
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 18,
@@ -151,7 +151,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           FigmaCard(
             child: Text(
               (user.bio ?? '').trim().isEmpty
-                  ? 'Aucune biographie renseignee.'
+                  ? 'Aucune biographie renseignée.'
                   : user.bio!,
               style: TextStyle(
                 color: context.colors.textSecondary,
@@ -162,7 +162,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Parametres',
+            'Paramètres',
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 18,
@@ -173,7 +173,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _SettingsTile(
             icon: Icons.person_outline,
             title: 'Informations personnelles',
-            subtitle: 'Nom, email et roles',
+            subtitle: 'Nom, email et rôles',
             color: const Color(0xFF8B5E3C),
             onTap: () => setState(() => _showPersonalInfo = true),
           ),
@@ -182,19 +182,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             title: 'Notifications',
             subtitle: 'Voir les notifications du backend',
             color: const Color(0xFF6D3A5D),
-            onTap: () => context.go(AppRoutes.notifications),
+            onTap: () => context.push(AppRoutes.notifications),
           ),
           _SettingsTile(
             icon: Icons.auto_awesome,
             title: 'Assistant Plumo',
             subtitle: 'Ouvrir les assistants IA',
             color: const Color(0xFF6D3A5D),
-            onTap: () => context.go(AppRoutes.plumoWriting),
+            onTap: () => context.push(AppRoutes.plumoWriting),
           ),
           _SettingsTile(
             icon: Icons.settings_outlined,
-            title: 'Preferences',
-            subtitle: 'Theme clair ou sombre',
+            title: 'Préférences',
+            subtitle: 'Thème clair ou sombre',
             color: const Color(0xFF6B6B6B),
             onTap: () => context.push(AppRoutes.preferences),
           ),
@@ -216,7 +216,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.logout),
-            label: Text(_loggingOut ? 'Deconnexion...' : 'Se deconnecter'),
+            label: Text(_loggingOut ? 'Déconnexion...' : 'Se déconnecter'),
             style: OutlinedButton.styleFrom(
               foregroundColor: context.colors.destructive,
               side: BorderSide(color: context.colors.destructive),
@@ -250,7 +250,7 @@ class _PersonalInfoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fields = [
-      (Icons.person_outline, 'Prenom', user.firstname),
+      (Icons.person_outline, 'Prénom', user.firstname),
       (Icons.person_outline, 'Nom', user.lastname),
       (Icons.mail_outline, 'Email', user.email),
       (Icons.alternate_email, 'Nom utilisateur', user.username ?? ''),
@@ -266,8 +266,8 @@ class _PersonalInfoView extends StatelessWidget {
             children: [
               TextButton.icon(
                 onPressed: onBack,
-                icon: const Icon(Icons.chevron_left),
-                label: const Text('Profil'),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Retour'),
               ),
               Expanded(
                 child: Text(
@@ -350,7 +350,7 @@ class _RolesField extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Roles',
+                  'Rôles',
                   style: TextStyle(
                     color: context.colors.textSecondary,
                     fontSize: 11,
@@ -428,7 +428,7 @@ class _InfoField extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  value.trim().isEmpty ? 'Non renseigne' : value,
+                  value.trim().isEmpty ? 'Non renseigné' : value,
                   style: TextStyle(
                     color: context.colors.textPrimary,
                     fontSize: 14,
@@ -586,7 +586,7 @@ String _friendlyRoleName(String value) {
   return switch (value.trim().toUpperCase()) {
     'AUTHOR' => 'Auteur',
     'READER' => 'Lecteur',
-    'BETA_READER' => 'Beta-testeur',
+    'BETA_READER' => 'Bêta-testeur',
     _ => value,
   };
 }
