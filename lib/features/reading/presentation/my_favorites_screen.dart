@@ -24,6 +24,11 @@ class MyFavoritesScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        FigmaBackButton(
+          label: 'Retour',
+          onTap: () => returnToPreviousOr(context, AppRoutes.library),
+        ),
+        const SizedBox(height: 18),
         PlumoraCard(
           borderColor: context.colors.destructive.withValues(alpha: 0.35),
           child: Row(
@@ -153,7 +158,7 @@ class _FavoriteCard extends ConsumerWidget {
     return PlumoraCard(
       padding: EdgeInsets.zero,
       clip: true,
-      onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
