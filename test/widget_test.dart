@@ -162,7 +162,7 @@ void main() {
       expect(tester.getSize(content).width, 1040);
       expect(find.text('Plumora'), findsOneWidget);
       expect(find.text('Accueil'), findsOneWidget);
-      expect(find.text('Mes manuscrits'), findsOneWidget);
+      expect(find.text('Écrire'), findsOneWidget);
       expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
 
       await tester.tap(toggleButton);
@@ -190,14 +190,14 @@ void main() {
       expect(tester.getSize(content).width, 1204);
       expect(find.text('Plumora'), findsNothing);
       expect(find.text('Accueil'), findsNothing);
-      expect(find.text('Mes manuscrits'), findsNothing);
+      expect(find.text('Écrire'), findsNothing);
       expect(find.byIcon(Icons.home), findsOneWidget);
       expect(find.byIcon(Icons.edit_note_outlined), findsOneWidget);
       expect(
         tester
             .widgetList<Tooltip>(find.byType(Tooltip))
             .map((tooltip) => tooltip.message),
-        containsAll(['Accueil', 'Mes manuscrits', 'Découvrir']),
+        containsAll(['Accueil', 'Écrire', 'Découvrir']),
       );
 
       await tester.drag(resizeHandle, const Offset(200, 0));
@@ -207,7 +207,7 @@ void main() {
       expect(tester.getSize(content).width, 1040);
       expect(find.text('Plumora'), findsOneWidget);
       expect(find.text('Accueil'), findsOneWidget);
-      expect(find.text('Mes manuscrits'), findsOneWidget);
+      expect(find.text('Écrire'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

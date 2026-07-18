@@ -25,7 +25,7 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.home,
     ),
     ShellDestination(
-      label: 'Decouvrir',
+      label: 'Découvrir',
       icon: Icons.menu_book_outlined,
       selectedIcon: Icons.menu_book,
       path: AppRoutes.discover,
@@ -53,7 +53,7 @@ class MainShell extends StatelessWidget {
 
   /// Matches the updated Figma `AppLayout.tsx` `NAV_ITEMS` exactly: six
   /// entries (no more standalone "Éditeur" destination — the chapter editor
-  /// is reached from within "Mes manuscrits" now).
+  /// is reached from within the "Écrire" space now).
   static const List<ShellDestination> desktopDestinations = [
     ShellDestination(
       label: 'Accueil',
@@ -62,7 +62,7 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.home,
     ),
     ShellDestination(
-      label: 'Mes manuscrits',
+      label: 'Écrire',
       icon: Icons.edit_note_outlined,
       selectedIcon: Icons.edit_note,
       path: AppRoutes.manuscripts,

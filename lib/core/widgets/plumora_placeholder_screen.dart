@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/plumora_colors.dart';
+import 'figma_plumora.dart';
 import 'plumora_ui.dart';
 
 class PlumoraPlaceholderScreen extends StatelessWidget {
@@ -9,6 +10,7 @@ class PlumoraPlaceholderScreen extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     this.actions = const [],
+    this.onBack,
     super.key,
   });
 
@@ -16,6 +18,7 @@ class PlumoraPlaceholderScreen extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final List<Widget> actions;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -35,42 +38,52 @@ class PlumoraPlaceholderScreen extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
-              child: PlumoraCard(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    PlumoraIconTile(
-                      backgroundColor: context.colors.secondary,
-                      child: Icon(
-                        icon,
-                        color: context.colors.primary,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: context.colors.textPrimary,
-                            fontWeight: FontWeight.w900,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: context.colors.textSecondary,
-                        height: 1.45,
-                      ),
-                    ),
-                    if (actions.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      Wrap(spacing: 12, runSpacing: 12, children: actions),
-                    ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (onBack != null) ...[
+                    FigmaBackButton(label: 'Retour', onTap: onBack!),
+                    const SizedBox(height: 18),
                   ],
-                ),
+                  PlumoraCard(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        PlumoraIconTile(
+                          backgroundColor: context.colors.secondary,
+                          child: Icon(
+                            icon,
+                            color: context.colors.primary,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: context.colors.textPrimary,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          subtitle,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: context.colors.textSecondary,
+                                height: 1.45,
+                              ),
+                        ),
+                        if (actions.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          Wrap(spacing: 12, runSpacing: 12, children: actions),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

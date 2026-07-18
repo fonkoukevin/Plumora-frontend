@@ -71,7 +71,7 @@ class PlumoraAppHeader extends ConsumerWidget {
             ],
             if (trailing != null) ...[trailing!, const SizedBox(width: 4)],
             _HeaderIconButton(
-              onTap: () => context.go(AppRoutes.notifications),
+              onTap: () => context.push(AppRoutes.notifications),
               tooltip: 'Notifications',
               child: Stack(
                 clipBehavior: Clip.none,
