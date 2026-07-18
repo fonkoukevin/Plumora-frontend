@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/models/book_model.dart';
 import '../../book/data/repositories/book_repository.dart';
@@ -47,7 +48,22 @@ class _AuthorBetaCommentsScreenState
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1040),
-          child: content,
+          child: widget.bookId == null
+              ? content
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FigmaBackButton(
+                      label: 'Retour',
+                      onTap: () => returnToPreviousOr(
+                        context,
+                        AppRoutes.authorBookDetailPath(widget.bookId!),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    content,
+                  ],
+                ),
         ),
       ),
     );
@@ -624,7 +640,7 @@ class _AuthorCommentCard extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: comment.bookId.isEmpty
                     ? null
-                    : () => context.go(
+                    : () => context.push(
                         AppRoutes.chapterEditorPath(comment.bookId),
                       ),
                 icon: const Icon(Icons.open_in_new, size: 17),

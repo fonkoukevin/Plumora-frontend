@@ -55,12 +55,14 @@ class BetaReadChapterScreen extends ConsumerWidget {
     return chaptersAsync.when(
       loading: () => Scaffold(
         backgroundColor: context.colors.background,
+        appBar: _backAppBar(context),
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => _ErrorScaffold(
         title: 'Chapitre indisponible',
         message: AppError.messageFor(error),
         onRetry: () => ref.invalidate(betaSharedChaptersProvider(campaignId)),
+        onBack: () => returnToPreviousOr(context, _fallbackLocation()),
       ),
       data: (chapters) {
         final sorted = [...chapters]
@@ -74,9 +76,10 @@ class BetaReadChapterScreen extends ConsumerWidget {
         if (index < 0) {
           return _ErrorScaffold(
             title: 'Chapitre introuvable',
-            message: "Ce chapitre n'est pas partage dans cette campagne.",
+            message: "Ce chapitre n'est pas partagé dans cette campagne.",
             onRetry: () =>
                 ref.invalidate(betaSharedChaptersProvider(campaignId)),
+            onBack: () => returnToPreviousOr(context, _fallbackLocation()),
           );
         }
 
@@ -101,20 +104,25 @@ class BetaReadChapterScreen extends ConsumerWidget {
           backgroundColor: context.colors.background,
           appBar: AppBar(
             backgroundColor: context.colors.cards,
-            leading: IconButton(
-              onPressed: () => context.go(
-                AppRoutes.betaChaptersPath(
-                  campaignId,
-                  invitationId: invitationId,
-                  bookId: effectiveBookId,
+            leadingWidth: 104,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: FigmaBackButton(
+                label: 'Retour',
+                onTap: () => returnToPreviousOr(
+                  context,
+                  AppRoutes.betaChaptersPath(
+                    campaignId,
+                    invitationId: invitationId,
+                    bookId: effectiveBookId,
+                  ),
                 ),
               ),
-              icon: const Icon(Icons.arrow_back),
             ),
             title: Column(
               children: [
                 const Text(
-                  'Beta-lecture',
+                  'Bêta-lecture',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
                 ),
                 Text(
@@ -234,7 +242,7 @@ class BetaReadChapterScreen extends ConsumerWidget {
                                   bookId: effectiveBookId,
                                 ),
                               ),
-                        child: const Text('Precedent'),
+                        child: const Text('Précédent'),
                       ),
                       const SizedBox(width: 10),
                       FilledButton(
@@ -258,6 +266,28 @@ class BetaReadChapterScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  String _fallbackLocation() {
+    return AppRoutes.betaChaptersPath(
+      campaignId,
+      invitationId: invitationId,
+      bookId: bookId,
+    );
+  }
+
+  PreferredSizeWidget _backAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: context.colors.cards,
+      leadingWidth: 104,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: FigmaBackButton(
+          label: 'Retour',
+          onTap: () => returnToPreviousOr(context, _fallbackLocation()),
+        ),
+      ),
     );
   }
 
@@ -478,7 +508,7 @@ class _CommentsBlock extends StatelessWidget {
                   style: TextStyle(color: context.colors.textSecondary),
                 ),
                 const SizedBox(height: 10),
-                TextButton(onPressed: onRetry, child: const Text('Reessayer')),
+                TextButton(onPressed: onRetry, child: const Text('Réessayer')),
               ],
             ),
             data: (comments) {
@@ -487,7 +517,7 @@ class _CommentsBlock extends StatelessWidget {
                   .toList();
               if (chapterComments.isEmpty) {
                 return Text(
-                  'Aucun retour ajoute pour ce chapitre.',
+                  'Aucun retour ajouté pour ce chapitre.',
                   style: TextStyle(color: context.colors.textSecondary),
                 );
               }
@@ -623,16 +653,26 @@ class _ErrorScaffold extends StatelessWidget {
     required this.title,
     required this.message,
     required this.onRetry,
+    required this.onBack,
   });
 
   final String title;
   final String message;
   final VoidCallback onRetry;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.background,
+      appBar: AppBar(
+        backgroundColor: context.colors.cards,
+        leadingWidth: 104,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: FigmaBackButton(label: 'Retour', onTap: onBack),
+        ),
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -656,7 +696,7 @@ class _ErrorScaffold extends StatelessWidget {
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: onRetry,
-                  child: const Text('Reessayer'),
+                  child: const Text('Réessayer'),
                 ),
               ],
             ),
