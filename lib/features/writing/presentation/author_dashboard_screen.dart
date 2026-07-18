@@ -18,6 +18,13 @@ const _writeGreen = Color(0xFF3FBF7F);
 
 const _writeTabs = ['Toutes', 'En cours', 'Bêta-test', 'Publiées'];
 
+Color _softWriteBorder(BuildContext context) {
+  if (Theme.of(context).brightness == Brightness.dark) {
+    return context.elevatedBorderColor;
+  }
+  return Color.lerp(context.colors.border, context.colors.cards, 0.28)!;
+}
+
 class AuthorDashboardScreen extends ConsumerStatefulWidget {
   const AuthorDashboardScreen({super.key});
 
@@ -85,8 +92,8 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     return RefreshIndicator(
       onRefresh: () => ref.refresh(myBooksProvider.future),
       child: FigmaScreen(
-        maxWidth: 1280,
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 88),
+        maxWidth: 1180,
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 88),
         physics: const AlwaysScrollableScrollPhysics(),
         child: booksAsync.when(
           loading: () => const Center(
@@ -113,61 +120,90 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Builder(
-                  builder: (context) {
-                    final width = MediaQuery.sizeOf(context).width;
-                    final isDesktop = width >= 1024;
-                    final showFullButtonLabel = width >= 640;
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isDesktop = constraints.maxWidth >= 900;
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
+                    final showFullButtonLabel = constraints.maxWidth >= 600;
 
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              isDesktop
-                                  ? ShaderMask(
-                                      shaderCallback: (bounds) =>
-                                          LinearGradient(
-                                            colors: [
-                                              _writeAccent,
-                                              context.colors.plumoAccent,
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ).createShader(bounds),
-                                      child: Text(
-                                        '✍️ Mes manuscrits',
-                                        style: GoogleFonts.playfairDisplay(
-                                          color: Colors.white,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w900,
-                                          height: 1.05,
-                                        ),
-                                      ),
-                                    )
-                                  : Text(
-                                      '✍️ Mes manuscrits',
-                                      style: GoogleFonts.playfairDisplay(
-                                        color: context.colors.textPrimary,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                        height: 1.05,
+                              Container(
+                                width: isDesktop ? 40 : 36,
+                                height: isDesktop ? 40 : 36,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [_writeAccent, _writeAccentLight],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.edit_note_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 11),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    isDark
+                                        ? ShaderMask(
+                                            shaderCallback: (bounds) =>
+                                                LinearGradient(
+                                                  colors: [
+                                                    _writeAccent,
+                                                    context.colors.plumoAccent,
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ).createShader(bounds),
+                                            child: Text(
+                                              'Mes manuscrits',
+                                              style:
+                                                  GoogleFonts.playfairDisplay(
+                                                    color: Colors.white,
+                                                    fontSize: isDesktop
+                                                        ? 25
+                                                        : 20,
+                                                    fontWeight: FontWeight.w900,
+                                                    height: 1.05,
+                                                  ),
+                                            ),
+                                          )
+                                        : Text(
+                                            'Mes manuscrits',
+                                            style: GoogleFonts.playfairDisplay(
+                                              color: Colors.black,
+                                              fontSize: isDesktop ? 25 : 20,
+                                              fontWeight: FontWeight.w900,
+                                              height: 1.05,
+                                            ),
+                                          ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      isDesktop
+                                          ? '${books.length} histoires · '
+                                                '$totalChapters chapitres · '
+                                                '${_compactNumber(totalWords)} mots'
+                                          : '${books.length} histoires · '
+                                                '$totalChapters chapitres',
+                                      style: TextStyle(
+                                        color: context.colors.textSecondary,
+                                        fontSize: isDesktop ? 11 : 10,
+                                        height: 1.1,
                                       ),
                                     ),
-                              const SizedBox(height: 3),
-                              Text(
-                                isDesktop
-                                    ? '${books.length} histoires · '
-                                          '$totalChapters chapitres · '
-                                          '${_compactNumber(totalWords)} mots'
-                                    : '${books.length} histoires · '
-                                          '$totalChapters chapitres',
-                                style: TextStyle(
-                                  color: context.colors.textSecondary,
-                                  fontSize: 10,
-                                  height: 1.1,
+                                  ],
                                 ),
                               ),
                             ],
@@ -185,7 +221,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 17),
+                const SizedBox(height: 22),
                 Row(
                   children: [
                     Expanded(
@@ -196,7 +232,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                         color: _writeAccent,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _StatTile(
                         label: 'Chapitres',
@@ -205,7 +241,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                         color: _writeGold,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _StatTile(
                         label: 'Mots\nécrits',
@@ -216,7 +252,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 13),
+                const SizedBox(height: 16),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -232,15 +268,17 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 if (filtered.isEmpty)
                   _EmptyStories(
                     onCreate: () => context.go(AppRoutes.createBook),
                   )
                 else
                   FigmaResponsiveGrid(
-                    minTileWidth: 380,
-                    maxColumns: 2,
+                    minTileWidth: 340,
+                    maxColumns: 3,
+                    spacing: 16,
+                    runSpacing: 16,
                     children: [
                       for (final book in filtered)
                         _StoryCard(book: book, onArchive: _confirmArchive),
@@ -288,60 +326,119 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.colors.cards,
-        border: Border.all(color: context.colors.border),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 27,
-            height: 27,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(icon, size: 15, color: color),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 150;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final iconSize = compact ? 28.0 : 44.0;
+        final backgroundStart = Color.lerp(
+          context.colors.cards,
+          color,
+          isDark ? 0.10 : 0.07,
+        )!;
+        final outline = Color.lerp(
+          _softWriteBorder(context),
+          color,
+          isDark ? 0.18 : 0.12,
+        )!;
+
+        return Container(
+          key: ValueKey('manuscript_stat_$label'),
+          height: compact ? 64 : 80,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 8 : 16,
+            vertical: compact ? 9 : 12,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: context.colors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    height: 1,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: context.colors.cards,
+            gradient: LinearGradient(
+              colors: [backgroundStart, context.colors.cards],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: outline, width: 0.8),
+            borderRadius: BorderRadius.circular(compact ? 14 : 18),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: isDark ? 0.08 : 0.055),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (!compact)
+                Positioned(
+                  right: 2,
+                  top: 0,
+                  bottom: 0,
+                  child: Icon(
+                    icon,
+                    key: ValueKey('manuscript_stat_watermark_$label'),
+                    size: 52,
+                    color: color.withValues(alpha: isDark ? 0.07 : 0.05),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: context.colors.textSecondary,
-                    fontSize: 7,
-                    height: 1.1,
+              Row(
+                children: [
+                  Container(
+                    width: iconSize,
+                    height: iconSize,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: isDark ? 0.16 : 0.12),
+                      border: compact
+                          ? null
+                          : Border.all(
+                              color: color.withValues(alpha: 0.12),
+                              width: 0.8,
+                            ),
+                      borderRadius: BorderRadius.circular(compact ? 9 : 13),
+                    ),
+                    child: Icon(icon, size: compact ? 15 : 21, color: color),
                   ),
-                ),
-              ],
-            ),
+                  SizedBox(width: compact ? 7 : 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.colors.textPrimary,
+                            fontSize: compact ? 13 : 19,
+                            fontWeight: FontWeight.w900,
+                            height: 1,
+                          ),
+                        ),
+                        SizedBox(height: compact ? 3 : 5),
+                        Text(
+                          label.replaceAll('\n', ' '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
+                            fontSize: compact ? 8 : 10.5,
+                            fontWeight: FontWeight.w600,
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!compact) const SizedBox(width: 44),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -363,8 +460,8 @@ class _FilterTab extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
-        height: 22,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 15),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: selected
@@ -390,7 +487,7 @@ class _FilterTab extends StatelessWidget {
           label,
           style: TextStyle(
             color: selected ? Colors.white : context.colors.textSecondary,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -507,11 +604,20 @@ class _EmptyStories extends StatelessWidget {
   }
 }
 
-class _StoryCard extends StatelessWidget {
+class _StoryCard extends StatefulWidget {
   const _StoryCard({required this.book, required this.onArchive});
 
   final BookModel book;
   final void Function(BookModel book) onArchive;
+
+  @override
+  State<_StoryCard> createState() => _StoryCardState();
+}
+
+class _StoryCardState extends State<_StoryCard> {
+  bool _hovered = false;
+
+  BookModel get book => widget.book;
 
   bool get _isDraftish =>
       book.status == BookStatus.draft ||
@@ -523,127 +629,189 @@ class _StoryCard extends StatelessWidget {
     final title = book.title.isEmpty ? 'Histoire sans titre' : book.title;
     final primaryLabel = _isDraftish ? 'Écrire' : 'Lire';
     final secondary = _secondaryAction(book);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
+    return AnimatedContainer(
+      key: ValueKey('manuscript_card_${book.id}'),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      transform: Matrix4.translationValues(0, _hovered ? -4 : 0, 0),
+      transformAlignment: Alignment.center,
       decoration: BoxDecoration(
         color: context.colors.cards,
-        border: Border.all(color: context.colors.border),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 13),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () => context.go(AppRoutes.authorBookDetailPath(book.id)),
-            child: _StoryCover(book: book, title: title),
+        border: Border.all(
+          color: _hovered
+              ? context.colors.primary.withValues(alpha: 0.55)
+              : _softWriteBorder(context),
+          width: _hovered ? 1.1 : 0.8,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: _hovered
+                ? context.colors.primary.withValues(alpha: isDark ? 0.22 : 0.16)
+                : isDark
+                ? Colors.black.withValues(alpha: 0.16)
+                : context.colors.primary.withValues(alpha: 0.055),
+            blurRadius: _hovered ? 22 : 14,
+            offset: Offset(0, _hovered ? 9 : 5),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: ValueKey('manuscript_card_link_${book.id}'),
+          onTap: () => context.go(AppRoutes.authorBookDetailPath(book.id)),
+          onHover: (hovered) => setState(() => _hovered = hovered),
+          mouseCursor: SystemMouseCursors.click,
+          hoverColor: context.colors.primary.withValues(alpha: 0.045),
+          splashColor: context.colors.primary.withValues(alpha: 0.12),
+          highlightColor: context.colors.primary.withValues(alpha: 0.06),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 15),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () =>
-                            context.go(AppRoutes.authorBookDetailPath(book.id)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: context.colors.textPrimary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                                height: 1.05,
+                AnimatedScale(
+                  scale: _hovered ? 1.045 : 1,
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  child: _StoryCover(book: book, title: title),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: context.colors.textPrimary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.1,
+                                  ),
+                                ),
+                                if ((book.genre ?? '').isNotEmpty)
+                                  Text(
+                                    book.genre!,
+                                    style: TextStyle(
+                                      color: context.colors.textSecondary,
+                                      fontSize: 10.5,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          AnimatedOpacity(
+                            key: ValueKey(
+                              'manuscript_card_hover_arrow_${book.id}',
+                            ),
+                            opacity: _hovered ? 1 : 0,
+                            duration: const Duration(milliseconds: 150),
+                            child: Container(
+                              width: 27,
+                              height: 27,
+                              decoration: BoxDecoration(
+                                color: context.colors.primary.withValues(
+                                  alpha: 0.11,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.arrow_outward_rounded,
+                                size: 14,
+                                color: context.colors.primary,
                               ),
                             ),
-                            if ((book.genre ?? '').isNotEmpty)
-                              Text(
-                                book.genre!,
-                                style: TextStyle(
-                                  color: context.colors.textSecondary,
-                                  fontSize: 10,
-                                  height: 1.2,
-                                ),
-                              ),
-                          ],
+                          ),
+                          const SizedBox(width: 2),
+                          _StoryMenu(book: book, onArchive: widget.onArchive),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _StatusChip(status: book.status),
+                      const SizedBox(height: 9),
+                      Wrap(
+                        spacing: 9,
+                        runSpacing: 5,
+                        children: [
+                          _InlineStat(
+                            icon: Icons.description_outlined,
+                            label: '${book.chapterCount} chap.',
+                          ),
+                          _InlineStat(
+                            icon: Icons.edit_outlined,
+                            label:
+                                '${_compactNumber(book.wordCount, fixed: true)} mots',
+                          ),
+                          if (book.viewCount > 0)
+                            _InlineStat(
+                              icon: Icons.visibility_outlined,
+                              label: _compactNumber(book.viewCount),
+                            ),
+                          if (book.feedbackCount > 0)
+                            _InlineStat(
+                              icon: Icons.chat_bubble_outline,
+                              label: '${book.feedbackCount}',
+                            ),
+                          if ((book.averageRating ?? 0) > 0)
+                            _InlineStat(
+                              icon: Icons.star,
+                              iconColor: const Color(0xFFFACC15),
+                              label: book.averageRating!.toStringAsFixed(1),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      _InlineStat(
+                        icon: Icons.schedule,
+                        label: _relativeModified(
+                          book.updatedAt ?? book.createdAt,
                         ),
                       ),
-                    ),
-                    _StoryMenu(book: book, onArchive: onArchive),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                _StatusChip(status: book.status),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 9,
-                  runSpacing: 5,
-                  children: [
-                    _InlineStat(
-                      icon: Icons.description_outlined,
-                      label: '${book.chapterCount} chap.',
-                    ),
-                    _InlineStat(
-                      icon: Icons.edit_outlined,
-                      label:
-                          '${_compactNumber(book.wordCount, fixed: true)} mots',
-                    ),
-                    if (book.viewCount > 0)
-                      _InlineStat(
-                        icon: Icons.visibility_outlined,
-                        label: _compactNumber(book.viewCount),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _GradientMiniButton(
+                              icon: Icons.energy_savings_leaf_outlined,
+                              label: primaryLabel,
+                              onPressed: () => context.go(
+                                AppRoutes.chapterEditorPath(book.id),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _OutlineMiniButton(
+                              icon: secondary.icon,
+                              label: secondary.label,
+                              onPressed: () => context.go(secondary.route),
+                            ),
+                          ),
+                        ],
                       ),
-                    if (book.feedbackCount > 0)
-                      _InlineStat(
-                        icon: Icons.chat_bubble_outline,
-                        label: '${book.feedbackCount}',
-                      ),
-                    if ((book.averageRating ?? 0) > 0)
-                      _InlineStat(
-                        icon: Icons.star,
-                        iconColor: const Color(0xFFFACC15),
-                        label: book.averageRating!.toStringAsFixed(1),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                _InlineStat(
-                  icon: Icons.schedule,
-                  label: _relativeModified(book.updatedAt ?? book.createdAt),
-                ),
-                const SizedBox(height: 11),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _GradientMiniButton(
-                        icon: Icons.energy_savings_leaf_outlined,
-                        label: primaryLabel,
-                        onPressed: () =>
-                            context.go(AppRoutes.chapterEditorPath(book.id)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _OutlineMiniButton(
-                        icon: secondary.icon,
-                        label: secondary.label,
-                        onPressed: () => context.go(secondary.route),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -775,16 +943,16 @@ class _StoryCover extends StatelessWidget {
     final resolvedCoverUrl = resolvePlumoraImageUrl(book.coverUrl);
 
     return Container(
-      width: 64,
-      height: 85,
+      width: 68,
+      height: 96,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x2A000000),
-            blurRadius: 12,
-            offset: Offset(0, 7),
+            color: Color(0x24000000),
+            blurRadius: 10,
+            offset: Offset(0, 5),
           ),
         ],
       ),
@@ -896,7 +1064,7 @@ class _GradientMiniButton extends StatelessWidget {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(999),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 9),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -940,10 +1108,10 @@ class _OutlineMiniButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: BoxDecoration(
             color: context.colors.cards,
-            border: Border.all(color: context.colors.border),
+            border: Border.all(color: _softWriteBorder(context), width: 0.8),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Row(
@@ -1078,7 +1246,7 @@ class _WriteCta extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: borderColor.withValues(alpha: 0.05),
-            border: Border.all(color: context.colors.border),
+            border: Border.all(color: _softWriteBorder(context), width: 0.8),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
