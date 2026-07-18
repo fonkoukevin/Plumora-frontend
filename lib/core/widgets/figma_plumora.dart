@@ -597,6 +597,7 @@ class FigmaSectionHeader extends StatelessWidget {
   const FigmaSectionHeader({
     required this.title,
     this.icon,
+    this.iconWidget,
     this.trailing,
     this.iconColor,
     this.showAccent = true,
@@ -605,6 +606,7 @@ class FigmaSectionHeader extends StatelessWidget {
 
   final String title;
   final IconData? icon;
+  final Widget? iconWidget;
   final Widget? trailing;
   final Color? iconColor;
   final bool showAccent;
@@ -624,8 +626,9 @@ class FigmaSectionHeader extends StatelessWidget {
           ),
           const SizedBox(width: 10),
         ],
-        if (icon != null) ...[
-          Icon(icon, size: 18, color: iconColor ?? context.colors.primary),
+        if (iconWidget != null || icon != null) ...[
+          iconWidget ??
+              Icon(icon, size: 18, color: iconColor ?? context.colors.primary),
           const SizedBox(width: 8),
         ],
         Expanded(
