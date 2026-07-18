@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
@@ -62,15 +61,18 @@ class _BetaCampaignDetailAuthorScreenState
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 980),
               child: campaignAsync.when(
-                loading: () => const _LoadingCard(),
-                error: (error, _) => FigmaEmptyState(
-                  icon: Icons.search_off,
-                  title: 'Campagne introuvable',
-                  message: AppError.messageFor(error),
-                  action: FilledButton(
-                    onPressed: () =>
-                        ref.invalidate(betaCampaignProvider(widget.campaignId)),
-                    child: const Text('Réessayer'),
+                loading: () => _withBack(const _LoadingCard()),
+                error: (error, _) => _withBack(
+                  FigmaEmptyState(
+                    icon: Icons.search_off,
+                    title: 'Campagne introuvable',
+                    message: AppError.messageFor(error),
+                    action: FilledButton(
+                      onPressed: () => ref.invalidate(
+                        betaCampaignProvider(widget.campaignId),
+                      ),
+                      child: const Text('Réessayer'),
+                    ),
                   ),
                 ),
                 data: (campaign) => Column(
@@ -128,10 +130,31 @@ class _BetaCampaignDetailAuthorScreenState
     final bookId = widget.bookId?.trim().isNotEmpty == true
         ? widget.bookId!.trim()
         : campaign.bookId;
-    context.go(
+    returnToPreviousOr(
+      context,
       bookId.isEmpty
           ? AppRoutes.write
           : AppRoutes.authorBetaCampaignsPath(bookId),
+    );
+  }
+
+  Widget _withBack(Widget child) {
+    final bookId = widget.bookId?.trim() ?? '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FigmaBackButton(
+          label: 'Retour',
+          onTap: () => returnToPreviousOr(
+            context,
+            bookId.isEmpty
+                ? AppRoutes.write
+                : AppRoutes.authorBetaCampaignsPath(bookId),
+          ),
+        ),
+        const SizedBox(height: 22),
+        child,
+      ],
     );
   }
 

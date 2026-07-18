@@ -57,7 +57,7 @@ class ExternalBookApiService {
 
     final book = BookModel.fromJson(_readPayloadMap(response.data));
     if (book.id.isEmpty) {
-      throw const AppException('Le livre importe est invalide.');
+      throw const AppException('Le livre importé est invalide.');
     }
 
     return book;
@@ -72,7 +72,7 @@ class ExternalBookApiService {
       return payload.map((key, value) => MapEntry(key.toString(), value));
     }
 
-    throw const AppException('La reponse du catalogue externe est invalide.');
+    throw const AppException('La réponse du catalogue externe est invalide.');
   }
 
   Object? _unwrap(Object? data) {

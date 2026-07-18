@@ -70,7 +70,7 @@ class _PublicDomainCatalogScreenState
         children: [
           FigmaBackButton(
             label: 'Retour',
-            onTap: () => context.go(AppRoutes.discover),
+            onTap: () => returnToPreviousOr(context, AppRoutes.discover),
           ),
           const SizedBox(height: 18),
           Row(
@@ -142,7 +142,7 @@ class _PublicDomainCatalogScreenState
         subtitle: _error!,
         action: FilledButton(
           onPressed: () => _load(reset: true),
-          child: const Text('Reessayer'),
+          child: const Text('Réessayer'),
         ),
       );
     }
@@ -422,8 +422,8 @@ class _ResultsHeader extends StatelessWidget {
     final label = loading && !hasResults
         ? 'Recherche en cours'
         : count <= 0
-        ? 'Resultats'
-        : '$count resultats';
+        ? 'Résultats'
+        : '$count résultats';
 
     return FigmaSectionHeader(
       title: label,
@@ -447,8 +447,14 @@ class _ExternalBookCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PlumoraCard(
-      onTap: () =>
-          context.go(AppRoutes.publicDomainBookDetailPath(book.externalId)),
+      onTap: () {
+        final internalBookId = book.internalBookId?.trim();
+        context.push(
+          book.imported && internalBookId != null && internalBookId.isNotEmpty
+              ? AppRoutes.catalogBookDetailPath(internalBookId)
+              : AppRoutes.publicDomainBookDetailPath(book.externalId),
+        );
+      },
       padding: const EdgeInsets.all(16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,7 +495,7 @@ class _ExternalBookCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   book.summary.trim().isEmpty
-                      ? 'Aucun resume disponible.'
+                      ? 'Aucun résumé disponible.'
                       : book.summary,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
@@ -504,7 +510,7 @@ class _ExternalBookCard extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     PlumoraBadge(
-                      label: book.imported ? 'Importe' : 'Domaine public',
+                      label: book.imported ? 'Importé' : 'Domaine public',
                       backgroundColor: book.imported
                           ? context.colors.success.withValues(alpha: 0.14)
                           : context.colors.primary.withValues(alpha: 0.12),
@@ -540,7 +546,7 @@ class _ExternalBookCard extends StatelessWidget {
               Icon(Icons.chevron_right, color: context.colors.textSecondary),
               const SizedBox(height: 6),
               Text(
-                'Details',
+                'Détails',
                 style: TextStyle(
                   color: context.colors.primary,
                   fontSize: 11,
@@ -602,7 +608,7 @@ class _InlineError extends StatelessWidget {
               style: TextStyle(color: context.colors.textSecondary),
             ),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Reessayer')),
+          TextButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

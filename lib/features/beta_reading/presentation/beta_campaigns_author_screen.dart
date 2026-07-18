@@ -72,25 +72,29 @@ class _BetaCampaignsAuthorScreenState
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 980),
               child: bookAsync.when(
-                loading: () => const _LoadingCard(),
-                error: (error, _) => _StateCard(
-                  title: 'Livre introuvable',
-                  subtitle: AppError.messageFor(error),
-                  action: FilledButton(
-                    onPressed: () =>
-                        ref.invalidate(authorBookProvider(widget.bookId)),
-                    child: const Text('Réessayer'),
-                  ),
-                ),
-                data: (book) => chaptersAsync.when(
-                  loading: () => const _LoadingCard(),
-                  error: (error, _) => _StateCard(
-                    title: 'Chapitres indisponibles',
+                loading: () => _withBack(const _LoadingCard()),
+                error: (error, _) => _withBack(
+                  _StateCard(
+                    title: 'Livre introuvable',
                     subtitle: AppError.messageFor(error),
                     action: FilledButton(
                       onPressed: () =>
-                          ref.invalidate(bookChaptersProvider(widget.bookId)),
+                          ref.invalidate(authorBookProvider(widget.bookId)),
                       child: const Text('Réessayer'),
+                    ),
+                  ),
+                ),
+                data: (book) => chaptersAsync.when(
+                  loading: () => _withBack(const _LoadingCard()),
+                  error: (error, _) => _withBack(
+                    _StateCard(
+                      title: 'Chapitres indisponibles',
+                      subtitle: AppError.messageFor(error),
+                      action: FilledButton(
+                        onPressed: () =>
+                            ref.invalidate(bookChaptersProvider(widget.bookId)),
+                        child: const Text('Réessayer'),
+                      ),
                     ),
                   ),
                   data: (chapters) {
@@ -106,7 +110,8 @@ class _BetaCampaignsAuthorScreenState
                         TextButton.icon(
                           onPressed: _isSubmitting
                               ? null
-                              : () => context.go(
+                              : () => returnToPreviousOr(
+                                  context,
                                   AppRoutes.authorBookDetailPath(book.id),
                                 ),
                           icon: const Icon(Icons.arrow_back, size: 16),
@@ -126,7 +131,7 @@ class _BetaCampaignsAuthorScreenState
                                 'chapitre, puis reviens ici pour lancer la '
                                 'campagne.',
                             action: FilledButton.icon(
-                              onPressed: () => context.go(
+                              onPressed: () => context.push(
                                 AppRoutes.chapterEditorPath(book.id),
                               ),
                               icon: const Icon(Icons.edit_outlined, size: 18),
@@ -158,7 +163,7 @@ class _BetaCampaignsAuthorScreenState
                           ),
                           onClose: _closeCampaign,
                           onCancel: _cancelCampaign,
-                          onComments: (campaign) => context.go(
+                          onComments: (campaign) => context.push(
                             AppRoutes.authorBetaCommentsPath(book.id),
                           ),
                         ),
@@ -171,6 +176,24 @@ class _BetaCampaignsAuthorScreenState
           ),
         );
       },
+    );
+  }
+
+  Widget _withBack(Widget child) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextButton.icon(
+          onPressed: () => returnToPreviousOr(
+            context,
+            AppRoutes.authorBookDetailPath(widget.bookId),
+          ),
+          icon: const Icon(Icons.arrow_back, size: 16),
+          label: const Text('Retour'),
+        ),
+        const SizedBox(height: 22),
+        child,
+      ],
     );
   }
 
@@ -748,7 +771,7 @@ class _CampaignList extends StatelessWidget {
             const SizedBox(height: 14),
             for (final campaign in campaigns) ...[
               PlumoraCard(
-                onTap: () => context.go(
+                onTap: () => context.push(
                   AppRoutes.authorBetaCampaignDetailPath(
                     campaign.id,
                     bookId: campaign.bookId,
@@ -816,7 +839,7 @@ class _CampaignList extends StatelessWidget {
                             runSpacing: 10,
                             children: [
                               OutlinedButton.icon(
-                                onPressed: () => context.go(
+                                onPressed: () => context.push(
                                   AppRoutes.authorBetaCampaignDetailPath(
                                     campaign.id,
                                     bookId: campaign.bookId,

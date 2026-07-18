@@ -6,6 +6,7 @@ class CatalogBookModel {
     required this.authorName,
     this.authorId,
     this.genre,
+    this.language,
     this.coverUrl,
     this.externalSource,
     this.externalId,
@@ -23,6 +24,7 @@ class CatalogBookModel {
   final String authorName;
   final String? authorId;
   final String? genre;
+  final String? language;
   final String? coverUrl;
   final String? externalSource;
   final String? externalId;
@@ -46,6 +48,11 @@ class CatalogBookModel {
       authorName: _readAuthorName(json),
       authorId: _readNullableString(json, ['authorId', 'author_id']),
       genre: _readNullableString(json, ['genre', 'category']),
+      language: _readNullableString(json, [
+        'language',
+        'languageCode',
+        'language_code',
+      ]),
       coverUrl: _readNullableString(json, [
         'coverUrl',
         'cover_url',
@@ -101,6 +108,7 @@ class CatalogBookModel {
       authorName: detail.authorName,
       authorId: detail.authorId,
       genre: detail.genre,
+      language: detail.language,
       coverUrl: detail.coverUrl,
       externalSource: detail.externalSource,
       externalId: detail.externalId,
@@ -123,6 +131,7 @@ class CatalogBookDetailModel {
     this.authorId,
     this.authorBio,
     this.genre,
+    this.language,
     this.coverUrl,
     this.externalSource,
     this.externalId,
@@ -142,6 +151,7 @@ class CatalogBookDetailModel {
   final String? authorId;
   final String? authorBio;
   final String? genre;
+  final String? language;
   final String? coverUrl;
   final String? externalSource;
   final String? externalId;
@@ -158,6 +168,32 @@ class CatalogBookDetailModel {
   bool get isExternalImport => externalSource?.trim().isNotEmpty ?? false;
 
   bool get isPlumoraOriginal => !isExternalImport;
+
+  CatalogBookDetailModel copyWith({
+    int? chapterCount,
+    List<CatalogChapterModel>? chapters,
+  }) {
+    return CatalogBookDetailModel(
+      id: id,
+      title: title,
+      description: description,
+      authorName: authorName,
+      authorId: authorId,
+      authorBio: authorBio,
+      genre: genre,
+      language: language,
+      coverUrl: coverUrl,
+      externalSource: externalSource,
+      externalId: externalId,
+      rating: rating,
+      ratingCount: ratingCount,
+      readCount: readCount,
+      chapterCount: chapterCount ?? this.chapterCount,
+      estimatedReadingMinutes: estimatedReadingMinutes,
+      chapters: chapters ?? this.chapters,
+      publishedAt: publishedAt,
+    );
+  }
 
   factory CatalogBookDetailModel.fromJson(Object? value) {
     final json = _readMap(value);
@@ -183,6 +219,11 @@ class CatalogBookDetailModel {
       authorId: _readNullableString(bookJson, ['authorId', 'author_id']),
       authorBio: _readNullableString(bookJson, ['authorBio', 'author_bio']),
       genre: _readNullableString(bookJson, ['genre', 'category']),
+      language: _readNullableString(bookJson, [
+        'language',
+        'languageCode',
+        'language_code',
+      ]),
       coverUrl: _readNullableString(bookJson, [
         'coverUrl',
         'cover_url',

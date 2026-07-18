@@ -237,7 +237,7 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
                           ),
                           const SizedBox(width: 8),
                           FigmaPillTab(
-                            label: 'Beta',
+                            label: 'Bêta',
                             icon: Icons.edit_note_outlined,
                             selected: activeTab == 'beta',
                             badgeCount: betaBadgeCount,
@@ -309,7 +309,7 @@ class _ReadingsTab extends StatelessWidget {
                   Icons.bookmark_added_outlined,
                 ),
                 _Stat(
-                  'Termines',
+                  'Terminés',
                   finished.toString(),
                   Icons.bar_chart,
                   color: context.colors.accent,
@@ -327,7 +327,7 @@ class _ReadingsTab extends StatelessWidget {
               const FigmaEmptyState(
                 title: 'Aucune lecture',
                 message:
-                    'Tes lectures reprises depuis le backend apparaitront ici.',
+                    'Tes lectures reprises depuis le backend apparaîtront ici.',
                 icon: Icons.menu_book_outlined,
               )
             else
@@ -377,7 +377,7 @@ class _FavoritesTab extends StatelessWidget {
           children: [
             _LibraryBanner(
               title: 'Mes Favoris',
-              subtitle: '${favorites.length} livres sauvegardes',
+              subtitle: '${favorites.length} livres sauvegardés',
               icon: Icons.favorite,
               colors: [context.colors.destructive, const Color(0xFFB03030)],
             ),
@@ -465,7 +465,7 @@ class _BetaTab extends ConsumerWidget {
         return Column(
           children: [
             _LibraryBanner(
-              title: 'Espace Beta-lecture',
+              title: 'Espace Bêta-lecture',
               subtitle: 'Aidez les auteurs avec vos retours',
               icon: Icons.chat_bubble_outline,
               colors: [context.colors.plumora, context.colors.primary],
@@ -478,9 +478,9 @@ class _BetaTab extends ConsumerWidget {
             const SizedBox(height: 18),
             if (filtered.isEmpty)
               const FigmaEmptyState(
-                title: 'Aucune beta-lecture',
+                title: 'Aucune bêta-lecture',
                 message:
-                    'Les livres que tu as acceptes, commences a lire ou commentes apparaitront ici.',
+                    'Les livres que tu as acceptés, commencés à lire ou commentés apparaîtront ici.',
                 icon: Icons.edit_note_outlined,
               )
             else
@@ -495,15 +495,15 @@ class _BetaTab extends ConsumerWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                onPressed: () => context.go(AppRoutes.betaInvitations),
+                onPressed: () => context.push(AppRoutes.betaInvitations),
                 icon: const Icon(Icons.open_in_new, size: 16),
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       pendingCount > 0
-                          ? 'Gerer les invitations ($pendingCount en attente)'
-                          : 'Gerer les invitations',
+                          ? 'Gérer les invitations ($pendingCount en attente)'
+                          : 'Gérer les invitations',
                     ),
                     if (newOpportunitiesCount > 0) ...[
                       const SizedBox(width: 8),
@@ -556,7 +556,7 @@ class _PendingInvitationsBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FigmaCard(
-      onTap: () => context.go(AppRoutes.betaInvitations),
+      onTap: () => context.push(AppRoutes.betaInvitations),
       color: context.colors.orange.withValues(alpha: 0.08),
       borderColor: context.colors.orange.withValues(alpha: 0.3),
       padding: const EdgeInsets.all(14),
@@ -583,8 +583,8 @@ class _PendingInvitationsBanner extends StatelessWidget {
           Expanded(
             child: Text(
               count > 1
-                  ? '$count nouveaux livres te sont proposes en beta-lecture'
-                  : "Un nouveau livre t'est propose en beta-lecture",
+                  ? '$count nouveaux livres te sont proposés en bêta-lecture'
+                  : "Un nouveau livre t'est proposé en bêta-lecture",
               style: TextStyle(
                 color: context.colors.textPrimary,
                 fontWeight: FontWeight.w800,
@@ -610,9 +610,8 @@ class _ReadingTile extends ConsumerWidget {
     final cachedCover = ref.watch(bookCoverBytesProvider(reading.bookId));
 
     return FigmaCard(
-      onTap: () => context.go(
-        AppRoutes.readingPath(reading.bookId, chapterId: reading.chapterId),
-      ),
+      onTap: () =>
+          context.push(AppRoutes.catalogBookDetailPath(reading.bookId)),
       padding: const EdgeInsets.all(16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,7 +647,7 @@ class _ReadingTile extends ConsumerWidget {
                       ),
                     ),
                     FigmaBadge(
-                      label: complete ? 'Termine' : 'En cours',
+                      label: complete ? 'Terminé' : 'En cours',
                       backgroundColor: complete
                           ? context.colors.success.withValues(alpha: 0.15)
                           : context.colors.primary.withValues(alpha: 0.15),
@@ -700,7 +699,7 @@ class _ReadingTile extends ConsumerWidget {
                     const SizedBox(width: 4),
                     Text(
                       reading.updatedAt == null
-                          ? 'Progression sauvegardee'
+                          ? 'Progression sauvegardée'
                           : 'Lu le ${_shortDate(reading.updatedAt!)}',
                       style: TextStyle(
                         color: context.colors.textSecondary,
@@ -766,7 +765,7 @@ class _FavoriteTile extends ConsumerWidget {
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
     return InkWell(
-      onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -817,7 +816,7 @@ class _BetaTile extends ConsumerWidget {
     return FigmaCard(
       onTap: entry.campaignId.isEmpty
           ? null
-          : () => context.go(
+          : () => context.push(
               AppRoutes.betaChaptersPath(
                 entry.campaignId,
                 invitationId: entry.invitationId,
@@ -1035,13 +1034,13 @@ class _ErrorPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Donnees indisponibles',
+            'Données indisponibles',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );
