@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
@@ -47,11 +46,13 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
     return chapterAsync.when(
       loading: () => Scaffold(
         backgroundColor: context.colors.background,
+        appBar: _backAppBar(context),
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => _ScaffoldError(
         message: AppError.messageFor(error),
         onRetry: () => ref.invalidate(chapterProvider(widget.chapterId!)),
+        onBack: () => returnToPreviousOr(context, AppRoutes.editor),
       ),
       data: (chapter) {
         if (chapter != null) {
@@ -62,15 +63,18 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
           backgroundColor: context.colors.background,
           appBar: AppBar(
             backgroundColor: context.colors.cards,
-            leading: IconButton(
-              onPressed: () {
-                if (chapter?.bookId.trim().isNotEmpty == true) {
-                  context.go(AppRoutes.chapterEditorPath(chapter!.bookId));
-                } else {
-                  context.go(AppRoutes.editor);
-                }
-              },
-              icon: const Icon(Icons.arrow_back),
+            leadingWidth: 104,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: FigmaBackButton(
+                label: 'Retour',
+                onTap: () => returnToPreviousOr(
+                  context,
+                  chapter?.bookId.trim().isNotEmpty == true
+                      ? AppRoutes.chapterEditorPath(chapter!.bookId)
+                      : AppRoutes.editor,
+                ),
+              ),
             ),
             title: Row(
               mainAxisSize: MainAxisSize.min,
@@ -92,7 +96,7 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
                       ),
                     ),
                     Text(
-                      "Assistant d'ecriture",
+                      "Assistant d'écriture",
                       style: TextStyle(
                         color: context.colors.textSecondary,
                         fontSize: 11,
@@ -110,7 +114,7 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
             child: Column(
               children: [
                 Text(
-                  'Ameliore ton texte avec Plumo',
+                  'Améliore ton texte avec Plumo',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.colors.textPrimary,
@@ -122,7 +126,7 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
                 Text(
                   chapter == null
                       ? 'Colle un passage, choisis une action et envoie la demande au backend IA.'
-                      : 'Chapitre charge : ${chapter.title.isEmpty ? "sans titre" : chapter.title}',
+                      : 'Chapitre chargé : ${chapter.title.isEmpty ? "sans titre" : chapter.title}',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: context.colors.textSecondary),
                 ),
@@ -169,6 +173,20 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
     );
   }
 
+  PreferredSizeWidget _backAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: context.colors.cards,
+      leadingWidth: 104,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: FigmaBackButton(
+          label: 'Retour',
+          onTap: () => returnToPreviousOr(context, AppRoutes.editor),
+        ),
+      ),
+    );
+  }
+
   void _hydrateChapter(ChapterModel chapter) {
     if (_hydratedChapterId == chapter.id) {
       return;
@@ -184,7 +202,7 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
   Future<void> _requestSuggestion(AiWritingActionType action) async {
     final selectedText = _selectedTextController.text.trim();
     if (selectedText.isEmpty) {
-      setState(() => _error = 'Ajoute un passage a ameliorer.');
+      setState(() => _error = 'Ajoute un passage à améliorer.');
       return;
     }
 
@@ -235,7 +253,7 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
           controller: controller,
           minLines: 4,
           maxLines: 8,
-          decoration: const InputDecoration(labelText: 'Texte modifie'),
+          decoration: const InputDecoration(labelText: 'Texte modifié'),
         ),
         actions: [
           TextButton(
@@ -316,14 +334,14 @@ class _ActionColumn extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FigmaBadge(label: 'Texte selectionne'),
+              const FigmaBadge(label: 'Texte sélectionné'),
               const SizedBox(height: 14),
               TextField(
                 controller: selectedTextController,
                 minLines: 5,
                 maxLines: 8,
                 decoration: const InputDecoration(
-                  hintText: 'Colle ici le passage a ameliorer.',
+                  hintText: 'Colle ici le passage à améliorer.',
                 ),
               ),
               const SizedBox(height: 14),
@@ -380,7 +398,7 @@ class _ActionColumn extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  "Plumo est une aide a l'ecriture : chaque suggestion peut etre acceptee, modifiee ou ignoree.",
+                  "Plumo est une aide à l'écriture : chaque suggestion peut être acceptée, modifiée ou ignorée.",
                   style: TextStyle(
                     color: context.colors.textSecondary,
                     height: 1.4,
@@ -438,7 +456,7 @@ class _SuggestionColumn extends StatelessWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'La suggestion du backend IA apparaitra ici.',
+                  'La suggestion du backend IA apparaîtra ici.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: context.colors.textSecondary),
                 ),
@@ -598,15 +616,28 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _ScaffoldError extends StatelessWidget {
-  const _ScaffoldError({required this.message, required this.onRetry});
+  const _ScaffoldError({
+    required this.message,
+    required this.onRetry,
+    required this.onBack,
+  });
 
   final String message;
   final VoidCallback onRetry;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.background,
+      appBar: AppBar(
+        backgroundColor: context.colors.cards,
+        leadingWidth: 104,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: FigmaBackButton(label: 'Retour', onTap: onBack),
+        ),
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -627,7 +658,7 @@ class _ScaffoldError extends StatelessWidget {
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: onRetry,
-                  child: const Text('Reessayer'),
+                  child: const Text('Réessayer'),
                 ),
               ],
             ),

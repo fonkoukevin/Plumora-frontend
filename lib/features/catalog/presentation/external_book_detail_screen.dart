@@ -12,6 +12,7 @@ import '../../../core/widgets/plumora_ui.dart';
 import '../../reading/data/models/review_model.dart';
 import '../../reading/data/repositories/favorite_repository.dart';
 import '../../reading/data/repositories/review_repository.dart';
+import '../../reading/presentation/review_dialog.dart';
 import '../data/models/external_book_model.dart';
 import '../data/repositories/catalog_repository.dart';
 import '../data/repositories/external_book_repository.dart';
@@ -44,16 +45,16 @@ class _ExternalBookDetailScreenState
     );
 
     return FigmaScreen(
-      maxWidth: 680,
-      padding: const EdgeInsets.fromLTRB(16, 22, 16, 92),
+      maxWidth: 1120,
+      padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           FigmaBackButton(
             label: 'Retour',
-            onTap: () => context.go(AppRoutes.discover),
+            onTap: () => returnToPreviousOr(context, AppRoutes.discover),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 22),
           bookAsync.when(
             loading: () => const Center(
               child: Padding(
@@ -127,7 +128,7 @@ class _ExternalBookDetailScreenState
 
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
-      _showMessage('Impossible d ouvrir le lien externe.');
+      _showMessage('Impossible d’ouvrir le lien externe.');
     }
   }
 
@@ -152,7 +153,7 @@ class _ExternalBookDetailScreenState
               : SnackBarAction(
                   label: 'Lire',
                   onPressed: () {
-                    context.go(AppRoutes.readingPath(importedBookId));
+                    context.push(AppRoutes.readingPath(importedBookId));
                   },
                 ),
         ),
@@ -221,10 +222,10 @@ class _ExternalBookDetailScreenState
 
       _showMessage(
         isFavorite
-            ? 'Livre retire des favoris.'
+            ? 'Livre retiré des favoris.'
             : needsImport
-            ? 'Livre importe et ajoute aux favoris.'
-            : 'Livre ajoute aux favoris.',
+            ? 'Livre importé et ajouté aux favoris.'
+            : 'Livre ajouté aux favoris.',
       );
     } catch (error) {
       if (!mounted) {
@@ -244,10 +245,7 @@ class _ExternalBookDetailScreenState
   }
 
   Future<void> _openReviewDialog(ExternalBook book) async {
-    final request = await showDialog<ReviewUpsertRequest>(
-      context: context,
-      builder: (context) => const _ReviewDialog(),
-    );
+    final request = await showPlumoraReviewDialog(context);
     if (request == null || !mounted) {
       return;
     }
@@ -269,7 +267,7 @@ class _ExternalBookDetailScreenState
         return;
       }
 
-      _showMessage('Avis publie.');
+      _showMessage('Avis publié.');
     } catch (error) {
       if (!mounted) {
         return;
@@ -295,7 +293,7 @@ class _ExternalBookDetailScreenState
       return;
     }
 
-    context.go(AppRoutes.readingPath(bookId));
+    context.push(AppRoutes.readingPath(bookId));
   }
 
   String _importErrorMessage(Object error) {
@@ -381,16 +379,99 @@ class _BookDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final actions = _ExternalActionColumn(
+      book: book,
+      importing: importing,
+      isFavorite: isFavorite,
+      favoriteLoading: favoriteLoading,
+      onReadInPlumora: onReadInPlumora,
+      onSource: onSource,
+      onImport: onImport,
+      onToggleFavorite: onToggleFavorite,
+      importError: importError,
+      favoriteError: favoriteError,
+    );
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _BookInfo(book: book, reviewsAsync: reviewsAsync),
+        const SizedBox(height: 26),
+        _SummaryCard(summary: book.summary),
+        const SizedBox(height: 18),
+        _AuthorCard(book: book),
+        const SizedBox(height: 18),
+        _ExternalChaptersCard(book: book),
+        const SizedBox(height: 18),
+        _ReviewsPreview(
+          reviewsAsync: reviewsAsync,
+          submitting: reviewSubmitting,
+          error: reviewError,
+          onWriteReview: onWriteReview,
+          onRetry: onRetryReviews,
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 780;
+        if (!wide) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [actions, const SizedBox(height: 28), details],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 300, child: actions),
+            const SizedBox(width: 34),
+            Expanded(child: details),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ExternalActionColumn extends StatelessWidget {
+  const _ExternalActionColumn({
+    required this.book,
+    required this.importing,
+    required this.isFavorite,
+    required this.favoriteLoading,
+    required this.onReadInPlumora,
+    required this.onSource,
+    required this.onImport,
+    required this.onToggleFavorite,
+    this.importError,
+    this.favoriteError,
+  });
+
+  final ExternalBook book;
+  final bool importing;
+  final bool isFavorite;
+  final bool favoriteLoading;
+  final VoidCallback onReadInPlumora;
+  final VoidCallback onSource;
+  final VoidCallback onImport;
+  final VoidCallback onToggleFavorite;
+  final String? importError;
+  final String? favoriteError;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _HeroCover(book: book),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         if (book.canReadInPlumora)
           FilledButton.icon(
             onPressed: onReadInPlumora,
-            icon: const Icon(Icons.menu_book_outlined),
-            label: const Text('Lire dans Plumora'),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Lire maintenant'),
           )
         else if (book.imported)
           FilledButton.icon(
@@ -424,23 +505,12 @@ class _BookDetailContent extends StatelessWidget {
               : Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
           label: Text(
             favoriteLoading
-                ? 'Mise a jour...'
+                ? 'Mise à jour...'
                 : isFavorite
                 ? 'Retirer des favoris'
                 : 'Ajouter aux favoris',
           ),
         ),
-        if (favoriteError != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            favoriteError!,
-            style: TextStyle(
-              color: context.colors.destructive,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
         if (_hasExternalSource(book)) ...[
           const SizedBox(height: 10),
           OutlinedButton.icon(
@@ -455,6 +525,17 @@ class _BookDetailContent extends StatelessWidget {
             style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
           ),
         ],
+        if (favoriteError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            favoriteError!,
+            style: TextStyle(
+              color: context.colors.destructive,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
         if (importError != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -466,20 +547,6 @@ class _BookDetailContent extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 28),
-        _BookInfo(book: book),
-        const SizedBox(height: 20),
-        _SummaryCard(summary: book.summary),
-        const SizedBox(height: 18),
-        _AuthorCard(book: book),
-        const SizedBox(height: 18),
-        _ReviewsPreview(
-          reviewsAsync: reviewsAsync,
-          submitting: reviewSubmitting,
-          error: reviewError,
-          onWriteReview: onWriteReview,
-          onRetry: onRetryReviews,
-        ),
       ],
     );
   }
@@ -493,11 +560,11 @@ class _HeroCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
-      aspectRatio: 0.72,
+      aspectRatio: 2 / 3,
       child: PlumoraBookCover(
         width: double.infinity,
         height: double.infinity,
-        radius: 10,
+        radius: 18,
         colors: _coverColors(
           book.externalId.isEmpty ? book.title : book.externalId,
         ),
@@ -508,9 +575,10 @@ class _HeroCover extends StatelessWidget {
 }
 
 class _BookInfo extends StatelessWidget {
-  const _BookInfo({required this.book});
+  const _BookInfo({required this.book, required this.reviewsAsync});
 
   final ExternalBook book;
+  final AsyncValue<List<ReviewModel>> reviewsAsync;
 
   @override
   Widget build(BuildContext context) {
@@ -518,6 +586,12 @@ class _BookInfo extends StatelessWidget {
     final language = book.languages.isEmpty
         ? null
         : book.languages.take(2).join(', ').toUpperCase();
+    final reviews = reviewsAsync.valueOrNull;
+    final reviewCount = reviews?.length ?? 0;
+    final averageRating = reviews == null || reviews.isEmpty
+        ? null
+        : reviews.map((review) => review.rating).reduce((a, b) => a + b) /
+              reviews.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -526,17 +600,16 @@ class _BookInfo extends StatelessWidget {
           book.title.isEmpty ? 'Livre sans titre' : book.title,
           style: TextStyle(
             color: context.colors.textPrimary,
-            fontSize: 30,
+            fontSize: 40,
             fontWeight: FontWeight.w900,
-            height: 1.05,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           'par ${book.authorLabel}',
-          style: TextStyle(color: context.colors.textSecondary, fontSize: 16),
+          style: TextStyle(color: context.colors.textSecondary, fontSize: 20),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -550,31 +623,23 @@ class _BookInfo extends StatelessWidget {
             if (book.mediaType != null) PlumoraBadge(label: book.mediaType!),
           ],
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 22),
         Wrap(
           spacing: 22,
-          runSpacing: 14,
+          runSpacing: 12,
           children: [
-            const _MetaMetric(
+            _MetaMetric(
               icon: Icons.star,
               iconColor: Color(0xFFF5B400),
-              label: '4.7',
-              sub: '(Gutendex)',
+              label: averageRating?.toStringAsFixed(1) ?? '-',
+              sub: '($reviewCount avis)',
             ),
             _MetaMetric(
               icon: Icons.menu_book_outlined,
               label: _formatCompact(book.downloadCount),
               sub: 'lectures',
             ),
-            _MetaMetric(
-              icon: Icons.schedule,
-              label: book.canReadInPlumora
-                  ? 'Lecture Plumora'
-                  : book.imported
-                  ? 'Lecture indisponible'
-                  : 'Import requis',
-              sub: '',
-            ),
+            _MetaMetric(icon: Icons.schedule, label: '-', sub: 'de lecture'),
           ],
         ),
       ],
@@ -600,22 +665,19 @@ class _MetaMetric extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18, color: iconColor ?? context.colors.textSecondary),
-        const SizedBox(width: 6),
+        Icon(icon, color: iconColor ?? context.colors.textSecondary),
+        const SizedBox(width: 7),
         Text(
           label,
           style: TextStyle(
             color: context.colors.textPrimary,
-            fontSize: 14,
+            fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
         ),
         if (sub.isNotEmpty) ...[
           const SizedBox(width: 4),
-          Text(
-            sub,
-            style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
-          ),
+          Text(sub, style: TextStyle(color: context.colors.textSecondary)),
         ],
       ],
     );
@@ -637,7 +699,7 @@ class _SummaryCardState extends State<_SummaryCard> {
   @override
   Widget build(BuildContext context) {
     final text = widget.summary.trim().isEmpty
-        ? 'Aucun resume disponible pour ce livre.'
+        ? 'Aucun résumé disponible pour ce livre.'
         : widget.summary.trim();
     final canCollapse = text.length > 360;
 
@@ -646,7 +708,7 @@ class _SummaryCardState extends State<_SummaryCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Resume',
+            'Résumé',
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 20,
@@ -690,62 +752,102 @@ class _AuthorCard extends StatelessWidget {
         .join();
 
     return FigmaCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: context.colors.primary,
+            child: Text(
+              initials.isEmpty ? 'A' : initials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "À propos de l'auteur",
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  book.authorLabel,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${book.source} - domaine public',
+                  style: TextStyle(color: context.colors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExternalChaptersCard extends StatelessWidget {
+  const _ExternalChaptersCard({required this.book});
+
+  final ExternalBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    final internalBookId = book.internalBookId?.trim();
+    final canRead = internalBookId != null && internalBookId.isNotEmpty;
+
+    return FigmaCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "A propos de l'auteur",
+            'Chapitres',
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: context.colors.primary,
-                child: Text(
-                  initials.isEmpty ? 'A' : initials,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      book.authorLabel,
-                      style: TextStyle(
-                        color: context.colors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${book.source} - domaine public',
-                      style: TextStyle(
-                        color: context.colors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 14),
-          Text(
-            '${book.subjects.length} sujets repertories  -  ${_formatCompact(book.downloadCount)} lectures',
-            style: TextStyle(color: context.colors.textSecondary),
-          ),
+          if (canRead)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundColor: context.colors.primary.withValues(alpha: 0.1),
+                child: Icon(
+                  Icons.menu_book_outlined,
+                  color: context.colors.primary,
+                ),
+              ),
+              title: const Text(
+                'Lire les chapitres dans Plumora',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.readingPath(internalBookId)),
+            )
+          else
+            Text(
+              book.imported
+                  ? 'Aucun chapitre lisible pour le moment.'
+                  : 'Importe ce livre pour lire ses chapitres dans Plumora.',
+              style: TextStyle(color: context.colors.textSecondary),
+            ),
         ],
       ),
     );
@@ -866,7 +968,7 @@ class _ReviewsError extends StatelessWidget {
       children: [
         Text(message, style: TextStyle(color: context.colors.textSecondary)),
         const SizedBox(height: 10),
-        TextButton(onPressed: onRetry, child: const Text('Reessayer')),
+        TextButton(onPressed: onRetry, child: const Text('Réessayer')),
       ],
     );
   }
@@ -940,94 +1042,6 @@ class _Stars extends StatelessWidget {
   }
 }
 
-class _ReviewDialog extends StatefulWidget {
-  const _ReviewDialog();
-
-  @override
-  State<_ReviewDialog> createState() => _ReviewDialogState();
-}
-
-class _ReviewDialogState extends State<_ReviewDialog> {
-  final _controller = TextEditingController();
-  int _rating = 5;
-  String? _error;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Donner mon avis'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Note', style: TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              for (var value = 1; value <= 5; value++)
-                IconButton(
-                  tooltip: '$value etoiles',
-                  onPressed: () => setState(() => _rating = value),
-                  icon: Icon(
-                    value <= _rating ? Icons.star : Icons.star_border,
-                    color: const Color(0xFFF5C84C),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _controller,
-            minLines: 4,
-            maxLines: 6,
-            textInputAction: TextInputAction.newline,
-            decoration: const InputDecoration(
-              labelText: 'Commentaire',
-              hintText: 'Partage ton ressenti sur ce livre...',
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: TextStyle(
-                color: context.colors.destructive,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
-        ),
-        FilledButton(onPressed: _submit, child: const Text('Publier')),
-      ],
-    );
-  }
-
-  void _submit() {
-    final comment = _controller.text.trim();
-    if (comment.length < 3) {
-      setState(() => _error = 'Ajoute un commentaire un peu plus detaille.');
-      return;
-    }
-
-    Navigator.of(
-      context,
-    ).pop(ReviewUpsertRequest(rating: _rating, comment: comment));
-  }
-}
-
 class _ErrorCard extends StatelessWidget {
   const _ErrorCard({
     required this.title,
@@ -1052,7 +1066,7 @@ class _ErrorCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

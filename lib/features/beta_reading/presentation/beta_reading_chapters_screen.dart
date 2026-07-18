@@ -38,7 +38,7 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
         children: [
           FigmaBackButton(
             label: 'Retour',
-            onTap: () => context.go(AppRoutes.betaInvitations),
+            onTap: () => returnToPreviousOr(context, AppRoutes.betaInvitations),
           ),
           const SizedBox(height: 18),
           campaignAsync.maybeWhen(
@@ -91,7 +91,7 @@ class BetaReadingChaptersScreen extends ConsumerWidget {
 
               if (sorted.isEmpty) {
                 return const FigmaEmptyState(
-                  title: 'Aucun chapitre partage',
+                  title: 'Aucun chapitre partagé',
                   message:
                       "L'auteur n'a pas encore ouvert de chapitre pour cette campagne.",
                   icon: Icons.menu_book_outlined,
@@ -143,7 +143,7 @@ class _CampaignHeader extends StatelessWidget {
         Text(
           campaign?.bookTitle.trim().isNotEmpty == true
               ? campaign!.bookTitle
-              : 'Beta-lecture',
+              : 'Bêta-lecture',
           style: TextStyle(
             color: context.colors.textPrimary,
             fontSize: 36,
@@ -180,7 +180,7 @@ class _ChapterCard extends StatelessWidget {
     final hasFeedback = commentsCount > 0;
 
     return FigmaCard(
-      onTap: () => context.go(
+      onTap: () => context.push(
         AppRoutes.betaReadChapterPath(
           campaignId,
           chapter.id,
@@ -256,7 +256,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

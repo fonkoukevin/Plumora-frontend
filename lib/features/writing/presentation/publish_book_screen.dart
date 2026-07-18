@@ -44,12 +44,14 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
         children: [
           FigmaBackButton(
             label: 'Retour',
-            onTap: () =>
-                context.go(AppRoutes.authorBookDetailPath(widget.bookId)),
+            onTap: () => returnToPreviousOr(
+              context,
+              AppRoutes.authorBookDetailPath(widget.bookId),
+            ),
           ),
           const SizedBox(height: 18),
           Text(
-            'Preparer la publication',
+            'Préparer la publication',
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 36,
@@ -157,10 +159,10 @@ class _PublishContent extends StatelessWidget {
     );
 
     final checklist = [
-      _CheckItem('Titre renseigne', book.title.trim().isNotEmpty),
-      _CheckItem('Resume renseigne', book.description.trim().isNotEmpty),
+      _CheckItem('Titre renseigné', book.title.trim().isNotEmpty),
+      _CheckItem('Résumé renseigné', book.description.trim().isNotEmpty),
       _CheckItem(
-        'Categorie / genre renseigne',
+        'Catégorie / genre renseigné',
         (book.genre ?? '').trim().isNotEmpty,
       ),
       _CheckItem('Au moins un chapitre', chapters.isNotEmpty),
@@ -170,11 +172,11 @@ class _PublishContent extends StatelessWidget {
             chapters.every((chapter) => chapter.content.trim().isNotEmpty),
       ),
       _CheckItem(
-        'Retours beta traites (optionnel)',
+        'Retours bêta traités (optionnel)',
         betaFeedbackResolved,
         required: false,
       ),
-      _CheckItem('Livre non archive', !book.isArchived),
+      _CheckItem('Livre non archivé', !book.isArchived),
     ];
     final completed = checklist.where((item) => item.done).length;
     final progress = completed / checklist.length;
@@ -316,7 +318,10 @@ class _PublishContent extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: isPublishing
                     ? null
-                    : () => context.go(AppRoutes.authorBookDetailPath(book.id)),
+                    : () => returnToPreviousOr(
+                        context,
+                        AppRoutes.authorBookDetailPath(book.id),
+                      ),
                 child: const Text('Continuer plus tard'),
               ),
             ),
@@ -368,7 +373,7 @@ class _ErrorPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

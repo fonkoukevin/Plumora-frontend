@@ -11,6 +11,7 @@ import '../../book/data/repositories/book_cover_cache.dart';
 import '../../reading/data/models/review_model.dart';
 import '../../reading/data/repositories/favorite_repository.dart';
 import '../../reading/data/repositories/review_repository.dart';
+import '../../reading/presentation/review_dialog.dart';
 import '../data/models/catalog_book_model.dart';
 import '../data/repositories/catalog_repository.dart';
 
@@ -25,7 +26,9 @@ class BookDetailScreen extends ConsumerStatefulWidget {
 
 class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
   bool _favoriteMutating = false;
+  bool _reviewSubmitting = false;
   String? _favoriteError;
+  String? _reviewError;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +44,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         children: [
           FigmaBackButton(
             label: 'Retour',
-            onTap: () => context.go(AppRoutes.discover),
+            onTap: () => returnToPreviousOr(context, AppRoutes.discover),
           ),
           const SizedBox(height: 22),
           bookAsync.when(
@@ -71,6 +74,9 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
                 final details = _BookDetails(
                   book: book,
                   reviewsAsync: reviewsAsync,
+                  reviewSubmitting: _reviewSubmitting,
+                  reviewError: _reviewError,
+                  onWriteReview: _openReviewDialog,
                   onRetryReviews: () =>
                       ref.invalidate(bookReviewsProvider(widget.bookId)),
                 );
@@ -96,6 +102,41 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openReviewDialog() async {
+    final request = await showPlumoraReviewDialog(context);
+    if (request == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _reviewSubmitting = true;
+      _reviewError = null;
+    });
+
+    try {
+      await ref
+          .read(reviewRepositoryProvider)
+          .createReview(widget.bookId, request);
+      ref.invalidate(bookReviewsProvider(widget.bookId));
+      ref.invalidate(myReviewsProvider);
+      ref.invalidate(catalogBookDetailProvider(widget.bookId));
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Avis publié.')));
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _reviewError = AppError.messageFor(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _reviewSubmitting = false);
+      }
+    }
   }
 
   Future<void> _toggleFavorite(bool isFavorite) async {
@@ -141,6 +182,9 @@ class _ActionColumn extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+    final firstChapterId = book.chapters.isEmpty
+        ? null
+        : book.chapters.first.id.trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -158,7 +202,14 @@ class _ActionColumn extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
-          onPressed: () => context.go(AppRoutes.readingPath(book.id)),
+          onPressed: () => context.go(
+            AppRoutes.readingPath(
+              book.id,
+              chapterId: firstChapterId?.isEmpty ?? true
+                  ? null
+                  : firstChapterId,
+            ),
+          ),
           icon: const Icon(Icons.play_arrow),
           label: const Text('Lire maintenant'),
         ),
@@ -196,12 +247,18 @@ class _BookDetails extends StatelessWidget {
   const _BookDetails({
     required this.book,
     required this.reviewsAsync,
+    required this.reviewSubmitting,
+    required this.onWriteReview,
     required this.onRetryReviews,
+    this.reviewError,
   });
 
   final CatalogBookDetailModel book;
   final AsyncValue<List<ReviewModel>> reviewsAsync;
+  final bool reviewSubmitting;
+  final VoidCallback onWriteReview;
   final VoidCallback onRetryReviews;
+  final String? reviewError;
 
   @override
   Widget build(BuildContext context) {
@@ -235,9 +292,11 @@ class _BookDetails extends StatelessWidget {
           children: [
             if (book.genre != null && book.genre!.trim().isNotEmpty)
               FigmaBadge(label: book.genre!),
-            FigmaBadge(label: '${book.chapterCount} chapitres'),
+            FigmaBadge(
+              label: _chapterCountLabel(_visibleChapters(book).length),
+            ),
             if (book.publishedAt != null)
-              FigmaBadge(label: 'Publie le ${_shortDate(book.publishedAt!)}'),
+              FigmaBadge(label: 'Publié le ${_shortDate(book.publishedAt!)}'),
           ],
         ),
         const SizedBox(height: 22),
@@ -274,6 +333,9 @@ class _BookDetails extends StatelessWidget {
         _ReviewsCard(
           bookId: book.id,
           reviewsAsync: reviewsAsync,
+          submitting: reviewSubmitting,
+          error: reviewError,
+          onWriteReview: onWriteReview,
           onRetry: onRetryReviews,
         ),
       ],
@@ -330,7 +392,7 @@ class _SummaryCardState extends State<_SummaryCard> {
   @override
   Widget build(BuildContext context) {
     final text = widget.description.trim().isEmpty
-        ? 'Aucun resume disponible pour ce livre.'
+        ? 'Aucun résumé disponible pour ce livre.'
         : widget.description.trim();
     final canCollapse = text.length > 360;
 
@@ -339,7 +401,7 @@ class _SummaryCardState extends State<_SummaryCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Resume',
+            'Résumé',
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 20,
@@ -403,7 +465,7 @@ class _AuthorCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "A propos de l'auteur",
+                  "À propos de l'auteur",
                   style: TextStyle(
                     color: context.colors.textPrimary,
                     fontSize: 20,
@@ -441,6 +503,8 @@ class _ChaptersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final chapters = _visibleChapters(book);
+
     return FigmaCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,21 +518,21 @@ class _ChaptersCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          if (book.chapters.isEmpty)
-            Text(
-              'Aucun chapitre lisible pour le moment.',
-              style: TextStyle(color: context.colors.textSecondary),
-            )
-          else
-            for (final chapter in book.chapters.take(5)) ...[
-              ListTile(
+          for (var index = 0; index < chapters.length; index++) ...[
+            if (index > 0) Divider(color: context.colors.border),
+            Material(
+              type: MaterialType.transparency,
+              child: ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
                   backgroundColor: context.colors.primary.withValues(
                     alpha: 0.1,
                   ),
                   child: Text(
-                    chapter.order == 0 ? '-' : chapter.order.toString(),
+                    (chapters[index].order > 0
+                            ? chapters[index].order
+                            : index + 1)
+                        .toString(),
                     style: TextStyle(
                       color: context.colors.primary,
                       fontWeight: FontWeight.w900,
@@ -476,32 +540,64 @@ class _ChaptersCard extends StatelessWidget {
                   ),
                 ),
                 title: Text(
-                  chapter.title.isEmpty ? 'Chapitre sans titre' : chapter.title,
+                  chapters[index].title.isEmpty
+                      ? 'Chapitre ${index + 1}'
+                      : chapters[index].title,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.go(
-                  AppRoutes.readingPath(book.id, chapterId: chapter.id),
+                  AppRoutes.readingPath(book.id, chapterId: chapters[index].id),
                 ),
               ),
-              Divider(color: context.colors.border),
-            ],
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
+List<CatalogChapterModel> _visibleChapters(CatalogBookDetailModel book) {
+  if (book.chapters.isNotEmpty) {
+    return book.chapters;
+  }
+
+  final count = book.chapterCount > 0 ? book.chapterCount : 1;
+  return List.generate(
+    count,
+    (index) => CatalogChapterModel(
+      id: '',
+      title: book.isExternalImport && count == 1
+          ? 'Texte intégral'
+          : 'Chapitre ${index + 1}',
+      content: '',
+      order: index + 1,
+    ),
+    growable: false,
+  );
+}
+
+String _chapterCountLabel(int count) {
+  return '$count chapitre${count > 1 ? 's' : ''}';
+}
+
 class _ReviewsCard extends StatelessWidget {
   const _ReviewsCard({
     required this.bookId,
     required this.reviewsAsync,
+    required this.submitting,
+    required this.onWriteReview,
     required this.onRetry,
+    this.error,
   });
 
   final String bookId;
   final AsyncValue<List<ReviewModel>> reviewsAsync;
+  final bool submitting;
+  final VoidCallback onWriteReview;
   final VoidCallback onRetry;
+  final String? error;
 
   @override
   Widget build(BuildContext context) {
@@ -522,11 +618,22 @@ class _ReviewsCard extends StatelessWidget {
                 ),
               ),
               OutlinedButton(
-                onPressed: () => context.go(AppRoutes.libraryReviews),
-                child: const Text('Mes avis'),
+                onPressed: submitting ? null : onWriteReview,
+                child: Text(submitting ? 'Publication...' : 'Donner mon avis'),
               ),
             ],
           ),
+          if (error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              error!,
+              style: TextStyle(
+                color: context.colors.destructive,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           reviewsAsync.when(
             loading: () => const Center(
@@ -646,7 +753,7 @@ class _ErrorCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: context.colors.textSecondary)),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );
