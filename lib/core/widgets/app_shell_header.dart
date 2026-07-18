@@ -11,8 +11,8 @@ import 'plumora_logo_mark.dart';
 
 /// Shared sticky title row for every screen wrapped by [MainShell], matching
 /// the Figma `AppHeader.tsx` component: the Plumora logo lockup on mobile
-/// (where the sidebar with the logo is hidden), a gradient page title with an
-/// optional subtitle on desktop, and a bell + avatar on both. Each screen
+/// (where the sidebar with the logo is hidden), a theme-aware page title with
+/// an optional subtitle on desktop, and a bell + avatar on both. Each screen
 /// still owns its own pinned `SliverPersistentHeaderDelegate` for the
 /// blur/shadow-on-scroll chrome and any extra content (search, tabs) below
 /// this row.
@@ -43,87 +43,95 @@ class PlumoraAppHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDesktop = MediaQuery.sizeOf(context).width >= 1024;
     final unreadCount =
         ref.watch(unreadNotificationsCountProvider).valueOrNull ?? 0;
     final session = ref.watch(authControllerProvider).valueOrNull;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: isDesktop
-              ? _DesktopTitle(
-                  title: title,
-                  subtitle: subtitle,
-                  emoji: emoji,
-                  gradient: gradient,
-                )
-              : _MobileBrand(gradient: gradient),
-        ),
-        const SizedBox(width: 12),
-        if (action != null && isDesktop) ...[action!, const SizedBox(width: 8)],
-        if (trailing != null) ...[trailing!, const SizedBox(width: 4)],
-        _HeaderIconButton(
-          onTap: () => context.go(AppRoutes.notifications),
-          tooltip: 'Notifications',
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Icon(
-                Icons.notifications_none_rounded,
-                size: 20,
-                color: context.colors.textSecondary,
-              ),
-              if (unreadCount > 0)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: context.colors.primary,
-                      shape: BoxShape.circle,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 1024;
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: isDesktop
+                  ? _DesktopTitle(
+                      title: title,
+                      subtitle: subtitle,
+                      emoji: emoji,
+                      gradient: gradient,
+                    )
+                  : _MobileBrand(gradient: gradient),
+            ),
+            const SizedBox(width: 12),
+            if (action != null && isDesktop) ...[
+              action!,
+              const SizedBox(width: 8),
+            ],
+            if (trailing != null) ...[trailing!, const SizedBox(width: 4)],
+            _HeaderIconButton(
+              onTap: () => context.go(AppRoutes.notifications),
+              tooltip: 'Notifications',
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    size: 20,
+                    color: context.colors.textSecondary,
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: context.colors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            _HeaderIconButton(
+              onTap: () => context.go(AppRoutes.profile),
+              tooltip: 'Profil',
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x26000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  _initialsFor(session?.user?.displayName),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        _HeaderIconButton(
-          onTap: () => context.go(AppRoutes.profile),
-          tooltip: 'Profil',
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x26000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              _initialsFor(session?.user?.displayName),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -190,6 +198,19 @@ class _DesktopTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleText = Text(
+      title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: GoogleFonts.playfairDisplay(
+        color: isDark ? Colors.white : Colors.black,
+        fontSize: 24,
+        fontWeight: FontWeight.w800,
+        height: 1.1,
+      ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -202,24 +223,16 @@ class _DesktopTitle extends StatelessWidget {
               const SizedBox(width: 7),
             ],
             Flexible(
-              child: ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: gradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ).createShader(bounds),
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.playfairDisplay(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                ),
-              ),
+              child: isDark
+                  ? ShaderMask(
+                      shaderCallback: (bounds) => LinearGradient(
+                        colors: gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ).createShader(bounds),
+                      child: titleText,
+                    )
+                  : titleText,
             ),
           ],
         ),

@@ -599,6 +599,7 @@ class FigmaSectionHeader extends StatelessWidget {
     this.icon,
     this.trailing,
     this.iconColor,
+    this.showAccent = true,
     super.key,
   });
 
@@ -606,20 +607,23 @@ class FigmaSectionHeader extends StatelessWidget {
   final IconData? icon;
   final Widget? trailing;
   final Color? iconColor;
+  final bool showAccent;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 4,
-          height: 18,
-          decoration: BoxDecoration(
-            color: context.colors.accent,
-            borderRadius: BorderRadius.circular(999),
+        if (showAccent) ...[
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+              color: context.colors.accent,
+              borderRadius: BorderRadius.circular(999),
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
+          const SizedBox(width: 10),
+        ],
         if (icon != null) ...[
           Icon(icon, size: 18, color: iconColor ?? context.colors.primary),
           const SizedBox(width: 8),
@@ -737,8 +741,8 @@ class FigmaPillTab extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
           gradient: selected
-              ? LinearGradient(
-                  colors: [context.colors.orange, context.colors.orangeLight],
+              ? const LinearGradient(
+                  colors: [Color(0xFF292631), Color(0xFF5B5563)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
@@ -751,11 +755,11 @@ class FigmaPillTab extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: isDark
-                        ? const Color(0x66FF6B35)
-                        : const Color(0x22FF6B35),
-                    blurRadius: isDark ? 18 : 12,
-                    offset: Offset(0, isDark ? 7 : 5),
+                    color: const Color(
+                      0xFF292631,
+                    ).withValues(alpha: isDark ? 0.32 : 0.14),
+                    blurRadius: isDark ? 16 : 10,
+                    offset: Offset(0, isDark ? 6 : 4),
                   ),
                 ]
               : null,
