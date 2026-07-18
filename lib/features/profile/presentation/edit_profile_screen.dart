@@ -94,10 +94,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           Align(
             alignment: Alignment.centerLeft,
             child: FigmaBackButton(
-              label: 'Profil',
-              onTap: () => context.canPop()
-                  ? context.pop()
-                  : context.go(AppRoutes.profile),
+              label: 'Retour',
+              onTap: () => returnToPreviousOr(context, AppRoutes.profile),
             ),
           ),
           const SizedBox(height: 18),
@@ -113,7 +111,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Prenom, nom, nom utilisateur et biographie',
+            'Prénom, nom, nom utilisateur et biographie',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: context.colors.textSecondary,
@@ -135,12 +133,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   ],
                   PlumoraTextField(
                     controller: _firstnameController,
-                    label: 'Prenom',
+                    label: 'Prénom',
                     hint: 'Kevin',
                     textInputAction: TextInputAction.next,
                     validator: (value) {
                       if ((value ?? '').trim().isEmpty) {
-                        return 'Prenom requis';
+                        return 'Prénom requis';
                       }
                       return null;
                     },

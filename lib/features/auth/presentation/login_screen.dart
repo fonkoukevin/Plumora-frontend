@@ -88,6 +88,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       bottomPadding: 32,
       child: Column(
         children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FigmaBackButton(
+              label: 'Retour',
+              onTap: () => returnToPreviousOr(context, AppRoutes.landing),
+            ),
+          ),
+          const SizedBox(height: 18),
           const _PlumoraLetterMark(),
           const SizedBox(height: 24),
           Text(
@@ -102,7 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            'Connectez-vous pour continuer votre aventure litteraire',
+            'Connectez-vous pour continuer votre aventure littéraire',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: context.colors.textSecondary,
@@ -160,7 +168,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: isLoading ? null : () {},
-                      child: const Text('Mot de passe oublie ?'),
+                      child: const Text('Mot de passe oublié ?'),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -191,7 +199,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextButton(
                     onPressed: isLoading
                         ? null
-                        : () => context.go(AppRoutes.register),
+                        : () => context.push(AppRoutes.register),
                     child: const Text("Pas encore de compte ? S'inscrire"),
                   ),
                 ],

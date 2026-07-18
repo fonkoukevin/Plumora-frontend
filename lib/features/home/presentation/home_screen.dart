@@ -93,7 +93,7 @@ class HomeScreen extends ConsumerWidget {
                           onWrite: () => context.go(AppRoutes.write),
                           onDiscover: () => context.go(AppRoutes.discover),
                           onPlumo: () =>
-                              context.go(AppRoutes.plumoRecommendation),
+                              context.push(AppRoutes.plumoRecommendation),
                         ),
                         SizedBox(height: sectionGap),
                         _BookRail(
@@ -108,7 +108,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                         SizedBox(height: sectionGap),
                         _BookRail(
-                          title: 'Nouveautes',
+                          title: 'Nouveautés',
                           icon: Icons.bolt_outlined,
                           iconColor: context.colors.accent,
                           booksAsync: latestAsync,
@@ -238,7 +238,7 @@ class _ThemeToggleButton extends ConsumerWidget {
 
     return Semantics(
       button: true,
-      label: isDark ? 'Activer le theme clair' : 'Activer le theme sombre',
+      label: isDark ? 'Activer le thème clair' : 'Activer le thème sombre',
       child: Tooltip(
         message: isDark ? 'Thème clair' : 'Thème sombre',
         child: Material(
@@ -504,7 +504,7 @@ class _ContinueReadingCard extends ConsumerWidget {
         final radius = compact ? 20.0 : 24.0;
 
         return InkWell(
-          onTap: () => context.go(
+          onTap: () => context.push(
             AppRoutes.readingPath(reading.bookId, chapterId: reading.chapterId),
           ),
           borderRadius: BorderRadius.circular(radius),
@@ -943,7 +943,7 @@ class _BookTile extends ConsumerWidget {
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
     return InkWell(
-      onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
       child: SizedBox(
         width: 112,
         child: Column(
@@ -1028,15 +1028,15 @@ class _ActivityList extends StatelessWidget {
         notificationsAsync.when(
           loading: () => const _LoadingCard(height: 88),
           error: (_, _) => const FigmaEmptyState(
-            title: 'Activite indisponible',
+            title: 'Activité indisponible',
             message: 'Les notifications backend ne sont pas accessibles.',
             icon: Icons.notifications_none,
           ),
           data: (notifications) {
             if (notifications.isEmpty) {
               return const FigmaEmptyState(
-                title: 'Aucune activite',
-                message: 'Tes notifications apparaitront ici.',
+                title: 'Aucune activité',
+                message: 'Tes notifications apparaîtront ici.',
                 icon: Icons.notifications_none,
               );
             }
@@ -1044,7 +1044,7 @@ class _ActivityList extends StatelessWidget {
               children: [
                 for (final notification in notifications.take(3)) ...[
                   FigmaCard(
-                    onTap: () => context.go(AppRoutes.notifications),
+                    onTap: () => context.push(AppRoutes.notifications),
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
@@ -1120,7 +1120,7 @@ class _BetaSummaryCard extends StatelessWidget {
         final compact = constraints.maxWidth < 480;
 
         return FigmaCard(
-          onTap: () => context.go(AppRoutes.betaInvitations),
+          onTap: () => context.push(AppRoutes.betaInvitations),
           padding: EdgeInsets.all(compact ? 16 : 20),
           child: Row(
             children: [
@@ -1232,11 +1232,11 @@ class _InlineRetry extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Donnees indisponibles.',
+              'Données indisponibles.',
               style: TextStyle(color: context.colors.textSecondary),
             ),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Reessayer')),
+          TextButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

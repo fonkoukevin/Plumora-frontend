@@ -103,7 +103,7 @@ class AuthRepository {
 
   Future<UserModel> updateProfile(UpdateProfileRequest request) async {
     if (request.firstname.trim().isEmpty || request.lastname.trim().isEmpty) {
-      throw const AppException('Le prenom et le nom sont requis.');
+      throw const AppException('Le prénom et le nom sont requis.');
     }
     if (request.username.trim().isEmpty) {
       throw const AppException("Le nom d'utilisateur est requis.");

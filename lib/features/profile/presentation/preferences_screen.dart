@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
@@ -23,15 +22,13 @@ class PreferencesScreen extends ConsumerWidget {
           Row(
             children: [
               TextButton.icon(
-                onPressed: () => context.canPop()
-                    ? context.pop()
-                    : context.go(AppRoutes.profile),
-                icon: const Icon(Icons.chevron_left),
-                label: const Text('Profil'),
+                onPressed: () => returnToPreviousOr(context, AppRoutes.profile),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Retour'),
               ),
               Expanded(
                 child: Text(
-                  'Preferences',
+                  'Préférences',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.colors.textPrimary,
@@ -44,7 +41,7 @@ class PreferencesScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            'Theme',
+            'Thème',
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 18,
