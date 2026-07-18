@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../ai/data/models/plumo_ai_models.dart';
 import '../../ai/data/plumo_ai_error.dart';
@@ -65,12 +66,34 @@ class _ChapterDetailAuthorScreenState
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 920),
               child: chapterAsync.when(
-                loading: () => const _LoadingCard(),
-                error: (error, _) => _ErrorCard(
-                  title: 'Chapitre introuvable',
-                  message: AppError.messageFor(error),
-                  onRetry: () =>
-                      ref.invalidate(chapterProvider(widget.chapterId)),
+                loading: () => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FigmaBackButton(
+                      label: 'Retour',
+                      onTap: () =>
+                          returnToPreviousOr(context, _fallbackLocation()),
+                    ),
+                    const SizedBox(height: 18),
+                    const _LoadingCard(),
+                  ],
+                ),
+                error: (error, _) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FigmaBackButton(
+                      label: 'Retour',
+                      onTap: () =>
+                          returnToPreviousOr(context, _fallbackLocation()),
+                    ),
+                    const SizedBox(height: 18),
+                    _ErrorCard(
+                      title: 'Chapitre introuvable',
+                      message: AppError.messageFor(error),
+                      onRetry: () =>
+                          ref.invalidate(chapterProvider(widget.chapterId)),
+                    ),
+                  ],
                 ),
                 data: (chapter) {
                   _syncChapter(chapter);
@@ -82,7 +105,7 @@ class _ChapterDetailAuthorScreenState
                     isSaving: _isSaving,
                     isDeleting: _isDeleting,
                     onBack: () => _goBack(chapter),
-                    onOpenEditor: () => context.go(
+                    onOpenEditor: () => context.push(
                       AppRoutes.chapterEditorPath(_bookId(chapter)),
                     ),
                     onSave: () => _save(chapter),
@@ -119,12 +142,19 @@ class _ChapterDetailAuthorScreenState
 
   void _goBack(ChapterModel chapter) {
     final bookId = _bookId(chapter);
-    if (bookId.isNotEmpty) {
-      context.go(AppRoutes.authorBookDetailPath(bookId));
-      return;
-    }
+    returnToPreviousOr(
+      context,
+      bookId.isNotEmpty
+          ? AppRoutes.authorBookDetailPath(bookId)
+          : AppRoutes.write,
+    );
+  }
 
-    context.go(AppRoutes.write);
+  String _fallbackLocation() {
+    final bookId = widget.bookId?.trim() ?? '';
+    return bookId.isEmpty
+        ? AppRoutes.write
+        : AppRoutes.authorBookDetailPath(bookId);
   }
 
   Future<void> _save(ChapterModel chapter) async {

@@ -79,7 +79,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
         .toList(growable: false);
 
     if (candidates.length == 1) {
-      context.go(AppRoutes.publishBookPath(candidates.first.id));
+      context.push(AppRoutes.publishBookPath(candidates.first.id));
     } else {
       context.go(AppRoutes.manuscripts);
     }
@@ -215,7 +215,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                           label: showFullButtonLabel
                               ? 'Nouvelle histoire'
                               : 'Créer',
-                          onPressed: () => context.go(AppRoutes.createBook),
+                          onPressed: () => context.push(AppRoutes.createBook),
                         ),
                       ],
                     );
@@ -271,7 +271,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                 const SizedBox(height: 20),
                 if (filtered.isEmpty)
                   _EmptyStories(
-                    onCreate: () => context.go(AppRoutes.createBook),
+                    onCreate: () => context.push(AppRoutes.createBook),
                   )
                 else
                   FigmaResponsiveGrid(
@@ -291,7 +291,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                   title: "Plumo — Votre assistant d'écriture IA",
                   subtitle: 'Reformulez, améliorez le style, générez des idées',
                   borderColor: _writeAccent,
-                  onTap: () => context.go(AppRoutes.plumoWritingPath()),
+                  onTap: () => context.push(AppRoutes.plumoWritingPath()),
                 ),
                 const SizedBox(height: 12),
                 _WriteCta(
@@ -664,7 +664,7 @@ class _StoryCardState extends State<_StoryCard> {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           key: ValueKey('manuscript_card_link_${book.id}'),
-          onTap: () => context.go(AppRoutes.authorBookDetailPath(book.id)),
+          onTap: () => context.push(AppRoutes.authorBookDetailPath(book.id)),
           onHover: (hovered) => setState(() => _hovered = hovered),
           mouseCursor: SystemMouseCursors.click,
           hoverColor: context.colors.primary.withValues(alpha: 0.045),
@@ -790,7 +790,7 @@ class _StoryCardState extends State<_StoryCard> {
                             child: _GradientMiniButton(
                               icon: Icons.energy_savings_leaf_outlined,
                               label: primaryLabel,
-                              onPressed: () => context.go(
+                              onPressed: () => context.push(
                                 AppRoutes.chapterEditorPath(book.id),
                               ),
                             ),
@@ -800,7 +800,7 @@ class _StoryCardState extends State<_StoryCard> {
                             child: _OutlineMiniButton(
                               icon: secondary.icon,
                               label: secondary.label,
-                              onPressed: () => context.go(secondary.route),
+                              onPressed: () => context.push(secondary.route),
                             ),
                           ),
                         ],
@@ -1156,11 +1156,11 @@ class _StoryMenu extends StatelessWidget {
       onSelected: (value) {
         switch (value) {
           case 'write':
-            context.go(AppRoutes.chapterEditorPath(book.id));
+            context.push(AppRoutes.chapterEditorPath(book.id));
           case 'edit':
-            context.go(AppRoutes.editBookPath(book.id));
+            context.push(AppRoutes.editBookPath(book.id));
           case 'beta':
-            context.go(AppRoutes.authorBetaCampaignsPath(book.id));
+            context.push(AppRoutes.authorBetaCampaignsPath(book.id));
           case 'archive':
             onArchive(book);
         }
