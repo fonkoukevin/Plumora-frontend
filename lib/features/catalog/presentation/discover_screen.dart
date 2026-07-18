@@ -11,9 +11,6 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
-import '../../ai/data/models/plumo_ai_models.dart';
-import '../../ai/data/plumo_ai_error.dart';
-import '../../ai/data/repositories/plumo_ai_repository.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../data/models/catalog_book_model.dart';
 import '../data/models/external_book_model.dart';
@@ -39,7 +36,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     _DiscoverFilter(label: 'Romance', search: 'romance'),
     _DiscoverFilter(label: 'Thriller', search: 'thriller'),
     _DiscoverFilter(label: 'Sci-Fi', search: 'science fiction'),
-    _DiscoverFilter(label: 'Mystere', search: 'mystery'),
+    _DiscoverFilter(label: 'Mystère', search: 'mystery'),
     _DiscoverFilter(label: 'Aventure', search: 'adventure'),
     _DiscoverFilter(label: 'Horreur', search: 'horror'),
   ];
@@ -58,6 +55,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final plumoraQuery = PlumoraCatalogQuery(
       search: searchQuery,
       genre: hasCategory ? _plumoraGenreForFilter(_activeFilter) : '',
+      language: _language ?? '',
     );
 
     return LayoutBuilder(
@@ -75,7 +73,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   delegate: _DiscoverHeaderDelegate(
                     searchController: _searchController,
                     onSearch: _submitSearch,
-                    onPlumoTap: () => context.go(AppRoutes.plumoRecommendation),
+                    onPlumoTap: () =>
+                        context.push(AppRoutes.plumoRecommendation),
                     inlineControls: inlineHeaderControls,
                   ),
                 ),
@@ -103,7 +102,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                             const SizedBox(height: 30),
                             if (hasCategory) ...[
                               _PlumoraAsyncRail(
-                                title: 'Oeuvres Plumora',
+                                title: 'Œuvres Plumora',
                                 icon: Icons.auto_stories_outlined,
                                 iconColor: context.colors.plumora,
                                 query: plumoraQuery,
@@ -113,7 +112,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                                 title: _activeFilter.label,
                                 icon: _iconForFilter(_activeFilter),
                                 iconColor: _activeFilter.label == 'Romance'
-                                    ? context.colors.orange
+                                    ? const Color(0xFFEC4899)
                                     : context.colors.primary,
                                 query: _queryForCategory(
                                   searchQuery,
@@ -126,19 +125,15 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                               ),
                             ] else ...[
                               _PlumoraAsyncRail(
-                                title: 'Oeuvres Plumora',
+                                title: 'Œuvres Plumora',
                                 icon: Icons.auto_stories_outlined,
                                 iconColor: context.colors.plumora,
                                 query: plumoraQuery,
                               ),
                               const SizedBox(height: 32),
-                              if (searchQuery.isEmpty) ...[
-                                const _PlumoRecommendationsSection(),
-                                const SizedBox(height: 32),
-                              ],
                               if (searchQuery.isNotEmpty) ...[
                                 _ExternalAsyncRail(
-                                  title: 'Resultats',
+                                  title: 'Résultats',
                                   icon: Icons.search,
                                   query: ExternalBookSearchQuery(
                                     search: searchQuery,
@@ -156,11 +151,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                                   language: _language,
                                 ),
                                 rankItems: true,
-                                subtitle: "Mis a jour aujourd'hui",
+                                subtitle: "Mis à jour aujourd'hui",
                               ),
                               const SizedBox(height: 32),
                               _ExternalAsyncRail(
-                                title: 'Nouveautes',
+                                title: 'Nouveautés',
                                 icon: Icons.bolt_outlined,
                                 iconColor: context.colors.accent,
                                 query: ExternalBookSearchQuery(
@@ -183,8 +178,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                               const SizedBox(height: 32),
                               _ExternalAsyncRail(
                                 title: 'Romance',
-                                icon: Icons.favorite_border,
-                                iconColor: context.colors.orange,
+                                icon: Icons.favorite,
+                                iconColor: const Color(0xFFEC4899),
                                 query: ExternalBookSearchQuery(
                                   search: 'romance',
                                   language: _language,
@@ -207,7 +202,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   }
 
   String _plumoraGenreForFilter(_DiscoverFilter filter) {
-    return filter.label == 'Tous' ? '' : filter.label;
+    return switch (filter.label) {
+      'Tous' => '',
+      'Sci-Fi' => 'Science-Fiction',
+      'Mystère' => 'Mystère',
+      _ => filter.label,
+    };
   }
 
   void _submitSearch() {
@@ -229,12 +229,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   IconData _iconForFilter(_DiscoverFilter filter) {
     switch (filter.label) {
       case 'Romance':
-        return Icons.favorite_border;
+        return Icons.favorite;
       case 'Thriller':
         return Icons.local_fire_department_outlined;
       case 'Sci-Fi':
         return Icons.rocket_launch_outlined;
-      case 'Mystere':
+      case 'Mystère':
         return Icons.search;
       case 'Aventure':
         return Icons.explore_outlined;
@@ -430,7 +430,7 @@ class _PlumoHeaderCard extends StatelessWidget {
                 ),
                 SizedBox(height: compact ? 2 : 4),
                 Text(
-                  'Recommandations personnalisees par IA',
+                  'Recommandations personnalisées par IA',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -568,6 +568,53 @@ class _LanguageTabs extends StatelessWidget {
   }
 }
 
+class _RomanceHeaderIcon extends StatelessWidget {
+  const _RomanceHeaderIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 20,
+      height: 18,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 1,
+            child: Icon(Icons.favorite, size: 9, color: Color(0xFFF43F5E)),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Icon(Icons.favorite, size: 14, color: Color(0xFFEC4899)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FantasyHeaderIcon extends StatelessWidget {
+  const _FantasyHeaderIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text('🧙', style: TextStyle(fontSize: 18, height: 1));
+  }
+}
+
+Widget? _categoryHeaderIcon(String title) {
+  return switch (title) {
+    'Romance' => const _RomanceHeaderIcon(),
+    'Fantasy' => const _FantasyHeaderIcon(),
+    _ => null,
+  };
+}
+
+bool _showCategoryHeaderAccent(String title) {
+  return title != 'Romance' && title != 'Fantasy';
+}
+
 class _DiscoverSectionFrame extends StatelessWidget {
   const _DiscoverSectionFrame({
     required this.title,
@@ -590,7 +637,9 @@ class _DiscoverSectionFrame extends StatelessWidget {
         FigmaSectionHeader(
           title: title,
           icon: icon,
+          iconWidget: _categoryHeaderIcon(title),
           iconColor: iconColor ?? context.colors.primary,
+          showAccent: _showCategoryHeaderAccent(title),
           trailing: subtitle == null
               ? null
               : Text(
@@ -649,7 +698,7 @@ class _PlumoraAsyncRail extends ConsumerWidget {
             icon: icon,
             iconColor: resolvedIconColor,
             child: const _EmptyRail(
-              message: 'Aucune oeuvre Plumora trouvee pour ce filtre.',
+              message: 'Aucune œuvre Plumora trouvée pour ce filtre.',
             ),
           );
         }
@@ -805,7 +854,9 @@ class _DiscoverCarouselRailState extends State<_DiscoverCarouselRail> {
             FigmaSectionHeader(
               title: widget.title,
               icon: widget.icon,
+              iconWidget: _categoryHeaderIcon(widget.title),
               iconColor: widget.iconColor ?? context.colors.primary,
+              showAccent: _showCategoryHeaderAccent(widget.title),
               trailing: widget.subtitle == null
                   ? null
                   : Text(
@@ -943,7 +994,7 @@ class _PlumoraBookTile extends ConsumerWidget {
     final genre = book.genre?.trim();
 
     return InkWell(
-      onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
       child: SizedBox(
         width: 112,
         child: Column(
@@ -1023,183 +1074,6 @@ class _PlumoraBookTile extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _PlumoRecommendationsSection extends ConsumerWidget {
-  const _PlumoRecommendationsSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recommendationsAsync = ref.watch(plumoBookRecommendationsProvider);
-    final iconColor = context.colors.primary;
-
-    return recommendationsAsync.when(
-      loading: () => _DiscoverSectionFrame(
-        title: 'Pour vous',
-        icon: Icons.auto_awesome,
-        iconColor: iconColor,
-        child: const _LoadingRail(),
-      ),
-      error: (error, _) => _DiscoverSectionFrame(
-        title: 'Pour vous',
-        icon: Icons.auto_awesome,
-        iconColor: iconColor,
-        child: _InlineError(
-          message: plumoAiErrorMessage(error),
-          onRetry: () => ref.invalidate(plumoBookRecommendationsProvider),
-        ),
-      ),
-      data: (items) {
-        if (items.isEmpty) {
-          return _DiscoverSectionFrame(
-            title: 'Pour vous',
-            icon: Icons.auto_awesome,
-            iconColor: iconColor,
-            child: const _EmptyRail(
-              message: "Plumo n'a pas encore de recommandation pour toi.",
-            ),
-          );
-        }
-
-        return _DiscoverCarouselRail(
-          title: 'Pour vous',
-          icon: Icons.auto_awesome,
-          iconColor: iconColor,
-          itemCount: items.length,
-          itemBuilder: (context, index) =>
-              _PlumoRecommendationTile(item: items[index]),
-        );
-      },
-    );
-  }
-}
-
-class _PlumoRecommendationTile extends ConsumerWidget {
-  const _PlumoRecommendationTile({required this.item});
-
-  final BookRecommendationItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(catalogBookDetailProvider(item.bookId));
-
-    return detailAsync.when(
-      loading: () => const SizedBox(
-        width: 220,
-        height: 262,
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      // The recommendation references a book the catalog can't resolve
-      // (removed/unpublished since) -- skip it rather than show a broken
-      // card; Plumo must never appear to invent a book.
-      error: (_, _) => const SizedBox.shrink(),
-      data: (book) {
-        final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
-
-        return Container(
-          width: 220,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: context.colors.cards,
-            border: Border.all(color: context.colors.border),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  PlumoraBookCover(
-                    width: 62,
-                    height: 92,
-                    radius: 10,
-                    colors: _coverColors(book.id),
-                    imageUrl: book.coverUrl,
-                    imageBytes: cachedCover,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          book.title.isEmpty ? 'Livre sans titre' : book.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.colors.textPrimary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            height: 1.15,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          book.authorName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.colors.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (item.reason.trim().isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Expanded(
-                  child: Text(
-                    item.reason,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: context.colors.textSecondary,
-                      fontSize: 11,
-                      fontStyle: FontStyle.italic,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ] else
-                const Spacer(),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () =>
-                          context.go(AppRoutes.catalogBookDetailPath(book.id)),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        textStyle: const TextStyle(fontSize: 11),
-                      ),
-                      child: const Text('Détail'),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () =>
-                          context.go(AppRoutes.readingPath(book.id)),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        textStyle: const TextStyle(fontSize: 11),
-                      ),
-                      child: const Text('Lire'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
@@ -1379,7 +1253,7 @@ class _ExternalAsyncRailState extends ConsumerState<_ExternalAsyncRail> {
 String _externalCatalogErrorMessage(Object error) {
   final message = AppError.messageFor(error);
   if (message.toLowerCase().contains('gutendex')) {
-    return 'Catalogue externe momentanement indisponible.';
+    return 'Catalogue externe momentanément indisponible.';
   }
 
   return message;
@@ -1433,8 +1307,14 @@ class _ExternalBookTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () =>
-          context.go(AppRoutes.publicDomainBookDetailPath(book.externalId)),
+      onTap: () {
+        final internalBookId = book.internalBookId?.trim();
+        context.push(
+          book.imported && internalBookId != null && internalBookId.isNotEmpty
+              ? AppRoutes.catalogBookDetailPath(internalBookId)
+              : AppRoutes.publicDomainBookDetailPath(book.externalId),
+        );
+      },
       child: SizedBox(
         width: 112,
         child: Column(
@@ -1471,17 +1351,6 @@ class _ExternalBookTile extends StatelessWidget {
                 fontSize: 10,
               ),
             ),
-            const SizedBox(height: 5),
-            Text(
-              'Details',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: context.colors.primary,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
           ],
         ),
       ),
@@ -1499,7 +1368,7 @@ class _ExternalCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveBadge = book.imported
-        ? 'Importe'
+        ? 'Importé'
         : badge ?? 'Domaine public';
 
     return SizedBox(
@@ -1566,7 +1435,7 @@ class _CoverBadge extends StatelessWidget {
 }
 
 class _EmptyRail extends StatelessWidget {
-  const _EmptyRail({this.message = 'Aucun livre trouve pour ce filtre.'});
+  const _EmptyRail({this.message = 'Aucun livre trouvé pour ce filtre.'});
 
   final String message;
 
@@ -1601,7 +1470,7 @@ class _RoundBadge extends StatelessWidget {
       width: 22,
       height: 22,
       decoration: BoxDecoration(
-        color: context.colors.orange,
+        color: context.colors.primary,
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -1691,7 +1560,7 @@ class _InlineError extends StatelessWidget {
               style: TextStyle(color: context.colors.textSecondary),
             ),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Reessayer')),
+          TextButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );
