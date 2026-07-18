@@ -59,7 +59,7 @@ class _PlumoRecommendationScreenState
         children: [
           FigmaBackButton(
             label: 'Retour',
-            onTap: () => context.go(AppRoutes.discover),
+            onTap: () => returnToPreviousOr(context, AppRoutes.discover),
           ),
           const SizedBox(height: 22),
           Center(
@@ -125,7 +125,7 @@ class _PlumoRecommendationScreenState
                 ('romance', 'Romance', Icons.favorite_border),
                 ('suspense', 'Suspense', Icons.visibility_outlined),
                 ('motivation', 'Motivation', Icons.fitness_center),
-                ('evasion', 'Evasion', Icons.flight_takeoff),
+                ('evasion', 'Évasion', Icons.flight_takeoff),
               ])
                 _ChoiceButton(
                   label: mood.$2,
@@ -141,7 +141,7 @@ class _PlumoRecommendationScreenState
           ),
           const SizedBox(height: 18),
           _ChoiceCard(
-            title: 'Duree de lecture',
+            title: 'Durée de lecture',
             children: [
               for (final duration in const [
                 ('short', 'Court', '< 2h'),
@@ -158,15 +158,15 @@ class _PlumoRecommendationScreenState
           ),
           const SizedBox(height: 18),
           _ChoiceCard(
-            title: 'Genres preferes',
+            title: 'Genres préférés',
             children: [
               for (final genre in const [
                 ('Thriller', 'Thriller'),
                 ('Romance', 'Romance'),
                 ('Fantasy', 'Fantasy'),
                 ('Science-Fiction', 'Science-Fiction'),
-                ('Developpement personnel', 'Developpement personnel'),
-                ('Mystere', 'Mystere'),
+                ('Développement personnel', 'Développement personnel'),
+                ('Mystère', 'Mystère'),
               ])
                 _ChoiceButton(
                   label: genre.$2,
@@ -353,7 +353,7 @@ class _PlumoResults extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FigmaBackButton(label: 'Nouvelle recherche', onTap: onBack),
+          FigmaBackButton(label: 'Retour', onTap: onBack),
           const SizedBox(height: 24),
           Center(
             child: Column(
@@ -365,7 +365,7 @@ class _PlumoResults extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Selection personnalisee',
+                  'Sélection personnalisée',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.colors.textPrimary,
@@ -386,7 +386,7 @@ class _PlumoResults extends StatelessWidget {
                   Expanded(child: Text(error!)),
                   TextButton(
                     onPressed: onRetry,
-                    child: const Text('Reessayer'),
+                    child: const Text('Réessayer'),
                   ),
                 ],
               ),
@@ -394,7 +394,7 @@ class _PlumoResults extends StatelessWidget {
           else if (recommendations.isEmpty)
             const FigmaEmptyState(
               title: 'Aucune recommandation',
-              message: "Plumo n'a renvoye aucun livre pour cette demande.",
+              message: "Plumo n'a renvoyé aucun livre pour cette demande.",
               icon: Icons.auto_awesome,
             )
           else
@@ -549,7 +549,7 @@ class _RecommendationCard extends ConsumerWidget {
                   child: FilledButton.icon(
                     onPressed: book.id.isEmpty
                         ? null
-                        : () => context.go(
+                        : () => context.push(
                             AppRoutes.catalogBookDetailPath(book.id),
                           ),
                     icon: const Icon(Icons.menu_book_outlined),
