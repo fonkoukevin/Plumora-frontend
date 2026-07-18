@@ -18,8 +18,8 @@ final externalBookSearchProvider =
     FutureProvider.family<ExternalBookPage, ExternalBookSearchQuery>((
       ref,
       query,
-    ) {
-      return ref
+    ) async {
+      final page = await ref
           .watch(externalBookRepositoryProvider)
           .searchExternalBooks(
             search: query.search,
@@ -27,6 +27,27 @@ final externalBookSearchProvider =
             topic: query.topic,
             page: query.page,
           );
+
+      final language = _normalizeExternalLanguage(query.language);
+      if (language.isEmpty) {
+        return page;
+      }
+
+      final filteredBooks = page.content.where((book) {
+        return book.languages.any(
+          (value) => _normalizeExternalLanguage(value) == language,
+        );
+      }).toList();
+
+      return ExternalBookPage(
+        content: filteredBooks,
+        page: page.page,
+        size: page.size,
+        totalElements: page.totalElements,
+        totalPages: page.totalPages,
+        first: page.first,
+        last: page.last,
+      );
     });
 
 final externalBookDetailProvider = FutureProvider.family<ExternalBook, String>((
@@ -157,4 +178,15 @@ class ExternalBookRepository {
 
     return data?.toString().toLowerCase() ?? '';
   }
+}
+
+String _normalizeExternalLanguage(String? language) {
+  final value = language?.trim().toLowerCase() ?? '';
+  if (value.startsWith('fr-')) {
+    return 'fr';
+  }
+  if (value.startsWith('en-')) {
+    return 'en';
+  }
+  return value;
 }

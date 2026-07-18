@@ -8,11 +8,16 @@ class CatalogApiService {
 
   final Dio _dio;
 
-  Future<List<CatalogBookModel>> books({String? genre}) async {
+  Future<List<CatalogBookModel>> books({
+    String? genre,
+    String? language,
+  }) async {
     final response = await _dio.get(
       '/catalog/books',
       queryParameters: {
         if (genre != null && genre.trim().isNotEmpty) 'genre': genre.trim(),
+        if (language != null && language.trim().isNotEmpty)
+          'language': language.trim().toLowerCase(),
       },
     );
     return _readPayloadList(response.data)
@@ -37,10 +42,20 @@ class CatalogApiService {
         .toList();
   }
 
-  Future<List<CatalogBookModel>> search(String query) async {
+  Future<List<CatalogBookModel>> search(
+    String query, {
+    String? genre,
+    String? language,
+  }) async {
     final response = await _dio.get(
       '/catalog/books/search',
-      queryParameters: {'q': query.trim(), 'query': query.trim()},
+      queryParameters: {
+        'q': query.trim(),
+        'query': query.trim(),
+        if (genre != null && genre.trim().isNotEmpty) 'genre': genre.trim(),
+        if (language != null && language.trim().isNotEmpty)
+          'language': language.trim().toLowerCase(),
+      },
     );
     return _readPayloadList(response.data)
         .map(CatalogBookModel.fromJson)

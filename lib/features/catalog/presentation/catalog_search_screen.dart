@@ -62,7 +62,8 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextButton.icon(
-                    onPressed: () => context.go(AppRoutes.discover),
+                    onPressed: () =>
+                        returnToPreviousOr(context, AppRoutes.discover),
                     icon: const Icon(Icons.arrow_back, size: 16),
                     label: const Text('Retour'),
                   ),
@@ -153,7 +154,7 @@ class _SearchBookCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PlumoraCard(
-      onTap: () => context.go(AppRoutes.catalogBookDetailPath(book.id)),
+      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
