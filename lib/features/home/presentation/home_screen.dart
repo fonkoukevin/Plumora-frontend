@@ -28,6 +28,11 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isDesktop = viewportWidth >= 1024;
+    final compactSpacing = viewportWidth < 600;
+    final primaryGap = compactSpacing ? 20.0 : 24.0;
+    final sectionGap = compactSpacing ? 24.0 : 28.0;
     final session = ref.watch(authControllerProvider).valueOrNull;
     final displayName = _firstNameFor(session?.user);
     final popularAsync = ref.watch(popularCatalogBooksProvider);
@@ -35,6 +40,25 @@ class HomeScreen extends ConsumerWidget {
     final readingsAsync = ref.watch(myReadingProgressProvider);
     final betaAsync = ref.watch(betaInvitationsProvider);
     final notificationsAsync = ref.watch(myNotificationsProvider);
+    final readingCard = readingsAsync.when<Widget>(
+      loading: () => const _LoadingCard(height: 146),
+      error: (_, _) =>
+          _NoReadingCard(onDiscover: () => context.go(AppRoutes.discover)),
+      data: (readings) {
+        final active = readings.where((reading) => !reading.finished).toList()
+          ..sort((a, b) {
+            final aDate = a.updatedAt ?? DateTime(0);
+            final bDate = b.updatedAt ?? DateTime(0);
+            return bDate.compareTo(aDate);
+          });
+        if (active.isEmpty) {
+          return _NoReadingCard(
+            onDiscover: () => context.go(AppRoutes.discover),
+          );
+        }
+        return _ContinueReadingCard(reading: active.first);
+      },
+    );
 
     return ColoredBox(
       color: context.colors.background,
@@ -52,48 +76,26 @@ class HomeScreen extends ConsumerWidget {
                   constraints: const BoxConstraints(maxWidth: 1280),
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
-                      MediaQuery.sizeOf(context).width >= 420 ? 16 : 20,
                       16,
-                      MediaQuery.sizeOf(context).width >= 420 ? 16 : 20,
-                      92,
+                      20,
+                      16,
+                      isDesktop ? 40 : 92,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _QuoteCard(),
-                        const SizedBox(height: 22),
-                        readingsAsync.when(
-                          loading: () => const _LoadingCard(height: 146),
-                          error: (_, _) => _NoReadingCard(
-                            onDiscover: () => context.go(AppRoutes.discover),
-                          ),
-                          data: (readings) {
-                            final active =
-                                readings
-                                    .where((reading) => !reading.finished)
-                                    .toList()
-                                  ..sort((a, b) {
-                                    final aDate = a.updatedAt ?? DateTime(0);
-                                    final bDate = b.updatedAt ?? DateTime(0);
-                                    return bDate.compareTo(aDate);
-                                  });
-                            if (active.isEmpty) {
-                              return _NoReadingCard(
-                                onDiscover: () =>
-                                    context.go(AppRoutes.discover),
-                              );
-                            }
-                            return _ContinueReadingCard(reading: active.first);
-                          },
+                        _HomeHighlights(
+                          readingCard: readingCard,
+                          stackedGap: primaryGap,
                         ),
-                        const SizedBox(height: 18),
+                        SizedBox(height: primaryGap),
                         _QuickActions(
                           onWrite: () => context.go(AppRoutes.write),
                           onDiscover: () => context.go(AppRoutes.discover),
                           onPlumo: () =>
                               context.go(AppRoutes.plumoRecommendation),
                         ),
-                        const SizedBox(height: 26),
+                        SizedBox(height: sectionGap),
                         _BookRail(
                           title: 'Tendances',
                           icon: Icons.local_fire_department,
@@ -104,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
                           onRetry: () =>
                               ref.invalidate(popularCatalogBooksProvider),
                         ),
-                        const SizedBox(height: 24),
+                        SizedBox(height: sectionGap),
                         _BookRail(
                           title: 'Nouveautes',
                           icon: Icons.bolt_outlined,
@@ -114,7 +116,7 @@ class HomeScreen extends ConsumerWidget {
                           onRetry: () =>
                               ref.invalidate(latestCatalogBooksProvider),
                         ),
-                        const SizedBox(height: 24),
+                        SizedBox(height: sectionGap),
                         _ActivityList(notificationsAsync: notificationsAsync),
                         const SizedBox(height: 16),
                         betaAsync.when(
@@ -202,9 +204,9 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1280),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: PlumoraAppHeader(
-                  title: 'Tableau de bord',
+                  title: 'Accueil',
                   subtitle:
                       'Bonjour $displayName 👋 — Que voulez-vous '
                       "faire aujourd'hui ?",
@@ -274,87 +276,37 @@ class _ThemeToggleButton extends ConsumerWidget {
   }
 }
 
-class _QuoteCard extends StatelessWidget {
-  const _QuoteCard();
+class _HomeHighlights extends StatelessWidget {
+  const _HomeHighlights({required this.readingCard, required this.stackedGap});
+
+  final Widget readingCard;
+  final double stackedGap;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        final factor = ((constraints.maxWidth - 282) / (456 - 282)).clamp(
-          0.0,
-          1.0,
-        );
-        final height = lerpDouble(90, 128, factor)!;
-        final horizontalPadding = lerpDouble(17, 24, factor)!;
-        final verticalPadding = lerpDouble(16, 20, factor)!;
-        final radius = lerpDouble(14, 18, factor)!;
-        final iconSize = lerpDouble(30, 44, factor)!;
-        final iconGlyphSize = lerpDouble(17, 22, factor)!;
-        final gap = lerpDouble(11, 18, factor)!;
-        final quoteFontSize = lerpDouble(12, 15.5, factor)!;
-        final authorFontSize = lerpDouble(10, 14, factor)!;
-        final authorGap = lerpDouble(4, 8, factor)!;
-        final textAreaWidth =
-            constraints.maxWidth - (horizontalPadding * 2) - iconSize - gap;
+        if (constraints.maxWidth < 900) {
+          return Column(
+            key: const ValueKey('home_highlights_column'),
+            children: [
+              const _QuoteCard(),
+              SizedBox(height: stackedGap),
+              readingCard,
+            ],
+          );
+        }
 
         return SizedBox(
-          height: height,
-          child: FigmaCard(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: verticalPadding,
-            ),
-            radius: radius,
-            borderColor: context.colors.accent.withValues(
-              alpha: isDark ? 0.25 : 0.4,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _QuoteIcon(size: iconSize, iconSize: iconGlyphSize),
-                SizedBox(width: gap),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.topLeft,
-                    child: SizedBox(
-                      width: textAreaWidth,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '"N\'attendez pas l\'inspiration. Elle vient en écrivant."',
-                            maxLines: 2,
-                            style: TextStyle(
-                              color: context.colors.textPrimary,
-                              fontSize: quoteFontSize,
-                              fontStyle: FontStyle.italic,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: -0.15,
-                              height: 1.42,
-                            ),
-                          ),
-                          SizedBox(height: authorGap),
-                          Text(
-                            '— Victor Hugo',
-                            maxLines: 1,
-                            style: TextStyle(
-                              color: context.colors.textSecondary,
-                              fontSize: authorFontSize,
-                              fontWeight: FontWeight.w500,
-                              height: 1.25,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          key: const ValueKey('home_highlights_row'),
+          height: 180,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Expanded(child: _QuoteCard()),
+              const SizedBox(width: 24),
+              Expanded(flex: 2, child: readingCard),
+            ],
           ),
         );
       },
@@ -362,33 +314,172 @@ class _QuoteCard extends StatelessWidget {
   }
 }
 
-class _QuoteIcon extends StatelessWidget {
-  const _QuoteIcon({required this.size, required this.iconSize});
-
-  final double size;
-  final double iconSize;
+class _QuoteCard extends StatelessWidget {
+  const _QuoteCard();
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tint = context.colors.accent;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 400;
+        final featured = constraints.minHeight >= 180;
+        final centerCopy = constraints.maxWidth >= 1024;
+        const centeredCopyWidth = 900.0;
+        final featuredBackground = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            context.colors.cards,
+            Color.lerp(context.colors.cards, context.colors.primary, 0.06)!,
+          ],
+        );
+
+        return FigmaCard(
+          key: const ValueKey('home_quote_card'),
+          padding: EdgeInsets.all(compact ? 16 : 20),
+          radius: 16,
+          borderColor: featured
+              ? Color.lerp(context.colors.border, context.colors.primary, 0.25)
+              : context.colors.border,
+          gradient: featured ? featuredBackground : null,
+          child: featured
+              ? Column(
+                  key: const ValueKey('home_quote_featured_content'),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const _QuoteIcon(compact: false, featured: true),
+                    const SizedBox(height: 10),
+                    const _QuoteCopy(
+                      centered: true,
+                      compact: false,
+                      featured: true,
+                    ),
+                  ],
+                )
+              : centerCopy
+              ? SizedBox(
+                  height: 48,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _QuoteIcon(compact: compact),
+                      ),
+                      Center(
+                        child: SizedBox(
+                          width: centeredCopyWidth,
+                          child: const _QuoteCopy(
+                            centered: true,
+                            compact: false,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _QuoteIcon(compact: compact),
+                    SizedBox(width: compact ? 12 : 16),
+                    Expanded(
+                      child: _QuoteCopy(centered: false, compact: compact),
+                    ),
+                  ],
+                ),
+        );
+      },
+    );
+  }
+}
+
+class _QuoteCopy extends StatelessWidget {
+  const _QuoteCopy({
+    required this.centered,
+    required this.compact,
+    this.featured = false,
+  });
+
+  final bool centered;
+  final bool compact;
+  final bool featured;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('home_quote_content'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: centered
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          '"N\'attendez pas l\'inspiration. Elle vient en écrivant."',
+          maxLines: featured ? 3 : null,
+          overflow: featured ? TextOverflow.ellipsis : null,
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: featured
+              ? GoogleFonts.playfairDisplay(
+                  color: context.colors.textPrimary,
+                  fontSize: 14.5,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                )
+              : TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: centered ? 15 : (compact ? 13 : 14),
+                  fontStyle: FontStyle.italic,
+                  fontWeight: centered ? FontWeight.w500 : FontWeight.w400,
+                  height: centered ? 1.5 : (compact ? 1.5 : 1.6),
+                  letterSpacing: centered ? 0.1 : null,
+                ),
+        ),
+        SizedBox(height: featured ? 8 : (centered ? 7 : (compact ? 6 : 8))),
+        Text(
+          '— Victor Hugo',
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: TextStyle(
+            color: context.colors.textSecondary,
+            fontSize: featured ? 12 : (centered ? 12.5 : (compact ? 11.5 : 12)),
+            fontWeight: featured ? FontWeight.w600 : FontWeight.w500,
+            height: 1.35,
+            letterSpacing: featured ? 0.2 : null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuoteIcon extends StatelessWidget {
+  const _QuoteIcon({required this.compact, this.featured = false});
+
+  final bool compact;
+  final bool featured;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = context.colors.primary;
+
+    final size = featured ? 40.0 : (compact ? 32.0 : 36.0);
 
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: tint.withValues(alpha: 0.14),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: tint.withValues(alpha: isDark ? 0.35 : 0.30),
-            blurRadius: isDark ? 14 : 10,
-            offset: Offset(0, isDark ? 5 : 4),
-          ),
-        ],
+        color: tint.withValues(alpha: featured ? 0.12 : 0.10),
+        borderRadius: BorderRadius.circular(
+          featured ? 14 : (compact ? 10 : 12),
+        ),
       ),
       alignment: Alignment.center,
-      child: Icon(Icons.format_quote_rounded, size: iconSize, color: tint),
+      child: Icon(
+        Icons.format_quote_rounded,
+        size: featured ? 18 : (compact ? 15 : 16),
+        color: tint,
+      ),
     );
   }
 }
@@ -402,140 +493,191 @@ class _ContinueReadingCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cachedCover = ref.watch(bookCoverBytesProvider(reading.bookId));
 
-    return InkWell(
-      onTap: () => context.go(
-        AppRoutes.readingPath(reading.bookId, chapterId: reading.chapterId),
-      ),
-      borderRadius: BorderRadius.circular(20),
-      child: SizedBox(
-        height: 146,
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF250047), Color(0xFF790FC0), Color(0xFF30267E)],
-              stops: [0, 0.58, 1],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 560;
+        final cardHeight = compact ? 156.0 : 180.0;
+        final horizontalPadding = compact ? 16.0 : 20.0;
+        final verticalPadding = compact ? 16.0 : 18.0;
+        final coverWidth = compact ? 82.0 : 96.0;
+        final coverHeight = cardHeight - (verticalPadding * 2);
+        final radius = compact ? 20.0 : 24.0;
+
+        return InkWell(
+          onTap: () => context.go(
+            AppRoutes.readingPath(reading.bookId, chapterId: reading.chapterId),
+          ),
+          borderRadius: BorderRadius.circular(radius),
+          child: Container(
+            key: const ValueKey('home_continue_reading_card'),
+            height: cardHeight,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF250047),
+                  Color(0xFF790FC0),
+                  Color(0xFF30267E),
+                ],
+                stops: [0, 0.58, 1],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(radius),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x26000000),
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
+                ),
+              ],
             ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x22000000),
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.topRight,
+                        radius: 1.2,
+                        colors: [Color(0x287C3AED), Color(0x001F174A)],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: verticalPadding,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        foregroundDecoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.24),
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            compact ? 12 : 16,
+                          ),
+                        ),
+                        child: PlumoraBookCover(
+                          width: coverWidth,
+                          height: coverHeight,
+                          radius: compact ? 12 : 16,
+                          colors: _coverColors(reading.bookId),
+                          imageUrl: reading.coverUrl,
+                          imageBytes: cachedCover,
+                        ),
+                      ),
+                      SizedBox(width: compact ? 12 : 16),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _WhiteBadge(
+                              icon: Icons.menu_book_outlined,
+                              label: 'Continuer la lecture',
+                            ),
+                            SizedBox(height: compact ? 7 : 9),
+                            Text(
+                              reading.bookTitle.isEmpty
+                                  ? 'Livre sans titre'
+                                  : reading.bookTitle,
+                              maxLines: compact ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.playfairDisplay(
+                                color: Colors.white,
+                                fontSize: compact ? 16 : 20,
+                                fontWeight: FontWeight.w800,
+                                height: 1.12,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              reading.chapterId == null
+                                  ? 'Progression sauvegardée'
+                                  : 'Chapitre ${reading.chapterIndex + 1}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.72),
+                                fontSize: compact ? 11 : 12,
+                                height: 1.25,
+                              ),
+                            ),
+                            SizedBox(height: compact ? 8 : 12),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 360,
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                        child: LinearProgressIndicator(
+                                          key: const ValueKey(
+                                            'home_reading_progress',
+                                          ),
+                                          value: reading.progress,
+                                          minHeight: compact ? 4 : 6,
+                                          color: Colors.white,
+                                          backgroundColor: const Color(
+                                            0x33FFFFFF,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(
+                                        '${reading.progressPercent}% lu',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.68,
+                                          ),
+                                          fontSize: compact ? 10 : 11,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: compact ? 8 : 16),
+                      Container(
+                        width: compact ? 34 : 40,
+                        height: compact ? 34 : 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.20),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: compact ? 20 : 22,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.topRight,
-                      radius: 1.2,
-                      colors: [Color(0x287C3AED), Color(0x001F174A)],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 16,
-                top: 15,
-                child: Container(
-                  foregroundDecoration: BoxDecoration(
-                    border: Border.all(color: Color(0xFF8B38E9)),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: PlumoraBookCover(
-                    width: 77,
-                    height: 114,
-                    radius: 10,
-                    colors: _coverColors(reading.bookId),
-                    imageUrl: reading.coverUrl,
-                    imageBytes: cachedCover,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 105,
-                right: 46,
-                top: 36,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _WhiteBadge(
-                      icon: Icons.menu_book_outlined,
-                      label: 'Continuer la lecture',
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      reading.bookTitle.isEmpty
-                          ? 'Livre sans titre'
-                          : reading.bookTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.playfairDisplay(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        height: 1.15,
-                      ),
-                    ),
-                    Text(
-                      reading.chapterId == null
-                          ? 'Progression sauvegardée'
-                          : 'Chapitre ${reading.chapterIndex + 1}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 10,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: reading.progress,
-                        minHeight: 5,
-                        color: Colors.white,
-                        backgroundColor: const Color(0x33FFFFFF),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${reading.progressPercent}% lu',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 9,
-                        height: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                right: 7,
-                top: 57,
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.20),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -547,37 +689,44 @@ class _NoReadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FigmaCard(
-      onTap: onDiscover,
-      child: Row(
-        children: [
-          const FigmaGradientIcon(icon: Icons.menu_book_outlined),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Aucune lecture en cours',
-                  style: TextStyle(
-                    color: context.colors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 480;
+
+        return FigmaCard(
+          onTap: onDiscover,
+          padding: EdgeInsets.all(compact ? 16 : 20),
+          child: Row(
+            children: [
+              const FigmaGradientIcon(icon: Icons.menu_book_outlined),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Aucune lecture en cours',
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Découvre un livre pour commencer.',
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Decouvre un livre pour commencer.',
-                  style: TextStyle(
-                    color: context.colors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              Icon(Icons.chevron_right, color: context.colors.textSecondary),
+            ],
           ),
-          Icon(Icons.chevron_right, color: context.colors.textSecondary),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -595,38 +744,54 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _QuickAction(
-            label: 'Ecrire',
-            icon: Icons.edit_outlined,
-            colors: [
-              context.colors.brandPrimary,
-              context.colors.brandPrimaryLight,
-            ],
-            onTap: onWrite,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _QuickAction(
-            label: 'Decouvrir',
-            icon: Icons.menu_book_outlined,
-            colors: [context.colors.brandNavy, context.colors.brandNavyLight],
-            onTap: onDiscover,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _QuickAction(
-            label: 'Plumo',
-            icon: Icons.auto_awesome,
-            colors: [context.colors.brandGold, context.colors.brandGoldLight],
-            onTap: onPlumo,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 480;
+        final gap = compact ? 8.0 : 12.0;
+
+        return Row(
+          children: [
+            Expanded(
+              child: _QuickAction(
+                label: 'Écrire',
+                icon: Icons.edit_outlined,
+                colors: [
+                  context.colors.brandPrimary,
+                  context.colors.brandPrimaryLight,
+                ],
+                compact: compact,
+                onTap: onWrite,
+              ),
+            ),
+            SizedBox(width: gap),
+            Expanded(
+              child: _QuickAction(
+                label: 'Découvrir',
+                icon: Icons.menu_book_outlined,
+                colors: [
+                  context.colors.brandNavy,
+                  context.colors.brandNavyLight,
+                ],
+                compact: compact,
+                onTap: onDiscover,
+              ),
+            ),
+            SizedBox(width: gap),
+            Expanded(
+              child: _QuickAction(
+                label: 'Plumo',
+                icon: Icons.auto_awesome,
+                colors: [
+                  context.colors.brandGold,
+                  context.colors.brandGoldLight,
+                ],
+                compact: compact,
+                onTap: onPlumo,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -636,12 +801,14 @@ class _QuickAction extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.colors,
+    required this.compact,
     required this.onTap,
   });
 
   final String label;
   final IconData icon;
   final List<Color> colors;
+  final bool compact;
   final VoidCallback onTap;
 
   @override
@@ -650,7 +817,9 @@ class _QuickAction extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        key: ValueKey('home_quick_action_$label'),
+        height: compact ? 72 : 80,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: colors,
@@ -667,15 +836,18 @@ class _QuickAction extends StatelessWidget {
           ],
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 21),
-            const SizedBox(height: 8),
+            Icon(icon, color: Colors.white, size: compact ? 20 : 22),
+            SizedBox(height: compact ? 6 : 8),
             Text(
               label,
-              style: const TextStyle(
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
+                fontSize: compact ? 11 : 12,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
@@ -712,10 +884,22 @@ class _BookRail extends StatelessWidget {
           title: title,
           icon: icon,
           iconColor: iconColor,
-          trailing: TextButton.icon(
+          showAccent: false,
+          trailing: TextButton(
             onPressed: onSeeAll,
-            icon: const Icon(Icons.chevron_right, size: 16),
-            label: const Text('Tout voir'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Tout voir'),
+                SizedBox(width: 4),
+                Icon(Icons.chevron_right, size: 16),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -770,6 +954,7 @@ class _BookTile extends ConsumerWidget {
                 PlumoraBookCover(
                   width: 112,
                   height: 160,
+                  radius: 16,
                   colors: _coverColors(book.id),
                   imageUrl: book.coverUrl,
                   imageBytes: cachedCover,
@@ -779,8 +964,8 @@ class _BookTile extends ConsumerWidget {
                     top: 8,
                     left: 8,
                     child: Container(
-                      width: 22,
-                      height: 22,
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
                         color: context.colors.orange,
                         shape: BoxShape.circle,
@@ -838,7 +1023,7 @@ class _ActivityList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FigmaSectionHeader(title: 'Activite recente'),
+        const FigmaSectionHeader(title: 'Activité récente', showAccent: false),
         const SizedBox(height: 12),
         notificationsAsync.when(
           loading: () => const _LoadingCard(height: 88),
@@ -930,42 +1115,53 @@ class _BetaSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FigmaCard(
-      onTap: () => context.go(AppRoutes.betaInvitations),
-      child: Row(
-        children: [
-          FigmaGradientIcon(
-            icon: Icons.chat_bubble_outline,
-            colors: [context.colors.plumora, context.colors.primary],
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  count == 0
-                      ? 'Aucune beta-lecture active'
-                      : '$count beta-lecture(s) a traiter',
-                  style: TextStyle(
-                    color: context.colors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 480;
+
+        return FigmaCard(
+          onTap: () => context.go(AppRoutes.betaInvitations),
+          padding: EdgeInsets.all(compact ? 16 : 20),
+          child: Row(
+            children: [
+              FigmaGradientIcon(
+                icon: Icons.chat_bubble_outline,
+                colors: [context.colors.plumora, context.colors.primary],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      count == 0
+                          ? 'Aucune bêta-lecture active'
+                          : '$count bêta-lecture(s) à traiter',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Consulte tes invitations et retours bêta',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Consulte tes invitations et retours beta',
-                  style: TextStyle(
-                    color: context.colors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              Icon(Icons.chevron_right, color: context.colors.textSecondary),
+            ],
           ),
-          Icon(Icons.chevron_right, color: context.colors.textSecondary),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -979,7 +1175,7 @@ class _WhiteBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.20),
         borderRadius: BorderRadius.circular(999),
@@ -991,13 +1187,13 @@ class _WhiteBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: Colors.white, size: 13),
-            const SizedBox(width: 4),
+            const SizedBox(width: 5),
             Text(
               label,
               maxLines: 1,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 9,
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
               ),
             ),
