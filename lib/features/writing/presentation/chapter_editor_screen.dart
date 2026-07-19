@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/text/plumora_document_codec.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../ai/data/models/plumo_ai_models.dart';
@@ -16,11 +20,14 @@ import '../../book/data/models/chapter_model.dart';
 import '../../book/data/repositories/book_repository.dart';
 import '../../book/data/repositories/chapter_repository.dart';
 import '../data/writing_cache_invalidator.dart';
+import 'widgets/plumora_document_editor.dart';
 
 const _writeAccent = Color(0xFF7C5CFF);
 const _writeAccentLight = Color(0xFF9B80FF);
 const _writeGold = Color(0xFFD6B25E);
 const _writeGreen = Color(0xFF3FBF7F);
+
+enum _UnsavedDecision { stay, discard, save }
 
 class ChapterEditorScreen extends ConsumerStatefulWidget {
   const ChapterEditorScreen({this.bookId, super.key});
@@ -34,7 +41,7 @@ class ChapterEditorScreen extends ConsumerStatefulWidget {
 
 class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
   final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
+  late final quill.QuillController _contentController;
   String? _selectedChapterId;
   String? _hydratedChapterId;
   bool _isNewChapter = false;
@@ -42,13 +49,52 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
   bool _readMode = false;
   bool _showPlumo = false;
   bool _hasUnsavedChanges = false;
+  bool _isHydratingContent = false;
+  String _documentSnapshot = '';
+  Timer? _autoSaveTimer;
+  List<ChapterModel> _currentChapters = const [];
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _contentController = quill.QuillController.basic();
+    _documentSnapshot = PlumoraDocumentCodec.encodeDocument(
+      _contentController.document,
+    );
+    _contentController.addListener(_handleDocumentChanged);
+  }
+
+  @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     _titleController.dispose();
+    _contentController.removeListener(_handleDocumentChanged);
     _contentController.dispose();
     super.dispose();
+  }
+
+  void _handleDocumentChanged() {
+    if (_isHydratingContent || !mounted) {
+      return;
+    }
+    final snapshot = PlumoraDocumentCodec.encodeDocument(
+      _contentController.document,
+    );
+    if (snapshot == _documentSnapshot) {
+      return;
+    }
+    _documentSnapshot = snapshot;
+    _markDirty();
+  }
+
+  void _hydrateContent(String content) {
+    _isHydratingContent = true;
+    final document = PlumoraDocumentCodec.decodeDocument(content);
+    _contentController.document = document;
+    _contentController.readOnly = false;
+    _documentSnapshot = PlumoraDocumentCodec.encodeDocument(document);
+    _isHydratingContent = false;
   }
 
   @override
@@ -64,21 +110,16 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
     final bookAsync = ref.watch(authorBookProvider(bookId));
     final chaptersAsync = ref.watch(bookChaptersProvider(bookId));
 
-    return Scaffold(
-      backgroundColor: context.colors.background,
-      body: bookAsync.when(
-        loading: () => _EditorStateWithBack(
-          onBack: () => returnToPreviousOr(context, AppRoutes.write),
-          child: const Center(child: CircularProgressIndicator()),
-        ),
-        error: (error, _) => _EditorStateWithBack(
-          onBack: () => returnToPreviousOr(context, AppRoutes.write),
-          child: _CenteredError(
-            message: AppError.messageFor(error),
-            onRetry: () => ref.invalidate(authorBookProvider(bookId)),
-          ),
-        ),
-        data: (book) => chaptersAsync.when(
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _leaveEditor();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: context.colors.background,
+        body: bookAsync.when(
           loading: () => _EditorStateWithBack(
             onBack: () => returnToPreviousOr(context, AppRoutes.write),
             child: const Center(child: CircularProgressIndicator()),
@@ -87,24 +128,61 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
             onBack: () => returnToPreviousOr(context, AppRoutes.write),
             child: _CenteredError(
               message: AppError.messageFor(error),
-              onRetry: () => ref.invalidate(bookChaptersProvider(bookId)),
+              onRetry: () => ref.invalidate(authorBookProvider(bookId)),
             ),
           ),
-          data: (chapters) {
-            final sorted = [...chapters]
-              ..sort((a, b) {
-                final orderCompare = a.order.compareTo(b.order);
-                return orderCompare == 0
-                    ? a.title.compareTo(b.title)
-                    : orderCompare;
-              });
-            _syncSelection(sorted);
+          data: (book) => chaptersAsync.when(
+            loading: () => _EditorStateWithBack(
+              onBack: () => returnToPreviousOr(context, AppRoutes.write),
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => _EditorStateWithBack(
+              onBack: () => returnToPreviousOr(context, AppRoutes.write),
+              child: _CenteredError(
+                message: AppError.messageFor(error),
+                onRetry: () => ref.invalidate(bookChaptersProvider(bookId)),
+              ),
+            ),
+            data: (chapters) {
+              final sorted = [...chapters]
+                ..sort((a, b) {
+                  final orderCompare = a.order.compareTo(b.order);
+                  return orderCompare == 0
+                      ? a.title.compareTo(b.title)
+                      : orderCompare;
+                });
+              _currentChapters = sorted;
+              _syncSelection(sorted);
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 820;
-                if (compact) {
-                  return _MobileEditor(
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 820;
+                  if (compact) {
+                    return _MobileEditor(
+                      book: book,
+                      chapters: sorted,
+                      selectedChapterId: _selectedChapterId,
+                      titleController: _titleController,
+                      contentController: _contentController,
+                      isSaving: _isSaving,
+                      error: _error,
+                      isNewChapter: _isNewChapter,
+                      readMode: _readMode,
+                      showPlumo: _showPlumo,
+                      hasUnsavedChanges: _hasUnsavedChanges,
+                      onSelect: _selectChapter,
+                      onNew: () => _startNew(sorted),
+                      onSave: () => _save(book.id, sorted),
+                      onChanged: _markDirty,
+                      onReadModeChanged: (value) =>
+                          setState(() => _readMode = value),
+                      onPlumoChanged: (value) =>
+                          setState(() => _showPlumo = value),
+                      onBack: _leaveEditor,
+                    );
+                  }
+
+                  return _DesktopEditor(
                     book: book,
                     chapters: sorted,
                     selectedChapterId: _selectedChapterId,
@@ -124,32 +202,12 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
                         setState(() => _readMode = value),
                     onPlumoChanged: (value) =>
                         setState(() => _showPlumo = value),
+                    onBack: _leaveEditor,
                   );
-                }
-
-                return _DesktopEditor(
-                  book: book,
-                  chapters: sorted,
-                  selectedChapterId: _selectedChapterId,
-                  titleController: _titleController,
-                  contentController: _contentController,
-                  isSaving: _isSaving,
-                  error: _error,
-                  isNewChapter: _isNewChapter,
-                  readMode: _readMode,
-                  showPlumo: _showPlumo,
-                  hasUnsavedChanges: _hasUnsavedChanges,
-                  onSelect: _selectChapter,
-                  onNew: () => _startNew(sorted),
-                  onSave: () => _save(book.id, sorted),
-                  onChanged: _markDirty,
-                  onReadModeChanged: (value) =>
-                      setState(() => _readMode = value),
-                  onPlumoChanged: (value) => setState(() => _showPlumo = value),
-                );
-              },
-            );
-          },
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -174,7 +232,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
       _hydratedChapterId = existing.id;
       _hasUnsavedChanges = false;
       _titleController.text = existing.title;
-      _contentController.text = existing.content;
+      _hydrateContent(existing.content);
       return;
     }
 
@@ -193,8 +251,8 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
         _hydratedChapterId = '__new__';
         _isNewChapter = true;
         _hasUnsavedChanges = true;
-        _titleController.text = 'Chapitre 1';
-        _contentController.clear();
+        _setNewChapterTitle(1);
+        _hydrateContent('');
       }
       return;
     }
@@ -208,10 +266,19 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
     _hydratedChapterId = selected.id;
     _hasUnsavedChanges = false;
     _titleController.text = selected.title;
-    _contentController.text = selected.content;
+    _hydrateContent(selected.content);
   }
 
-  void _selectChapter(ChapterModel chapter) {
+  Future<void> _selectChapter(ChapterModel chapter) async {
+    if (chapter.id == _selectedChapterId && !_isNewChapter) {
+      return;
+    }
+    if (!await _confirmCanReplaceDraft()) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
     setState(() {
       _selectedChapterId = chapter.id;
       _hydratedChapterId = chapter.id;
@@ -221,11 +288,17 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
       _hasUnsavedChanges = false;
       _error = null;
       _titleController.text = chapter.title;
-      _contentController.text = chapter.content;
+      _hydrateContent(chapter.content);
     });
   }
 
-  void _startNew(List<ChapterModel> chapters) {
+  Future<void> _startNew(List<ChapterModel> chapters) async {
+    if (!await _confirmCanReplaceDraft()) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
     final nextOrder = chapters.isEmpty
         ? 1
         : chapters
@@ -240,9 +313,71 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
       _showPlumo = false;
       _hasUnsavedChanges = true;
       _error = null;
-      _titleController.text = 'Chapitre $nextOrder';
-      _contentController.clear();
+      _setNewChapterTitle(nextOrder);
+      _hydrateContent('');
     });
+  }
+
+  Future<bool> _confirmCanReplaceDraft() async {
+    if (!_hasUnsavedChanges) {
+      return true;
+    }
+    _autoSaveTimer?.cancel();
+    final decision = await showDialog<_UnsavedDecision>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Modifications non sauvegardées'),
+        content: const Text(
+          'Souhaites-tu enregistrer ce chapitre avant de continuer ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(_UnsavedDecision.stay),
+            child: const Text('Rester'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(_UnsavedDecision.discard),
+            child: const Text('Ignorer'),
+          ),
+          FilledButton.icon(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(_UnsavedDecision.save),
+            icon: const Icon(Icons.save_outlined, size: 18),
+            label: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+
+    if (decision == _UnsavedDecision.discard) {
+      setState(() => _hasUnsavedChanges = false);
+      return true;
+    }
+    if (decision != _UnsavedDecision.save) {
+      _scheduleAutoSave();
+      return false;
+    }
+
+    final bookId = widget.bookId?.trim() ?? '';
+    return bookId.isNotEmpty && await _save(bookId, _currentChapters);
+  }
+
+  Future<void> _leaveEditor() async {
+    if (!await _confirmCanReplaceDraft() || !mounted) {
+      return;
+    }
+    returnToPreviousOr(context, AppRoutes.write);
+  }
+
+  void _setNewChapterTitle(int order) {
+    final title = 'Chapitre $order - ';
+    _titleController.value = TextEditingValue(
+      text: title,
+      selection: TextSelection.collapsed(offset: title.length),
+    );
   }
 
   void _markDirty() {
@@ -251,14 +386,54 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
     // updating as the user types, even once `_hasUnsavedChanges` is already
     // true.
     setState(() => _hasUnsavedChanges = true);
+    _scheduleAutoSave();
   }
 
-  Future<void> _save(String bookId, List<ChapterModel> chapters) async {
-    final title = _titleController.text.trim();
-    if (title.isEmpty) {
-      setState(() => _error = 'Ajoute un titre de chapitre.');
+  void _scheduleAutoSave() {
+    _autoSaveTimer?.cancel();
+    final bookId = widget.bookId?.trim() ?? '';
+    if (_isNewChapter || _isSaving || bookId.isEmpty) {
       return;
     }
+    _autoSaveTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (mounted && _hasUnsavedChanges && !_isSaving) {
+        _save(bookId, _currentChapters, automatic: true);
+      }
+    });
+  }
+
+  Future<bool> _save(
+    String bookId,
+    List<ChapterModel> chapters, {
+    bool automatic = false,
+  }) async {
+    if (_isSaving) {
+      return false;
+    }
+    _autoSaveTimer?.cancel();
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      if (!automatic) {
+        setState(() => _error = 'Ajoute un titre de chapitre.');
+      }
+      return false;
+    }
+    if (_isNewChapter &&
+        RegExp(
+          r'^Chapitre\s+\d+\s*-\s*$',
+          caseSensitive: false,
+        ).hasMatch(title)) {
+      if (!automatic) {
+        setState(() => _error = 'Ajoute le nom du chapitre après le tiret.');
+      }
+      return false;
+    }
+
+    final wasNewChapter = _isNewChapter;
+    final targetChapterId = _selectedChapterId;
+    final savedSnapshot = PlumoraDocumentCodec.encodeDocument(
+      _contentController.document,
+    );
 
     setState(() {
       _isSaving = true;
@@ -267,7 +442,7 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
 
     try {
       final repository = ref.read(chapterRepositoryProvider);
-      final order = _isNewChapter
+      final order = wasNewChapter
           ? (chapters.isEmpty
                 ? 1
                 : chapters
@@ -277,37 +452,58 @@ class _ChapterEditorScreenState extends ConsumerState<ChapterEditorScreen> {
           : chapters
                 .cast<ChapterModel?>()
                 .firstWhere(
-                  (chapter) => chapter?.id == _selectedChapterId,
+                  (chapter) => chapter?.id == targetChapterId,
                   orElse: () => null,
                 )
                 ?.order;
       final request = ChapterUpsertRequest(
         title: title,
-        content: _contentController.text,
+        content: savedSnapshot,
         order: order,
       );
-      final saved = _isNewChapter || _selectedChapterId == null
+      final saved = wasNewChapter || targetChapterId == null
           ? await repository.createChapter(bookId, request)
-          : await repository.updateChapter(_selectedChapterId!, request);
+          : await repository.updateChapter(targetChapterId, request);
+
+      if (!mounted) {
+        return true;
+      }
 
       ref.invalidate(bookChaptersProvider(bookId));
       ref.invalidate(authorBookProvider(bookId));
       ref.invalidate(chapterProvider(saved.id));
       ref.invalidate(myBooksProvider);
       invalidateBookPublicationCaches(ref, bookId);
+      final stillOnSavedChapter = wasNewChapter
+          ? _isNewChapter && _selectedChapterId == targetChapterId
+          : !_isNewChapter && _selectedChapterId == targetChapterId;
+      final contentUnchanged =
+          PlumoraDocumentCodec.encodeDocument(_contentController.document) ==
+          savedSnapshot;
+      final titleUnchanged = _titleController.text.trim() == title;
       setState(() {
-        _selectedChapterId = saved.id;
-        _hydratedChapterId = saved.id;
-        _isNewChapter = false;
-        _hasUnsavedChanges = false;
-        _titleController.text = saved.title;
-        _contentController.text = saved.content;
+        if (stillOnSavedChapter) {
+          _selectedChapterId = saved.id;
+          _hydratedChapterId = saved.id;
+          _isNewChapter = false;
+          _hasUnsavedChanges = !(contentUnchanged && titleUnchanged);
+        }
       });
+      return true;
     } catch (error) {
-      setState(() => _error = AppError.messageFor(error));
+      if (mounted) {
+        setState(() => _error = AppError.messageFor(error));
+      }
+      return false;
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
+        // Une nouvelle frappe peut arriver pendant la requête. Dans ce cas,
+        // le brouillon reste sale et doit repartir dans le cycle d'autosave
+        // une fois la sauvegarde courante terminée.
+        if (_hasUnsavedChanges) {
+          _scheduleAutoSave();
+        }
       }
     }
   }
@@ -445,6 +641,7 @@ class _DesktopEditor extends StatelessWidget {
     required this.hasUnsavedChanges,
     required this.onReadModeChanged,
     required this.onPlumoChanged,
+    required this.onBack,
     this.error,
   });
 
@@ -452,7 +649,7 @@ class _DesktopEditor extends StatelessWidget {
   final List<ChapterModel> chapters;
   final String? selectedChapterId;
   final TextEditingController titleController;
-  final TextEditingController contentController;
+  final quill.QuillController contentController;
   final bool isSaving;
   final bool isNewChapter;
   final ValueChanged<ChapterModel> onSelect;
@@ -464,13 +661,13 @@ class _DesktopEditor extends StatelessWidget {
   final bool hasUnsavedChanges;
   final ValueChanged<bool> onReadModeChanged;
   final ValueChanged<bool> onPlumoChanged;
+  final VoidCallback onBack;
   final String? error;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _FigmaBookNavigationRail(book: book, chaptersCount: chapters.length),
         _FigmaChapterNavigationRail(
           book: book,
           chapters: chapters,
@@ -478,6 +675,7 @@ class _DesktopEditor extends StatelessWidget {
           isNewChapter: isNewChapter,
           onSelect: onSelect,
           onNew: onNew,
+          onBack: onBack,
         ),
         Expanded(
           child: _FigmaEditorPane(
@@ -492,8 +690,6 @@ class _DesktopEditor extends StatelessWidget {
             showPlumo: showPlumo,
             hasUnsavedChanges: hasUnsavedChanges,
             error: error,
-            onSelect: onSelect,
-            onNew: onNew,
             onSave: onSave,
             onChanged: onChanged,
             onReadModeChanged: onReadModeChanged,
@@ -523,6 +719,7 @@ class _MobileEditor extends StatelessWidget {
     required this.hasUnsavedChanges,
     required this.onReadModeChanged,
     required this.onPlumoChanged,
+    required this.onBack,
     this.error,
   });
 
@@ -530,7 +727,7 @@ class _MobileEditor extends StatelessWidget {
   final List<ChapterModel> chapters;
   final String? selectedChapterId;
   final TextEditingController titleController;
-  final TextEditingController contentController;
+  final quill.QuillController contentController;
   final bool isSaving;
   final bool isNewChapter;
   final ValueChanged<ChapterModel> onSelect;
@@ -542,6 +739,7 @@ class _MobileEditor extends StatelessWidget {
   final bool hasUnsavedChanges;
   final ValueChanged<bool> onReadModeChanged;
   final ValueChanged<bool> onPlumoChanged;
+  final VoidCallback onBack;
   final String? error;
 
   @override
@@ -564,94 +762,7 @@ class _MobileEditor extends StatelessWidget {
       onChanged: onChanged,
       onReadModeChanged: onReadModeChanged,
       onPlumoChanged: onPlumoChanged,
-    );
-  }
-}
-
-class _FigmaBookNavigationRail extends StatelessWidget {
-  const _FigmaBookNavigationRail({
-    required this.book,
-    required this.chaptersCount,
-  });
-
-  final BookModel book;
-  final int chaptersCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final title = _figmaBookTitle(book);
-
-    return Container(
-      width: 224,
-      decoration: BoxDecoration(
-        color: context.colors.cards,
-        border: Border(right: BorderSide(color: context.colors.border)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: context.colors.border)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextButton.icon(
-                  onPressed: () => returnToPreviousOr(context, AppRoutes.write),
-                  icon: const Icon(Icons.arrow_back, size: 15),
-                  label: const Text('Retour'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.colors.textSecondary,
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 30),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _FigmaBookMiniCover(book: book, title: title),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: context.colors.textPrimary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${_figmaBookGenre(book)} - $chaptersCount chap.',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: context.colors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-        ],
-      ),
+      onBack: onBack,
     );
   }
 }
@@ -664,6 +775,7 @@ class _FigmaChapterNavigationRail extends StatelessWidget {
     required this.isNewChapter,
     required this.onSelect,
     required this.onNew,
+    required this.onBack,
   });
 
   final BookModel book;
@@ -672,12 +784,13 @@ class _FigmaChapterNavigationRail extends StatelessWidget {
   final bool isNewChapter;
   final ValueChanged<ChapterModel> onSelect;
   final VoidCallback onNew;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     final totalWords = chapters.fold<int>(
       0,
-      (sum, chapter) => sum + _figmaWordCount(chapter.content),
+      (sum, chapter) => sum + PlumoraDocumentCodec.wordCount(chapter.content),
     );
 
     return Container(
@@ -693,38 +806,45 @@ class _FigmaChapterNavigationRail extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: context.colors.border)),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Chapitres',
-                        style: TextStyle(
-                          color: context.colors.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                        ),
+                FigmaBackButton(label: 'Retour', onTap: onBack),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Chapitres',
+                            style: TextStyle(
+                              color: context.colors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${chapters.length} chapitres - ${_figmaCompactNumber(totalWords)} mots',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: context.colors.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${chapters.length} chapitres - ${_figmaCompactNumber(totalWords)} mots',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: context.colors.textSecondary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _FigmaSquareIconButton(
-                  icon: Icons.add,
-                  tooltip: 'Nouveau chapitre',
-                  color: _writeAccent,
-                  onTap: onNew,
+                    ),
+                    _FigmaSquareIconButton(
+                      icon: Icons.add,
+                      tooltip: 'Nouveau chapitre',
+                      color: _writeAccent,
+                      onTap: onNew,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -784,8 +904,6 @@ class _FigmaEditorPane extends StatelessWidget {
     required this.readMode,
     required this.showPlumo,
     required this.hasUnsavedChanges,
-    required this.onSelect,
-    required this.onNew,
     required this.onSave,
     required this.onChanged,
     required this.onReadModeChanged,
@@ -796,15 +914,13 @@ class _FigmaEditorPane extends StatelessWidget {
   final BookModel book;
   final List<ChapterModel> chapters;
   final TextEditingController titleController;
-  final TextEditingController contentController;
+  final quill.QuillController contentController;
   final String? selectedChapterId;
   final bool isSaving;
   final bool isNewChapter;
   final bool readMode;
   final bool showPlumo;
   final bool hasUnsavedChanges;
-  final ValueChanged<ChapterModel> onSelect;
-  final VoidCallback onNew;
   final VoidCallback onSave;
   final VoidCallback onChanged;
   final ValueChanged<bool> onReadModeChanged;
@@ -828,16 +944,13 @@ class _FigmaEditorPane extends StatelessWidget {
       fallbackOrder: activeIndex + 1,
     );
     final published = _figmaChapterIsPublished(book, activeChapter);
-    final words = _figmaWordCount(contentController.text);
+    final contentText = _figmaControllerPlainText(contentController);
+    final words = _figmaWordCount(contentText);
     final readTime = _figmaReadTimeMinutes(words);
-    final prevChapter = activeIndex > 0 ? chapters[activeIndex - 1] : null;
-    final nextChapter = activeIndex >= 0 && activeIndex < chapters.length - 1
-        ? chapters[activeIndex + 1]
-        : null;
-
     return Column(
       children: [
         _FigmaEditorToolbar(
+          contentController: contentController,
           readMode: readMode,
           showPlumo: showPlumo,
           isSaving: isSaving,
@@ -851,93 +964,91 @@ class _FigmaEditorPane extends StatelessWidget {
             onClose: () => onPlumoChanged(false),
             contentController: contentController,
             titleController: titleController,
+            onChanged: onChanged,
           ),
         if (error != null) _FigmaEditorErrorBar(error!),
         Expanded(
           child: SingleChildScrollView(
             child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 30, 24, 36),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _FigmaEditorBreadcrumb(
-                        bookTitle: _figmaBookTitle(book),
-                        chapterIndex: activeIndex + 1,
-                        chapterTitle: title,
-                      ),
-                      const SizedBox(height: 22),
-                      if (readMode)
-                        Text(
-                          title,
-                          style: GoogleFonts.playfairDisplay(
-                            color: context.colors.textPrimary,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        )
-                      else
-                        TextField(
-                          controller: titleController,
-                          onChanged: (_) => onChanged(),
-                          decoration: const InputDecoration(
-                            filled: false,
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            hintText: 'Titre du chapitre...',
-                          ),
-                          style: GoogleFonts.playfairDisplay(
-                            color: context.colors.textPrimary,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w900,
-                          ),
+              child: Container(
+                constraints: const BoxConstraints(
+                  maxWidth: 820,
+                  minHeight: 720,
+                ),
+                margin: const EdgeInsets.symmetric(vertical: 28),
+                padding: const EdgeInsets.fromLTRB(52, 42, 52, 48),
+                decoration: BoxDecoration(
+                  color: context.colors.cards,
+                  border: Border.all(color: context.colors.border),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.055),
+                      blurRadius: 28,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _FigmaEditorBreadcrumb(
+                      bookTitle: _figmaBookTitle(book),
+                      chapterIndex: activeIndex + 1,
+                      chapterTitle: title,
+                    ),
+                    const SizedBox(height: 22),
+                    if (readMode)
+                      Text(
+                        title,
+                        style: GoogleFonts.playfairDisplay(
+                          color: context.colors.textPrimary,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
                         ),
-                      const SizedBox(height: 18),
-                      _FigmaChapterStatusStrip(
-                        published: published,
-                        wordCount: words,
-                        readTime: readTime,
-                      ),
-                      const SizedBox(height: 26),
-                      if (readMode)
-                        _FigmaReadingContent(
-                          title: title,
-                          content: contentController.text,
-                          showTitle: false,
-                        )
-                      else
-                        TextField(
-                          controller: contentController,
-                          onChanged: (_) => onChanged(),
-                          keyboardType: TextInputType.multiline,
-                          minLines: 18,
-                          maxLines: null,
-                          decoration: const InputDecoration(
-                            filled: false,
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            hintText: 'Commencez à écrire ce chapitre...',
-                          ),
-                          style: TextStyle(
-                            color: context.colors.textPrimary,
-                            fontSize: 17,
-                            height: 1.9,
-                            fontFamily: 'Georgia',
-                          ),
+                      )
+                    else
+                      TextField(
+                        controller: titleController,
+                        onChanged: (_) => onChanged(),
+                        decoration: const InputDecoration(
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          hintText: 'Titre du chapitre...',
                         ),
-                      const SizedBox(height: 34),
-                      _FigmaChapterJumpRow(
-                        prevChapter: prevChapter,
-                        nextChapter: nextChapter,
-                        onSelect: onSelect,
-                        onNew: onNew,
+                        style: GoogleFonts.playfairDisplay(
+                          color: context.colors.textPrimary,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    if (isNewChapter && !readMode) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Ajoutez le nom du chapitre après le tiret.',
+                        style: TextStyle(
+                          color: context.colors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 18),
+                    _FigmaChapterStatusStrip(
+                      published: published,
+                      wordCount: words,
+                      readTime: readTime,
+                    ),
+                    const SizedBox(height: 26),
+                    PlumoraDocumentEditor(
+                      controller: contentController,
+                      readOnly: readMode,
+                      autoFocus: isNewChapter,
+                      placeholder: 'Commencez à écrire ce chapitre…',
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -972,6 +1083,7 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
     required this.onChanged,
     required this.onReadModeChanged,
     required this.onPlumoChanged,
+    required this.onBack,
     this.error,
   });
 
@@ -979,7 +1091,7 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
   final List<ChapterModel> chapters;
   final String? selectedChapterId;
   final TextEditingController titleController;
-  final TextEditingController contentController;
+  final quill.QuillController contentController;
   final bool isSaving;
   final bool isNewChapter;
   final bool readMode;
@@ -991,6 +1103,7 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
   final VoidCallback onChanged;
   final ValueChanged<bool> onReadModeChanged;
   final ValueChanged<bool> onPlumoChanged;
+  final VoidCallback onBack;
   final String? error;
 
   @override
@@ -1009,12 +1122,9 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
       titleController,
       fallbackOrder: activeIndex + 1,
     );
-    final words = _figmaWordCount(contentController.text);
+    final contentText = _figmaControllerPlainText(contentController);
+    final words = _figmaWordCount(contentText);
     final readTime = _figmaReadTimeMinutes(words);
-    final prevChapter = activeIndex > 0 ? chapters[activeIndex - 1] : null;
-    final nextChapter = activeIndex >= 0 && activeIndex < chapters.length - 1
-        ? chapters[activeIndex + 1]
-        : null;
     final saved = !hasUnsavedChanges && !isNewChapter;
     final published = _figmaChapterIsPublished(book, activeChapter);
 
@@ -1028,43 +1138,29 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
               color: context.colors.cards,
               border: Border(bottom: BorderSide(color: context.colors.border)),
             ),
-            child: Row(
+            child: Column(
               children: [
-                FigmaBackButton(
-                  label: 'Retour',
-                  onTap: () => returnToPreviousOr(context, AppRoutes.write),
+                Row(
+                  children: [
+                    FigmaBackButton(label: 'Retour', onTap: onBack),
+                    const Spacer(),
+                    _FigmaSavedStatusPill(
+                      isSaving: isSaving,
+                      saved: saved,
+                      onSave: onSave,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 4),
-                const _FigmaToolbarIcon(
-                  icon: Icons.format_bold,
-                  tooltip: 'Gras',
-                ),
-                const _FigmaToolbarIcon(
-                  icon: Icons.format_italic,
-                  tooltip: 'Italique',
-                ),
-                const _FigmaToolbarIcon(
-                  icon: Icons.format_underlined,
-                  tooltip: 'Souligner',
-                ),
-                const _FigmaToolbarIcon(
-                  icon: Icons.format_quote,
-                  tooltip: 'Citation',
-                ),
-                const _FigmaToolbarIcon(
-                  icon: Icons.format_list_bulleted,
-                  tooltip: 'Liste',
-                ),
-                const _FigmaToolbarIcon(
-                  icon: Icons.horizontal_rule,
-                  tooltip: 'Séparateur',
-                ),
-                const Spacer(),
-                _FigmaSavedStatusPill(
-                  isSaving: isSaving,
-                  saved: saved,
-                  onSave: onSave,
-                ),
+                if (!readMode) ...[
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: double.infinity,
+                    child: PlumoraDocumentToolbar(
+                      controller: contentController,
+                      compact: true,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1113,6 +1209,17 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
                           height: 1.15,
                         ),
                       ),
+                      if (isNewChapter && !readMode) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Ajoutez le nom du chapitre après le tiret.',
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 18),
                       _FigmaChapterPublishStrip(
                         published: published,
@@ -1123,27 +1230,12 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
                       const SizedBox(height: 18),
                       Divider(color: context.colors.border),
                       const SizedBox(height: 20),
-                      TextField(
+                      PlumoraDocumentEditor(
                         controller: contentController,
-                        onChanged: (_) => onChanged(),
                         readOnly: readMode,
-                        keyboardType: TextInputType.multiline,
-                        minLines: 14,
-                        maxLines: null,
-                        decoration: const InputDecoration(
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          hintText: 'Commencez à écrire ce chapitre...',
-                        ),
-                        style: TextStyle(
-                          color: context.colors.textPrimary,
-                          fontSize: 16,
-                          height: 1.85,
-                          fontFamily: 'Georgia',
-                        ),
+                        compact: true,
+                        autoFocus: isNewChapter,
+                        placeholder: 'Commencez à écrire ce chapitre…',
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -1153,19 +1245,9 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
             ),
           ),
         ),
-        // Deliberately outside the scrollable area: with a very long
-        // chapter (e.g. an imported book), the reader must never have to
-        // scroll to the end just to reach chapter navigation or add a new
-        // chapter.
-        _FigmaMobileChapterJumps(
-          prevChapter: prevChapter,
-          nextChapter: nextChapter,
-          onSelect: onSelect,
-          onNew: onNew,
-        ),
         _FigmaMobileFooterStats(
           words: words,
-          chars: contentController.text.length,
+          chars: contentText.length,
           readTime: readTime,
           saved: saved,
         ),
@@ -1174,6 +1256,7 @@ class _FigmaChapterPageMobileEditorBody extends StatelessWidget {
             onClose: () => onPlumoChanged(false),
             contentController: contentController,
             titleController: titleController,
+            onChanged: onChanged,
           )
         else
           _FigmaBottomChapterToolbar(
@@ -1392,7 +1475,7 @@ class _FigmaMobileFooterStats extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Text(
             '$chars car.',
             style: TextStyle(
@@ -1401,9 +1484,9 @@ class _FigmaMobileFooterStats extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Text(
-            '~$readTime min lecture',
+            '~$readTime min',
             style: TextStyle(color: context.colors.textSecondary, fontSize: 10),
           ),
           const Spacer(),
@@ -1417,7 +1500,7 @@ class _FigmaMobileFooterStats extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            saved ? 'Sauvegardé' : 'Non sauvegardé',
+            saved ? 'Sauvé' : 'À sauver',
             style: TextStyle(
               color: saved ? _writeGreen : _writeAccent,
               fontSize: 10,
@@ -1442,25 +1525,28 @@ class _FigmaBottomChapterToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
-      decoration: BoxDecoration(
-        color: context.colors.cards,
-        border: Border(top: BorderSide(color: context.colors.border)),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: onReadMode,
-            icon: Icon(
-              readMode ? Icons.edit_outlined : Icons.visibility_outlined,
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+        decoration: BoxDecoration(
+          color: context.colors.cards,
+          border: Border(top: BorderSide(color: context.colors.border)),
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: onReadMode,
+              icon: Icon(
+                readMode ? Icons.edit_outlined : Icons.visibility_outlined,
+              ),
+              color: context.colors.textSecondary,
+              tooltip: readMode ? 'Écrire' : 'Lire',
             ),
-            color: context.colors.textSecondary,
-            tooltip: readMode ? 'Écrire' : 'Lire',
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: _FigmaPlumoButton(active: false, onTap: onPlumo)),
-        ],
+            const SizedBox(width: 8),
+            Expanded(child: _FigmaPlumoButton(active: false, onTap: onPlumo)),
+          ],
+        ),
       ),
     );
   }
@@ -1492,7 +1578,7 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
   final List<ChapterModel> chapters;
   final String? selectedChapterId;
   final TextEditingController titleController;
-  final TextEditingController contentController;
+  final quill.QuillController contentController;
   final bool isSaving;
   final bool isNewChapter;
   final bool readMode;
@@ -1522,7 +1608,8 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
       titleController,
       fallbackOrder: activeIndex + 1,
     );
-    final words = _figmaWordCount(contentController.text);
+    final contentText = _figmaControllerPlainText(contentController);
+    final words = _figmaWordCount(contentText);
     final prevChapter = activeIndex > 0 ? chapters[activeIndex - 1] : null;
     final nextChapter = activeIndex >= 0 && activeIndex < chapters.length - 1
         ? chapters[activeIndex + 1]
@@ -1623,31 +1710,11 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-            child: readMode
-                ? _FigmaReadingContent(
-                    title: title,
-                    content: contentController.text,
-                  )
-                : TextField(
-                    controller: contentController,
-                    onChanged: (_) => onChanged(),
-                    keyboardType: TextInputType.multiline,
-                    minLines: 22,
-                    maxLines: null,
-                    decoration: const InputDecoration(
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      hintText: 'Commencez à écrire...',
-                    ),
-                    style: TextStyle(
-                      color: context.colors.textPrimary,
-                      fontSize: 16,
-                      height: 1.9,
-                      fontFamily: 'Georgia',
-                    ),
-                  ),
+            child: PlumoraDocumentEditor(
+              controller: contentController,
+              readOnly: readMode,
+              compact: true,
+            ),
           ),
         ),
         _FigmaMobileChapterJumps(
@@ -1661,6 +1728,7 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
             onClose: () => onPlumoChanged(false),
             contentController: contentController,
             titleController: titleController,
+            onChanged: onChanged,
           )
         else if (!readMode)
           _FigmaMobileWritingToolbar(onPlumo: () => onPlumoChanged(true)),
@@ -1687,6 +1755,7 @@ class FigmaMobileEditorBodyDeprecated extends StatelessWidget {
 
 class _FigmaEditorToolbar extends StatelessWidget {
   const _FigmaEditorToolbar({
+    required this.contentController,
     required this.readMode,
     required this.showPlumo,
     required this.isSaving,
@@ -1696,6 +1765,7 @@ class _FigmaEditorToolbar extends StatelessWidget {
     required this.onSave,
   });
 
+  final quill.QuillController contentController;
   final bool readMode;
   final bool showPlumo;
   final bool isSaving;
@@ -1718,35 +1788,7 @@ class _FigmaEditorToolbar extends StatelessWidget {
             const _FigmaReadModePill()
           else
             Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: const [
-                    _FigmaToolbarIcon(icon: Icons.format_bold, tooltip: 'Gras'),
-                    _FigmaToolbarIcon(
-                      icon: Icons.format_italic,
-                      tooltip: 'Italique',
-                    ),
-                    _FigmaToolbarIcon(
-                      icon: Icons.format_underlined,
-                      tooltip: 'Souligner',
-                    ),
-                    _FigmaToolbarSeparator(),
-                    _FigmaToolbarIcon(
-                      icon: Icons.format_quote,
-                      tooltip: 'Citation',
-                    ),
-                    _FigmaToolbarIcon(
-                      icon: Icons.format_list_bulleted,
-                      tooltip: 'Liste',
-                    ),
-                    _FigmaToolbarIcon(
-                      icon: Icons.horizontal_rule,
-                      tooltip: 'Séparateur',
-                    ),
-                  ],
-                ),
-              ),
+              child: PlumoraDocumentToolbar(controller: contentController),
             ),
           if (readMode) const Spacer(),
           const SizedBox(width: 10),
@@ -1788,11 +1830,13 @@ class _FigmaPlumoDesktopPanel extends ConsumerStatefulWidget {
     required this.onClose,
     required this.contentController,
     required this.titleController,
+    required this.onChanged,
   });
 
   final VoidCallback onClose;
-  final TextEditingController contentController;
+  final quill.QuillController contentController;
   final TextEditingController titleController;
+  final VoidCallback onChanged;
 
   @override
   ConsumerState<_FigmaPlumoDesktopPanel> createState() =>
@@ -1804,54 +1848,87 @@ class _FigmaPlumoDesktopPanelState
   _PlumoQuickAction? _pendingAction;
 
   @override
+  void initState() {
+    super.initState();
+    widget.contentController.addListener(_handleSelectionChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FigmaPlumoDesktopPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.contentController != widget.contentController) {
+      oldWidget.contentController.removeListener(_handleSelectionChanged);
+      widget.contentController.addListener(_handleSelectionChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.contentController.removeListener(_handleSelectionChanged);
+    super.dispose();
+  }
+
+  void _handleSelectionChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final selection = _plumoSelectionSnapshot(widget.contentController);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(22, 14, 22, 16),
       decoration: BoxDecoration(
         color: context.colors.cards,
         border: Border(bottom: BorderSide(color: context.colors.border)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _FigmaGradientIconBox(icon: Icons.auto_awesome, size: 34),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Sélectionne du texte (ou laisse tout le chapitre) puis demande à Plumo.',
-              style: TextStyle(
-                color: context.colors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
-          ),
-          for (final action in _PlumoQuickAction.values)
-            Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: OutlinedButton(
-                onPressed: _pendingAction == null ? () => _run(action) : null,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+          Row(
+            children: [
+              const _FigmaGradientIconBox(icon: Icons.auto_awesome, size: 36),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Plumo, ton complice d’écriture',
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tu choisis le passage, Plumo propose, tu gardes toujours le dernier mot.',
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
-                child: _pendingAction == action
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(action.label),
               ),
-            ),
-          IconButton(
-            onPressed: widget.onClose,
-            icon: const Icon(Icons.close, size: 18),
-            color: context.colors.textSecondary,
+              IconButton(
+                onPressed: widget.onClose,
+                tooltip: 'Fermer Plumo',
+                icon: const Icon(Icons.close, size: 18),
+                color: context.colors.textSecondary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _PlumoSelectionCoach(selection: selection),
+          const SizedBox(height: 12),
+          _PlumoActionGrid(
+            selectionReady: selection.isReady,
+            pendingAction: _pendingAction,
+            onAction: _run,
+            compact: false,
           ),
         ],
       ),
@@ -1859,6 +1936,9 @@ class _FigmaPlumoDesktopPanelState
   }
 
   Future<void> _run(_PlumoQuickAction action) async {
+    if (_pendingAction != null) {
+      return;
+    }
     setState(() => _pendingAction = action);
     await _runPlumoQuickAction(
       context: context,
@@ -1866,81 +1946,11 @@ class _FigmaPlumoDesktopPanelState
       action: action,
       contentController: widget.contentController,
       titleController: widget.titleController,
+      onChanged: widget.onChanged,
     );
     if (mounted) {
       setState(() => _pendingAction = null);
     }
-  }
-}
-
-class _FigmaBookMiniCover extends StatelessWidget {
-  const _FigmaBookMiniCover({required this.book, required this.title});
-
-  final BookModel book;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 56,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: _figmaBookCoverColors(book),
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(9),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if ((book.coverUrl ?? '').trim().isNotEmpty)
-            Image.network(
-              book.coverUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  const SizedBox.shrink(),
-            ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.48),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 5,
-            right: 5,
-            bottom: 5,
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 7,
-                height: 1.1,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -2029,46 +2039,6 @@ class _FigmaChapterNavTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _FigmaToolbarIcon extends StatelessWidget {
-  const _FigmaToolbarIcon({required this.icon, required this.tooltip});
-
-  final IconData icon;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: SizedBox(
-        width: 34,
-        height: 34,
-        child: IconButton(
-          onPressed: () {},
-          padding: EdgeInsets.zero,
-          icon: Icon(icon, size: 18),
-          color: context.colors.textSecondary,
-          hoverColor: context.colors.muted,
-          splashRadius: 18,
-        ),
-      ),
-    );
-  }
-}
-
-class _FigmaToolbarSeparator extends StatelessWidget {
-  const _FigmaToolbarSeparator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 22,
-      margin: const EdgeInsets.symmetric(horizontal: 6),
-      color: context.colors.border,
     );
   }
 }
@@ -2421,108 +2391,6 @@ class _FigmaEditorBreadcrumb extends StatelessWidget {
   }
 }
 
-class _FigmaReadingContent extends StatelessWidget {
-  const _FigmaReadingContent({
-    required this.title,
-    required this.content,
-    this.showTitle = true,
-  });
-
-  final String title;
-  final String content;
-  final bool showTitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = content.trim();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showTitle) ...[
-          Text(
-            title,
-            style: GoogleFonts.playfairDisplay(
-              color: context.colors.textPrimary,
-              fontSize: 23,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-        Text(
-          text.isEmpty ? 'Ce chapitre est vide.' : content,
-          style: TextStyle(
-            color: text.isEmpty
-                ? context.colors.textSecondary
-                : context.colors.textPrimary,
-            fontSize: 17,
-            height: 1.9,
-            fontFamily: 'Georgia',
-            fontStyle: text.isEmpty ? FontStyle.italic : FontStyle.normal,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FigmaChapterJumpRow extends StatelessWidget {
-  const _FigmaChapterJumpRow({
-    required this.prevChapter,
-    required this.nextChapter,
-    required this.onSelect,
-    required this.onNew,
-  });
-
-  final ChapterModel? prevChapter;
-  final ChapterModel? nextChapter;
-  final ValueChanged<ChapterModel> onSelect;
-  final VoidCallback onNew;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(top: 20),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: context.colors.border)),
-      ),
-      child: Row(
-        children: [
-          if (prevChapter != null)
-            Expanded(
-              child: _FigmaChapterJumpButton(
-                chapter: prevChapter!,
-                label: 'Chapitre précédent',
-                leading: true,
-                onTap: () => onSelect(prevChapter!),
-              ),
-            )
-          else
-            const Spacer(),
-          const SizedBox(width: 12),
-          if (nextChapter != null)
-            Expanded(
-              child: _FigmaChapterJumpButton(
-                chapter: nextChapter!,
-                label: 'Chapitre suivant',
-                leading: false,
-                onTap: () => onSelect(nextChapter!),
-              ),
-            )
-          else
-            Expanded(
-              child: _FigmaDashedButton(
-                icon: Icons.add,
-                label: 'Nouveau chapitre',
-                onTap: onNew,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _FigmaMobileChapterJumps extends StatelessWidget {
   const _FigmaMobileChapterJumps({
     required this.prevChapter,
@@ -2830,86 +2698,6 @@ class _FigmaDashedButton extends StatelessWidget {
   }
 }
 
-class _FigmaChapterJumpButton extends StatelessWidget {
-  const _FigmaChapterJumpButton({
-    required this.chapter,
-    required this.label,
-    required this.leading,
-    required this.onTap,
-  });
-
-  final ChapterModel chapter;
-  final String label;
-  final bool leading;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final content = Expanded(
-      child: Column(
-        crossAxisAlignment: leading
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.end,
-        children: [
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Text(
-            _figmaChapterTitle(chapter),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(color: context.colors.border),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: leading
-              ? [
-                  Icon(
-                    Icons.chevron_left,
-                    color: context.colors.textSecondary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 6),
-                  content,
-                ]
-              : [
-                  content,
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.chevron_right,
-                    color: context.colors.textSecondary,
-                    size: 20,
-                  ),
-                ],
-        ),
-      ),
-    );
-  }
-}
-
 class _FigmaMobileJumpButton extends StatelessWidget {
   const _FigmaMobileJumpButton({
     required this.icon,
@@ -3078,11 +2866,13 @@ class _FigmaMobilePlumoPanel extends ConsumerStatefulWidget {
     required this.onClose,
     required this.contentController,
     required this.titleController,
+    required this.onChanged,
   });
 
   final VoidCallback onClose;
-  final TextEditingController contentController;
+  final quill.QuillController contentController;
   final TextEditingController titleController;
+  final VoidCallback onChanged;
 
   @override
   ConsumerState<_FigmaMobilePlumoPanel> createState() =>
@@ -3094,7 +2884,35 @@ class _FigmaMobilePlumoPanelState
   _PlumoQuickAction? _pendingAction;
 
   @override
+  void initState() {
+    super.initState();
+    widget.contentController.addListener(_handleSelectionChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FigmaMobilePlumoPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.contentController != widget.contentController) {
+      oldWidget.contentController.removeListener(_handleSelectionChanged);
+      widget.contentController.addListener(_handleSelectionChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.contentController.removeListener(_handleSelectionChanged);
+    super.dispose();
+  }
+
+  void _handleSelectionChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final selection = _plumoSelectionSnapshot(widget.contentController);
     return SafeArea(
       top: false,
       child: Container(
@@ -3111,41 +2929,43 @@ class _FigmaMobilePlumoPanelState
                 const _FigmaGradientIconBox(icon: Icons.auto_awesome, size: 30),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    'Plumo',
-                    style: TextStyle(
-                      color: context.colors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Plumo',
+                        style: TextStyle(
+                          color: context.colors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'Ton passage, tes choix.',
+                        style: TextStyle(
+                          color: context.colors.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
                   onPressed: widget.onClose,
+                  tooltip: 'Fermer Plumo',
                   icon: const Icon(Icons.close, size: 20),
                   color: context.colors.textSecondary,
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final action in _PlumoQuickAction.values)
-                  OutlinedButton(
-                    onPressed: _pendingAction == null
-                        ? () => _run(action)
-                        : null,
-                    child: _pendingAction == action
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(action.label),
-                  ),
-              ],
+            const SizedBox(height: 10),
+            _PlumoSelectionCoach(selection: selection, compact: true),
+            const SizedBox(height: 10),
+            _PlumoActionGrid(
+              selectionReady: selection.isReady,
+              pendingAction: _pendingAction,
+              onAction: _run,
+              compact: true,
             ),
           ],
         ),
@@ -3154,6 +2974,9 @@ class _FigmaMobilePlumoPanelState
   }
 
   Future<void> _run(_PlumoQuickAction action) async {
+    if (_pendingAction != null) {
+      return;
+    }
     setState(() => _pendingAction = action);
     await _runPlumoQuickAction(
       context: context,
@@ -3161,6 +2984,7 @@ class _FigmaMobilePlumoPanelState
       action: action,
       contentController: widget.contentController,
       titleController: widget.titleController,
+      onChanged: widget.onChanged,
     );
     if (mounted) {
       setState(() => _pendingAction = null);
@@ -3168,17 +2992,409 @@ class _FigmaMobilePlumoPanelState
   }
 }
 
-enum _PlumoQuickAction {
-  rewrite('Reformuler', Icons.autorenew),
-  improveStyle('Améliorer le style', Icons.auto_fix_high),
-  summarize('Résumer', Icons.short_text),
-  continueStory("Continuer l'histoire", Icons.fast_forward),
-  titles('Proposer des titres', Icons.title);
+class _PlumoSelectionSnapshot {
+  const _PlumoSelectionSnapshot({
+    required this.start,
+    required this.end,
+    required this.text,
+    required this.selectionExists,
+  });
 
-  const _PlumoQuickAction(this.label, this.icon);
+  final int start;
+  final int end;
+  final String text;
+  final bool selectionExists;
+
+  String get trimmedText => text.trim();
+  String get leadingWhitespace =>
+      RegExp(r'^\s*').firstMatch(text)?.group(0) ?? '';
+  String get trailingWhitespace =>
+      RegExp(r'\s*$').firstMatch(text)?.group(0) ?? '';
+  bool get hasWords => trimmedText.isNotEmpty;
+  bool get isTooLong => trimmedText.length > plumoAiMaxInputChars;
+  bool get isReady => selectionExists && hasWords && !isTooLong;
+  int get wordCount => _figmaWordCount(trimmedText);
+  int get characterCount => trimmedText.length;
+
+  String replacementFor(String suggestion) {
+    return '$leadingWhitespace${suggestion.trim()}$trailingWhitespace';
+  }
+}
+
+class _PlumoSelectionCoach extends StatelessWidget {
+  const _PlumoSelectionCoach({required this.selection, this.compact = false});
+
+  final _PlumoSelectionSnapshot selection;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (selection.isReady) {
+      return Container(
+        key: const ValueKey('plumo-selection-ready'),
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 12 : 14,
+          vertical: compact ? 10 : 11,
+        ),
+        decoration: BoxDecoration(
+          color: context.colors.success.withValues(alpha: 0.09),
+          border: Border.all(
+            color: context.colors.success.withValues(alpha: 0.35),
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              color: context.colors.success,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Passage prêt pour Plumo ✨',
+                    style: TextStyle(
+                      color: context.colors.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${_plumoWordLabel(selection.wordCount)} sélectionnés · '
+                    '${selection.characterCount} caractères',
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '“${_plumoPreview(selection.trimmedText, 150)}”',
+                    maxLines: compact ? 2 : 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final tooLong = selection.selectionExists && selection.isTooLong;
+    final onlyWhitespace = selection.selectionExists && !selection.hasWords;
+    final accent = tooLong ? context.colors.warning : context.colors.primary;
+    final title = tooLong
+        ? 'Raccourcis un peu ta sélection'
+        : onlyWhitespace
+        ? 'Sélectionne quelques mots'
+        : 'Surligne un passage pour commencer';
+    final message = tooLong
+        ? '${selection.characterCount} caractères sélectionnés : Plumo accepte '
+              'jusqu’à $plumoAiMaxInputChars caractères à la fois.'
+        : onlyWhitespace
+        ? 'Ta sélection ne contient que des espaces. Surligne une phrase ou un paragraphe.'
+        : 'Dans l’éditeur, surligne la phrase ou le paragraphe à retravailler. '
+              'Plumo ne touchera jamais tout le chapitre par surprise.';
+
+    return Container(
+      key: const ValueKey('plumo-selection-coach'),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 12 : 14,
+        vertical: compact ? 10 : 11,
+      ),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.07),
+        border: Border.all(color: accent.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.13),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '1',
+              style: TextStyle(
+                color: accent,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  message,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlumoActionGrid extends StatelessWidget {
+  const _PlumoActionGrid({
+    required this.selectionReady,
+    required this.pendingAction,
+    required this.onAction,
+    required this.compact,
+  });
+
+  final bool selectionReady;
+  final _PlumoQuickAction? pendingAction;
+  final ValueChanged<_PlumoQuickAction> onAction;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = compact
+            ? 2
+            : constraints.maxWidth < 760
+            ? 2
+            : 5;
+        final spacing = 8.0;
+        final itemWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final action in _PlumoQuickAction.values)
+              SizedBox(
+                width: itemWidth,
+                child: _PlumoActionCard(
+                  action: action,
+                  ready: selectionReady,
+                  loading: pendingAction == action,
+                  enabled: pendingAction == null,
+                  onTap: () => onAction(action),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PlumoActionCard extends StatelessWidget {
+  const _PlumoActionCard({
+    required this.action,
+    required this.ready,
+    required this.loading,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final _PlumoQuickAction action;
+  final bool ready;
+  final bool loading;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = ready
+        ? context.colors.primary
+        : context.colors.textSecondary;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: '${action.label}. ${action.description}',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: ValueKey('plumo-action-${action.name}'),
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(11),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            constraints: const BoxConstraints(minHeight: 64),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+            decoration: BoxDecoration(
+              color: ready
+                  ? context.colors.primary.withValues(alpha: 0.055)
+                  : context.colors.muted.withValues(alpha: 0.42),
+              border: Border.all(
+                color: ready
+                    ? context.colors.primary.withValues(alpha: 0.38)
+                    : context.colors.border,
+              ),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Row(
+              children: [
+                if (loading)
+                  const SizedBox(
+                    width: 19,
+                    height: 19,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Icon(action.icon, size: 19, color: accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        action.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: ready
+                              ? context.colors.textPrimary
+                              : context.colors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        ready ? action.description : 'Sélection requise',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.colors.textSecondary,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _PlumoQuickAction {
+  rewrite(
+    'Reformuler',
+    Icons.autorenew,
+    'Même idée, plus fluide',
+    'Reformule ce passage avec fluidité, sans changer son sens ni les événements.',
+  ),
+  improveStyle(
+    'Améliorer le style',
+    Icons.auto_fix_high,
+    'Plus vivant et précis',
+    'Améliore le style de ce passage sans changer son sens ni les événements.',
+  ),
+  summarize(
+    'Résumer',
+    Icons.short_text,
+    'Aller à l’essentiel',
+    'Résume fidèlement ce passage en conservant les informations importantes.',
+  ),
+  continueStory(
+    'Continuer l’histoire',
+    Icons.fast_forward,
+    'Imaginer la suite',
+    'Continue ce passage dans le même ton, sans contredire les éléments déjà présents.',
+  ),
+  titles(
+    'Proposer des titres',
+    Icons.title,
+    'Nommer ce chapitre',
+    'Propose des titres évocateurs pour le chapitre à partir de ce passage.',
+  );
+
+  const _PlumoQuickAction(
+    this.label,
+    this.icon,
+    this.description,
+    this.instruction,
+  );
 
   final String label;
   final IconData icon;
+  final String description;
+  final String instruction;
+}
+
+_PlumoSelectionSnapshot _plumoSelectionSnapshot(
+  quill.QuillController controller,
+) {
+  final plainText = _figmaControllerPlainText(controller);
+  final selection = controller.selection;
+  if (!selection.isValid || selection.isCollapsed) {
+    final cursor = selection.isValid
+        ? selection.extentOffset.clamp(0, plainText.length)
+        : 0;
+    return _PlumoSelectionSnapshot(
+      start: cursor,
+      end: cursor,
+      text: '',
+      selectionExists: false,
+    );
+  }
+
+  final start = selection.start.clamp(0, plainText.length);
+  final end = selection.end.clamp(start, plainText.length);
+  return _PlumoSelectionSnapshot(
+    start: start,
+    end: end,
+    text: plainText.substring(start, end),
+    selectionExists: end > start,
+  );
+}
+
+String _plumoWordLabel(int count) => count == 1 ? '1 mot' : '$count mots';
+
+String _plumoPreview(String text, int maxCharacters) {
+  final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (normalized.length <= maxCharacters) {
+    return normalized;
+  }
+  return '${normalized.substring(0, maxCharacters).trimRight()}…';
 }
 
 class _PlumoQuickResult {
@@ -3195,45 +3411,61 @@ class _PlumoQuickResult {
   final List<String> warnings;
 }
 
-/// Runs a quick Plumo IA action on the current selection (or the whole
-/// chapter when nothing is selected) and shows the result in a bottom sheet.
+/// Runs a quick Plumo IA action only on the passage explicitly selected by
+/// the author and shows the result in a bottom sheet.
 /// Never touches [contentController]/[titleController] itself -- only the
-/// sheet's Remplacer/Inserer/Utiliser buttons do, and only once the user taps
+/// sheet's Remplacer/Insérer/Utiliser buttons do, and only once the user taps
 /// them, per the "never auto-apply" rule.
 Future<void> _runPlumoQuickAction({
   required BuildContext context,
   required WidgetRef ref,
   required _PlumoQuickAction action,
-  required TextEditingController contentController,
+  required quill.QuillController contentController,
   required TextEditingController titleController,
+  required VoidCallback onChanged,
 }) async {
-  final selection = contentController.selection;
-  final hasSelection = selection.isValid && !selection.isCollapsed;
-  final sourceText =
-      (hasSelection
-              ? selection.textInside(contentController.text)
-              : contentController.text)
-          .trim();
-
-  if (sourceText.isEmpty) {
+  final selection = _plumoSelectionSnapshot(contentController);
+  final plainText = _figmaControllerPlainText(contentController);
+  if (!selection.selectionExists || !selection.hasWords) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
         const SnackBar(
           content: Text(
-            "Écris ou sélectionne un passage avant de demander à Plumo.",
+            'Commence par surligner le passage que tu veux retravailler.',
           ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
     return;
   }
 
+  if (selection.isTooLong) {
+    if (context.mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cette sélection est trop longue. Choisis un passage plus court pour aider Plumo à être précis.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    return;
+  }
+
+  final start = selection.start;
+  final end = selection.end;
+  final sourceText = selection.trimmedText;
+
   final repository = ref.read(plumoAiRepositoryProvider);
   final request = AiWritingRequest(
     text: sourceText,
-    instruction: action == _PlumoQuickAction.improveStyle
-        ? "Améliore le style d'écriture sans changer le sens ni les événements."
-        : null,
+    instruction: action.instruction,
   );
 
   Future<_PlumoQuickResult> load() async {
@@ -3281,54 +3513,119 @@ Future<void> _runPlumoQuickAction({
     backgroundColor: Colors.transparent,
     builder: (sheetContext) => _PlumoResultSheet(
       action: action,
-      future: resultFuture,
+      sourceText: sourceText,
+      initialFuture: resultFuture,
+      onRegenerate: load,
       onReplace: (text) {
-        final start = hasSelection ? selection.start : 0;
-        final end = hasSelection
-            ? selection.end
-            : contentController.text.length;
-        final newText = contentController.text.replaceRange(start, end, text);
-        contentController.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: start + text.length),
+        final replacement = selection.replacementFor(text);
+        contentController.replaceText(
+          start,
+          end - start,
+          replacement,
+          TextSelection.collapsed(offset: start + replacement.length),
+        );
+        onChanged();
+        _showPlumoAppliedSnackBar(
+          context,
+          message: 'Passage remplacé par la proposition de Plumo.',
+          onUndo: () {
+            contentController.undo();
+            onChanged();
+          },
         );
       },
       onInsertAfter: (text) {
-        final insertAt = hasSelection
-            ? selection.end
-            : contentController.text.length;
+        final insertAt = end;
         final separator = insertAt == 0 ? '' : '\n\n';
-        final newText = contentController.text.replaceRange(
+        final trailingSeparator = insertAt < plainText.length ? '\n\n' : '';
+        final insertedText = '$separator${text.trim()}$trailingSeparator';
+        contentController.replaceText(
           insertAt,
-          insertAt,
-          '$separator$text',
+          0,
+          insertedText,
+          TextSelection.collapsed(offset: insertAt + insertedText.length),
         );
-        contentController.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(
-            offset: insertAt + separator.length + text.length,
-          ),
+        onChanged();
+        _showPlumoAppliedSnackBar(
+          context,
+          message: 'Proposition ajoutée après le passage sélectionné.',
+          onUndo: () {
+            contentController.undo();
+            onChanged();
+          },
         );
       },
-      onUseAsTitle: (text) => titleController.text = text,
+      onUseAsTitle: (text) {
+        final previousTitle = titleController.text;
+        titleController.text = text;
+        onChanged();
+        _showPlumoAppliedSnackBar(
+          context,
+          message: 'Titre du chapitre mis à jour.',
+          onUndo: () {
+            titleController.text = previousTitle;
+            onChanged();
+          },
+        );
+      },
     ),
   );
 }
 
-class _PlumoResultSheet extends StatelessWidget {
+void _showPlumoAppliedSnackBar(
+  BuildContext context, {
+  required String message,
+  required VoidCallback onUndo,
+}) {
+  if (!context.mounted) {
+    return;
+  }
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(message),
+      behavior: SnackBarBehavior.floating,
+      action: SnackBarAction(label: 'Annuler', onPressed: onUndo),
+    ),
+  );
+}
+
+class _PlumoResultSheet extends StatefulWidget {
   const _PlumoResultSheet({
     required this.action,
-    required this.future,
+    required this.sourceText,
+    required this.initialFuture,
+    required this.onRegenerate,
     required this.onReplace,
     required this.onInsertAfter,
     required this.onUseAsTitle,
   });
 
   final _PlumoQuickAction action;
-  final Future<_PlumoQuickResult> future;
+  final String sourceText;
+  final Future<_PlumoQuickResult> initialFuture;
+  final Future<_PlumoQuickResult> Function() onRegenerate;
   final ValueChanged<String> onReplace;
   final ValueChanged<String> onInsertAfter;
   final ValueChanged<String> onUseAsTitle;
+
+  @override
+  State<_PlumoResultSheet> createState() => _PlumoResultSheetState();
+}
+
+class _PlumoResultSheetState extends State<_PlumoResultSheet> {
+  late Future<_PlumoQuickResult> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.initialFuture;
+  }
+
+  void _regenerate() {
+    setState(() => _future = widget.onRegenerate());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3345,7 +3642,7 @@ class _PlumoResultSheet extends StatelessWidget {
           ),
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
           child: FutureBuilder<_PlumoQuickResult>(
-            future: future,
+            future: _future,
             builder: (context, snapshot) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -3371,7 +3668,7 @@ class _PlumoResultSheet extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          action.label,
+                          widget.action.label,
                           style: TextStyle(
                             color: context.colors.textPrimary,
                             fontSize: 16,
@@ -3407,38 +3704,103 @@ class _PlumoResultSheet extends StatelessWidget {
     AsyncSnapshot<_PlumoQuickResult> snapshot,
   ) {
     if (snapshot.connectionState != ConnectionState.done) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 42),
-        child: Center(child: CircularProgressIndicator()),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 38),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Plumo cherche la bonne formule…',
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
     if (snapshot.hasError) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text(
-          plumoAiErrorMessage(snapshot.error!),
-          style: TextStyle(color: context.colors.destructive),
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.colors.destructive.withValues(alpha: 0.06),
+          border: Border.all(
+            color: context.colors.destructive.withValues(alpha: 0.25),
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Plumo a perdu le fil',
+              style: TextStyle(
+                color: context.colors.textPrimary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              plumoAiErrorMessage(snapshot.error!),
+              style: TextStyle(color: context.colors.destructive),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _regenerate,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Réessayer'),
+            ),
+          ],
         ),
       );
     }
 
     final result = snapshot.data!;
-    if (action == _PlumoQuickAction.titles) {
+    if (widget.action == _PlumoQuickAction.titles) {
       if (result.titles.isEmpty) {
-        return Text(
-          "Plumo n'a proposé aucun titre.",
-          style: TextStyle(color: context.colors.textSecondary),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PlumoOriginalPassageCard(text: widget.sourceText),
+            const SizedBox(height: 14),
+            Text(
+              "Plumo n'a proposé aucun titre.",
+              style: TextStyle(color: context.colors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _regenerate,
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('Essayer à nouveau'),
+            ),
+          ],
         );
       }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _PlumoOriginalPassageCard(text: widget.sourceText),
+          const SizedBox(height: 16),
+          Text(
+            'Les idées de Plumo',
+            style: TextStyle(
+              color: context.colors.textPrimary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
           for (final title in result.titles) ...[
             _PlumoTitleTile(
               title: title,
               onUseAsTitle: () {
-                onUseAsTitle(title);
+                widget.onUseAsTitle(title);
                 Navigator.of(context).pop();
               },
               onCopy: () => _copy(context, title),
@@ -3448,6 +3810,15 @@ class _PlumoResultSheet extends StatelessWidget {
           if (result.explanation.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
+              'Pourquoi ces titres ?',
+              style: TextStyle(
+                color: context.colors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
               result.explanation,
               style: TextStyle(
                 color: context.colors.textSecondary,
@@ -3455,6 +3826,13 @@ class _PlumoResultSheet extends StatelessWidget {
               ),
             ),
           ],
+          ..._warningWidgets(context, result.warnings),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: _regenerate,
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('D’autres idées'),
+          ),
         ],
       );
     }
@@ -3463,6 +3841,23 @@ class _PlumoResultSheet extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _PlumoOriginalPassageCard(text: widget.sourceText),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Icon(Icons.auto_awesome, size: 17, color: context.colors.primary),
+            const SizedBox(width: 7),
+            Text(
+              'Proposition de Plumo',
+              style: TextStyle(
+                color: context.colors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
@@ -3473,7 +3868,7 @@ class _PlumoResultSheet extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(
+          child: SelectableText(
             suggestion.isEmpty
                 ? "Plumo n'a renvoyé aucune suggestion."
                 : suggestion,
@@ -3481,7 +3876,16 @@ class _PlumoResultSheet extends StatelessWidget {
           ),
         ),
         if (result.explanation.trim().isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          Text(
+            'Ce que Plumo a travaillé',
+            style: TextStyle(
+              color: context.colors.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
             result.explanation,
             style: TextStyle(color: context.colors.textSecondary, height: 1.4),
@@ -3516,49 +3920,251 @@ class _PlumoResultSheet extends StatelessWidget {
         ],
         if (suggestion.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Row(
+          _buildApplyButtons(context, suggestion),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
             children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () {
-                    onReplace(suggestion);
-                    Navigator.of(context).pop();
-                  },
-                  icon: const Icon(Icons.find_replace, size: 18),
-                  label: const Text('Remplacer'),
-                ),
+              TextButton.icon(
+                onPressed: _regenerate,
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: const Text('Une autre version'),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    onInsertAfter(suggestion);
-                    Navigator.of(context).pop();
-                  },
-                  icon: const Icon(Icons.playlist_add, size: 18),
-                  label: const Text('Insérer'),
-                ),
+              TextButton.icon(
+                onPressed: () => _editBeforeApplying(context, suggestion),
+                icon: const Icon(Icons.tune, size: 18),
+                label: const Text('Ajuster'),
+              ),
+              TextButton.icon(
+                onPressed: () => _copy(context, suggestion),
+                icon: const Icon(Icons.copy_outlined, size: 18),
+                label: const Text('Copier'),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton.icon(
-              onPressed: () => _copy(context, suggestion),
-              icon: const Icon(Icons.copy_outlined, size: 18),
-              label: const Text('Copier'),
-            ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(
+                Icons.shield_outlined,
+                size: 14,
+                color: context.colors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Rien ne change dans ton chapitre sans ton accord.',
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ],
     );
   }
 
+  Widget _buildApplyButtons(BuildContext context, String suggestion) {
+    void replace() {
+      widget.onReplace(suggestion);
+      Navigator.of(context).pop();
+    }
+
+    void insert() {
+      widget.onInsertAfter(suggestion);
+      Navigator.of(context).pop();
+    }
+
+    if (widget.action == _PlumoQuickAction.continueStory) {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: insert,
+          icon: const Icon(Icons.playlist_add, size: 18),
+          label: const Text('Ajouter la suite'),
+        ),
+      );
+    }
+
+    final summarize = widget.action == _PlumoQuickAction.summarize;
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: summarize ? insert : replace,
+            icon: Icon(
+              summarize ? Icons.playlist_add : Icons.find_replace,
+              size: 18,
+            ),
+            label: Text(
+              summarize ? 'Insérer le résumé' : 'Remplacer la sélection',
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: summarize ? replace : insert,
+            icon: Icon(
+              summarize ? Icons.find_replace : Icons.playlist_add,
+              size: 18,
+            ),
+            label: Text(summarize ? 'Remplacer la sélection' : 'Insérer après'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _editBeforeApplying(
+    BuildContext sheetContext,
+    String suggestion,
+  ) async {
+    final controller = TextEditingController(text: suggestion);
+    final modified = await showDialog<String>(
+      context: sheetContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Ajuster la proposition'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 5,
+          maxLines: 12,
+          decoration: const InputDecoration(
+            hintText: 'Modifie librement la proposition de Plumo…',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: Text(
+              widget.action == _PlumoQuickAction.continueStory ||
+                      widget.action == _PlumoQuickAction.summarize
+                  ? 'Ajouter au chapitre'
+                  : 'Remplacer la sélection',
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (modified == null || modified.trim().isEmpty || !mounted) {
+      return;
+    }
+    if (widget.action == _PlumoQuickAction.continueStory ||
+        widget.action == _PlumoQuickAction.summarize) {
+      widget.onInsertAfter(modified.trim());
+    } else {
+      widget.onReplace(modified.trim());
+    }
+    if (sheetContext.mounted) {
+      Navigator.of(sheetContext).pop();
+    }
+  }
+
+  List<Widget> _warningWidgets(BuildContext context, List<String> warnings) {
+    if (warnings.isEmpty) {
+      return const [];
+    }
+    return [
+      const SizedBox(height: 12),
+      for (final warning in warnings)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, size: 15, color: context.colors.accent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  warning,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ];
+  }
+
   void _copy(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Copié dans le presse-papiers.')),
+    );
+  }
+}
+
+class _PlumoOriginalPassageCard extends StatelessWidget {
+  const _PlumoOriginalPassageCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.format_quote,
+              size: 17,
+              color: context.colors.textSecondary,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              'Passage original',
+              style: TextStyle(
+                color: context.colors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              _plumoWordLabel(_figmaWordCount(text)),
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: context.colors.muted.withValues(alpha: 0.55),
+            border: Border.all(color: context.colors.border),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            _plumoPreview(text, 420),
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -3613,17 +4219,17 @@ class _FigmaEditorStatsBar extends StatelessWidget {
     required this.saved,
   });
 
-  final TextEditingController controller;
+  final quill.QuillController controller;
   final int activeIndex;
   final int chaptersLength;
   final bool saved;
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: controller,
-      builder: (context, value, _) {
-        final text = value.text;
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final text = _figmaControllerPlainText(controller);
         final words = _figmaWordCount(text);
         final readTime = _figmaReadTimeMinutes(words);
         final chapterCount = chaptersLength <= 0 ? 1 : chaptersLength;
@@ -3709,11 +4315,6 @@ String _figmaBookTitle(BookModel book) {
   return title.isEmpty ? 'Livre sans titre' : title;
 }
 
-String _figmaBookGenre(BookModel book) {
-  final genre = book.genre?.trim();
-  return genre == null || genre.isEmpty ? 'Manuscrit' : genre;
-}
-
 String _figmaChapterTitle(ChapterModel chapter, {int? fallbackOrder}) {
   final title = chapter.title.trim();
   if (title.isNotEmpty) {
@@ -3733,7 +4334,7 @@ String _figmaControllerTitle(
 }
 
 String _figmaChapterDetail(BookModel book, ChapterModel chapter) {
-  final words = _figmaWordCount(chapter.content);
+  final words = PlumoraDocumentCodec.wordCount(chapter.content);
   final wordsLabel = words == 0 ? 'Vide' : '$words mots';
   final status = _figmaChapterIsPublished(book, chapter)
       ? 'Publié'
@@ -3747,7 +4348,7 @@ bool _figmaChapterIsPublished(BookModel book, ChapterModel? chapter) {
   }
 
   return book.status == BookStatus.published &&
-      chapter.content.trim().isNotEmpty;
+      PlumoraDocumentCodec.hasMeaningfulContent(chapter.content);
 }
 
 int _figmaActiveIndex(
@@ -3805,6 +4406,10 @@ int _figmaWordCount(String value) {
       .length;
 }
 
+String _figmaControllerPlainText(quill.QuillController controller) {
+  return PlumoraDocumentCodec.plainTextFromDocument(controller.document);
+}
+
 int _figmaReadTimeMinutes(int words) {
   return words <= 0 ? 1 : (words / 200).round().clamp(1, 999);
 }
@@ -3817,21 +4422,6 @@ String _figmaCompactNumber(int value) {
     return '${(value / 1000).toStringAsFixed(1)}k';
   }
   return value.toString();
-}
-
-List<Color> _figmaBookCoverColors(BookModel book) {
-  final palettes = [
-    [const Color(0xFF7C3AED), const Color(0xFF312E81)],
-    [const Color(0xFFE11D48), const Color(0xFFC2410C)],
-    [const Color(0xFF2563EB), const Color(0xFF1E293B)],
-    [const Color(0xFF10B981), const Color(0xFF0891B2)],
-    [const Color(0xFFF59E0B), const Color(0xFFB91C1C)],
-    [const Color(0xFFDB2777), const Color(0xFF991B1B)],
-  ];
-  final key = book.id.isEmpty ? book.title : book.id;
-  final index =
-      key.codeUnits.fold<int>(0, (sum, code) => sum + code) % palettes.length;
-  return palettes[index];
 }
 
 class _EditorStateWithBack extends StatelessWidget {
