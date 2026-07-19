@@ -2,7 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:go_router/go_router.dart';
+import 'package:plumora_app/core/text/plumora_document_codec.dart';
 import 'package:plumora_app/core/theme/plumora_theme.dart';
 import 'package:plumora_app/features/catalog/data/models/catalog_book_model.dart';
 import 'package:plumora_app/features/reading/data/models/reading_progress_model.dart';
@@ -64,6 +66,64 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Confort de lecture'), findsOneWidget);
     expect(find.text('Grand'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the reader displays selectable rich text at the chosen scale', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final remainingWords = List<String>.generate(
+      221,
+      (index) => 'mot$index',
+    ).join(' ');
+    final document = Document.fromJson(<Map<String, dynamic>>[
+      <String, dynamic>{
+        'insert': 'Un passage',
+        'attributes': <String, dynamic>{'bold': true},
+      },
+      <String, dynamic>{
+        'insert': ' inspirant',
+        'attributes': <String, dynamic>{'italic': true},
+      },
+      <String, dynamic>{'insert': ' $remainingWords\n'},
+    ]);
+
+    await tester.pumpWidget(
+      _readerApp(chapterContent: PlumoraDocumentCodec.encodeDocument(document)),
+    );
+    await tester.pumpAndSettle();
+
+    final richTextFinder = find.byKey(
+      const ValueKey<String>('plumora_rich_text_view'),
+    );
+    expect(richTextFinder, findsOneWidget);
+    expect(find.textContaining('Un passage', findRichText: true), findsWidgets);
+    expect(find.textContaining('2 MIN DE LECTURE'), findsOneWidget);
+
+    final initialEditor = tester.widget<QuillEditor>(richTextFinder);
+    expect(initialEditor.controller.readOnly, isTrue);
+    expect(initialEditor.config.scrollable, isFalse);
+    expect(initialEditor.config.enableInteractiveSelection, isTrue);
+    expect(
+      initialEditor.controller.document.toDelta().toJson().first['attributes'],
+      containsPair('bold', true),
+    );
+    final initialFontSize =
+        initialEditor.config.customStyles!.paragraph!.style.fontSize!;
+
+    await tester.tap(find.byTooltip('Confort de lecture'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Grand'));
+    await tester.pumpAndSettle();
+
+    final enlargedEditor = tester.widget<QuillEditor>(richTextFinder);
+    expect(
+      enlargedEditor.config.customStyles!.paragraph!.style.fontSize,
+      greaterThan(initialFontSize),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -160,8 +220,12 @@ void main() {
   });
 }
 
-Widget _readerApp({double textScale = 1, ReviewRepository? reviewRepository}) {
-  final content = [
+Widget _readerApp({
+  double textScale = 1,
+  ReviewRepository? reviewRepository,
+  String? chapterContent,
+}) {
+  final legacyContent = [
     'The Project Gutenberg eBook of Carmen',
     '',
     'Cette licence technique ne doit pas apparaître.',
@@ -190,7 +254,7 @@ Widget _readerApp({double textScale = 1, ReviewRepository? reviewRepository}) {
       CatalogChapterModel(
         id: 'chapter-reader',
         title: 'Texte intégral',
-        content: content,
+        content: chapterContent ?? legacyContent,
         order: 1,
       ),
     ],

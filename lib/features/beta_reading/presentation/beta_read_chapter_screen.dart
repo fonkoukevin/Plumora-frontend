@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/text/plumora_document_codec.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../data/models/beta_campaign_model.dart';
@@ -191,7 +192,9 @@ class BetaReadChapterScreen extends ConsumerWidget {
                                     ref,
                                     chapter,
                                     effectiveBookId,
-                                    defaultSelectedText: paragraph,
+                                    defaultSelectedText: paragraph.text,
+                                    defaultPositionStart:
+                                        paragraph.positionStart,
                                   )
                                 : (
                                     _,
@@ -297,9 +300,13 @@ class BetaReadChapterScreen extends ConsumerWidget {
     BetaSharedChapterModel chapter,
     String effectiveBookId, {
     String? defaultSelectedText,
+    int? defaultPositionStart,
   }) async {
+    final visibleText = PlumoraDocumentCodec.plainText(chapter.content);
     final selectedText = defaultSelectedText ?? _fallbackSelectedText(chapter);
-    final positionStart = chapter.content.indexOf(selectedText);
+    final positionStart = selectedText.isEmpty
+        ? -1
+        : defaultPositionStart ?? visibleText.indexOf(selectedText);
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -326,9 +333,16 @@ class BetaReadChapterScreen extends ConsumerWidget {
   }
 
   static String _fallbackSelectedText(BetaSharedChapterModel chapter) {
-    final text = chapter.content.trim();
-    return text.length <= 180 ? text : '${text.substring(0, 180)}...';
+    final text = PlumoraDocumentCodec.plainText(chapter.content).trim();
+    return text.length <= 180 ? text : text.substring(0, 180);
   }
+}
+
+class _VisibleParagraph {
+  const _VisibleParagraph({required this.text, required this.positionStart});
+
+  final String text;
+  final int positionStart;
 }
 
 class _ChapterText extends StatelessWidget {
@@ -340,15 +354,12 @@ class _ChapterText extends StatelessWidget {
 
   final BetaSharedChapterModel chapter;
   final Set<String> annotatedText;
-  final ValueChanged<String> onParagraphTap;
+  final ValueChanged<_VisibleParagraph> onParagraphTap;
 
   @override
   Widget build(BuildContext context) {
-    final paragraphs = chapter.content
-        .split(RegExp(r'\n\s*\n'))
-        .map((part) => part.trim())
-        .where((part) => part.isNotEmpty)
-        .toList();
+    final visibleText = PlumoraDocumentCodec.plainText(chapter.content);
+    final paragraphs = _visibleParagraphs(visibleText);
 
     var badgeNumber = 0;
 
@@ -378,14 +389,47 @@ class _ChapterText extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 22),
               child: _AnnotatableParagraph(
-                text: paragraph,
-                badgeNumber: annotatedText.contains(paragraph)
+                text: paragraph.text,
+                badgeNumber: annotatedText.contains(paragraph.text)
                     ? ++badgeNumber
                     : null,
                 onTap: () => onParagraphTap(paragraph),
               ),
             ),
       ],
+    );
+  }
+
+  static List<_VisibleParagraph> _visibleParagraphs(String text) {
+    final paragraphs = <_VisibleParagraph>[];
+    final separator = RegExp(r'\n+');
+    var start = 0;
+
+    for (final match in separator.allMatches(text)) {
+      _addVisibleParagraph(paragraphs, text, start, match.start);
+      start = match.end;
+    }
+    _addVisibleParagraph(paragraphs, text, start, text.length);
+    return paragraphs;
+  }
+
+  static void _addVisibleParagraph(
+    List<_VisibleParagraph> paragraphs,
+    String source,
+    int start,
+    int end,
+  ) {
+    final raw = source.substring(start, end);
+    final leadingWhitespace = RegExp(r'^\s*').firstMatch(raw)?.group(0) ?? '';
+    final paragraph = raw.trim();
+    if (paragraph.isEmpty) {
+      return;
+    }
+    paragraphs.add(
+      _VisibleParagraph(
+        text: paragraph,
+        positionStart: start + leadingWhitespace.length,
+      ),
     );
   }
 }

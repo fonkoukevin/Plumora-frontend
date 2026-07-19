@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/text/plumora_document_codec.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
@@ -556,7 +557,7 @@ class _ChapterRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${chapter.content.length} caractères',
+                  '${PlumoraDocumentCodec.characterCount(chapter.content)} caractères',
                   style: TextStyle(
                     color: context.colors.textSecondary,
                     fontSize: 12,
