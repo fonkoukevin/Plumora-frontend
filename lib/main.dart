@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_router.dart';
@@ -39,6 +41,13 @@ class _PlumoraMaterialApp extends ConsumerWidget {
       themeMode: ref.watch(themeModeControllerProvider),
       themeAnimationDuration: const Duration(milliseconds: 200),
       themeAnimationCurve: Curves.easeInOutCubic,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
+      ],
+      supportedLocales: FlutterQuillLocalizations.supportedLocales,
       routerConfig: ref.watch(appRouterProvider),
     );
   }

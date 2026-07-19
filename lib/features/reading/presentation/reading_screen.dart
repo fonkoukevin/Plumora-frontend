@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/text/plumora_document_codec.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../../core/widgets/plumora_rich_text_view.dart';
 import '../../catalog/data/models/catalog_book_model.dart';
 import '../../catalog/data/repositories/catalog_repository.dart';
 import '../data/models/reading_progress_model.dart';
@@ -897,11 +899,24 @@ class _ReaderText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blocks = _ReaderBlock.parse(chapter.content);
+    final isRichText = PlumoraDocumentCodec.isRichText(chapter.content);
+    final richPlainText = isRichText
+        ? PlumoraDocumentCodec.plainText(chapter.content).trim()
+        : '';
+    final blocks = isRichText
+        ? const <_ReaderBlock>[]
+        : _ReaderBlock.parse(chapter.content);
+    final firstContentText = isRichText
+        ? richPlainText
+              .split('\n')
+              .map((line) => line.trim())
+              .firstWhere((line) => line.isNotEmpty, orElse: () => '')
+        : (blocks.isEmpty ? '' : blocks.first.text);
     final shouldShowChapterTitle =
         chapter.title.trim().isNotEmpty &&
         !_isGenericFullTextTitle(chapter.title) &&
-        (blocks.isEmpty || !_similarText(blocks.first.text, chapter.title));
+        (firstContentText.isEmpty ||
+            !_similarText(firstContentText, chapter.title));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -931,7 +946,13 @@ class _ReaderText extends StatelessWidget {
         ],
         const _ReaderOrnament(),
         const SizedBox(height: 34),
-        if (blocks.isEmpty)
+        if (isRichText && richPlainText.isNotEmpty)
+          PlumoraRichTextView(
+            content: chapter.content,
+            compact: compact,
+            fontScale: fontScale,
+          )
+        else if (blocks.isEmpty)
           Text(
             'Ce chapitre ne contient pas encore de texte.',
             style: TextStyle(
@@ -1246,7 +1267,9 @@ Color _readerPaper(BuildContext context) {
 }
 
 int _readingMinutes(String content) {
-  final prepared = _prepareReaderContent(content);
+  final prepared = PlumoraDocumentCodec.isRichText(content)
+      ? PlumoraDocumentCodec.plainText(content).trim()
+      : _prepareReaderContent(content);
   if (prepared.isEmpty) {
     return 1;
   }
