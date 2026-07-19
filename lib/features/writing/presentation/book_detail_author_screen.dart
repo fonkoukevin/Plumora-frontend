@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/text/plumora_document_codec.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
@@ -2130,16 +2131,11 @@ int _completedChapterCount(
 }
 
 bool _chapterHasContent(ChapterModel chapter) {
-  return chapter.content.trim().isNotEmpty;
+  return PlumoraDocumentCodec.hasMeaningfulContent(chapter.content);
 }
 
 int _chapterWordCount(ChapterModel chapter) {
-  final text = chapter.content.trim();
-  if (text.isEmpty) {
-    return 0;
-  }
-
-  return text.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
+  return PlumoraDocumentCodec.wordCount(chapter.content);
 }
 
 List<Color> _bookCoverColors(BookModel book) {
