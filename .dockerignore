@@ -1,0 +1,43 @@
+# Version control / editor / tooling metadata — irrelevant to the build.
+.git
+.github
+.vscode
+.idea
+*.iml
+
+# Docs & non-build metadata.
+docs
+README.md
+CHANGELOG.md
+AGENTS.md
+figma
+
+# Tests — not needed to produce the release web bundle.
+test
+coverage
+
+# Build outputs — regenerated fresh inside the image by `flutter build web`.
+build
+.dart_tool
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Native platform projects — not needed for `flutter build web`, and keeping
+# them out of the build context also means a local Android/iOS signing file
+# can never be sent to `docker build` even by mistake.
+android
+ios
+windows
+macos
+linux
+
+# Defense in depth: never send local secrets into the Docker build context,
+# even if one of the directory excludes above is ever narrowed.
+android/key.properties
+**/*.keystore
+**/*.jks
+**/*.p12
+**/*.mobileprovision
+.env
+.env.*

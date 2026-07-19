@@ -10,6 +10,7 @@ import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart' show resolvePlumoraImageUrl;
 import '../../book/data/models/book_model.dart';
 import '../../book/data/repositories/book_repository.dart';
+import 'widgets/continue_on_web_card.dart';
 
 const _writeAccent = Color(0xFF7C5CFF);
 const _writeAccentLight = Color(0xFF9B80FF);
@@ -302,6 +303,10 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                   borderColor: _writeGold,
                   onTap: () => _goToPublish(books),
                 ),
+                if (ContinueOnWebCard.isRelevant && books.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ContinueOnWebCard(manuscriptId: _mostRecentBookId(books)),
+                ],
               ],
             );
           },
@@ -1440,6 +1445,17 @@ String _relativeModified(DateTime? date) {
 
   return '${local.day.toString().padLeft(2, '0')}/'
       '${local.month.toString().padLeft(2, '0')}/${local.year}';
+}
+
+String _mostRecentBookId(List<BookModel> books) {
+  DateTime lastActivity(BookModel book) =>
+      book.updatedAt ??
+      book.createdAt ??
+      DateTime.fromMillisecondsSinceEpoch(0);
+
+  return books
+      .reduce((a, b) => lastActivity(a).isAfter(lastActivity(b)) ? a : b)
+      .id;
 }
 
 String _compactNumber(int value, {bool fixed = false}) {

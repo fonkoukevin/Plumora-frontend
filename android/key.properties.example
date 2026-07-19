@@ -1,0 +1,13 @@
+# Copy this file to android/key.properties (git-ignored, never commit it)
+# and fill in the real values from your own release keystore.
+#
+# Generate a keystore first, if you don't have one yet:
+#   keytool -genkey -v -keystore ~/plumora-release.keystore \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias plumora
+#
+# storeFile is resolved relative to the android/ directory (or use an
+# absolute path).
+storePassword=REPLACE_ME
+keyPassword=REPLACE_ME
+keyAlias=plumora
+storeFile=REPLACE_ME_PATH_TO_KEYSTORE.jks

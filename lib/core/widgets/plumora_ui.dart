@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../network/api_config.dart';
+import '../config/app_config.dart';
 import '../theme/plumora_colors.dart';
 
 class PlumoraCard extends StatefulWidget {
@@ -430,7 +430,7 @@ String? resolvePlumoraImageUrl(String? value) {
     return scheme == 'http' || scheme == 'https' ? url : null;
   }
 
-  final apiUri = Uri.tryParse(ApiConfig.baseUrl);
+  final apiUri = Uri.tryParse(AppConfig.apiBaseUrl);
   if (apiUri == null || !apiUri.hasScheme) {
     return null;
   }
