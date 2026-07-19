@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plumora_app/core/theme/plumora_theme.dart';
@@ -42,6 +44,13 @@ void main() {
         ],
         child: MaterialApp(
           theme: PlumoraTheme.light,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            FlutterQuillLocalizations.delegate,
+          ],
+          supportedLocales: FlutterQuillLocalizations.supportedLocales,
           home: const ChapterEditorScreen(bookId: 'book-1'),
         ),
       ),
@@ -49,6 +58,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chapitres'), findsOneWidget);
+    expect(find.text('Retour'), findsOneWidget);
+    expect(find.text('Fantasy - 1 chap.'), findsNothing);
     expect(find.text("Vue d'ensemble"), findsNothing);
     expect(find.text('Éditeur'), findsNothing);
     expect(find.text('Retours bêta'), findsNothing);
@@ -56,6 +67,76 @@ void main() {
     expect(find.text('Royalties'), findsNothing);
     expect(find.text('Paramètres'), findsNothing);
     expect(find.text('Vue mobile'), findsNothing);
+    expect(find.text('Chapitre précédent'), findsNothing);
+    expect(find.text('Chapitre suivant'), findsNothing);
+    expect(find.text('Nouveau chapitre'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byTooltip('Nouveau chapitre'));
+    await tester.pump();
+
+    final titleField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(titleField.controller?.text, 'Chapitre 2 - ');
+    expect(titleField.controller?.selection.baseOffset, 'Chapitre 2 - '.length);
+    expect(
+      find.text('Ajoutez le nom du chapitre après le tiret.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('mobile editor keeps the rich toolbar usable without overflow', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authorBookProvider.overrideWith(
+            (ref, id) async => const BookModel(
+              id: 'book-1',
+              title: 'Mon livre',
+              description: '',
+              status: BookStatus.draft,
+              genre: 'Fantasy',
+              chapterCount: 1,
+            ),
+          ),
+          bookChaptersProvider.overrideWith(
+            (ref, id) async => const [
+              ChapterModel(
+                id: 'chapter-1',
+                bookId: 'book-1',
+                title: 'Chapitre 1 - Le départ',
+                content: 'Le début de mon histoire.',
+                order: 1,
+              ),
+            ],
+          ),
+        ],
+        child: MaterialApp(
+          theme: PlumoraTheme.light,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            FlutterQuillLocalizations.delegate,
+          ],
+          supportedLocales: FlutterQuillLocalizations.supportedLocales,
+          home: const ChapterEditorScreen(bookId: 'book-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Retour'), findsOneWidget);
+    expect(find.byIcon(Icons.format_bold), findsOneWidget);
+    expect(find.byIcon(Icons.format_italic), findsOneWidget);
+    expect(find.text('Chapitre 1 - Le départ'), findsWidgets);
+    expect(find.text('Chapitre précédent'), findsNothing);
+    expect(find.text('Chapitre suivant'), findsNothing);
+    expect(find.text('Nouveau chapitre'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/text/plumora_document_codec.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../../core/widgets/plumora_rich_text_view.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../ai/data/models/plumo_ai_models.dart';
 import '../../ai/data/plumo_ai_error.dart';
@@ -127,7 +129,7 @@ class _ChapterDetailAuthorScreenState
 
     _loadedChapterId = chapter.id;
     _titleController.text = chapter.title;
-    _contentController.text = chapter.content;
+    _contentController.text = PlumoraDocumentCodec.plainText(chapter.content);
     _error = null;
   }
 
@@ -164,13 +166,19 @@ class _ChapterDetailAuthorScreenState
     });
 
     try {
+      // Rich chapters keep their Delta envelope intact on this compact screen.
+      // Their body is only edited in the full writing workspace, while the
+      // title can still be renamed safely here.
+      final storedContent = PlumoraDocumentCodec.isRichText(chapter.content)
+          ? chapter.content
+          : _contentController.text;
       final saved = await ref
           .read(chapterRepositoryProvider)
           .updateChapter(
             chapter.id,
             ChapterUpsertRequest(
               title: _titleController.text,
-              content: _contentController.text,
+              content: storedContent,
               order: chapter.order == 0 ? null : chapter.order,
             ),
           );
@@ -270,6 +278,8 @@ class _ChapterDetailForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final busy = isSaving || isDeleting;
+    final isRichContent = PlumoraDocumentCodec.isRichText(chapter.content);
+    final characterCount = PlumoraDocumentCodec.characterCount(chapter.content);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -294,7 +304,8 @@ class _ChapterDetailForm extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Chapitre ${chapter.order == 0 ? '-' : chapter.order} · ${chapter.content.length} caractères',
+          'Chapitre ${chapter.order == 0 ? '-' : chapter.order} · '
+          '$characterCount caractères',
           style: TextStyle(color: context.colors.textSecondary),
         ),
         const SizedBox(height: 24),
@@ -317,16 +328,24 @@ class _ChapterDetailForm extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               const _FieldLabel('Contenu'),
-              TextField(
-                controller: contentController,
-                enabled: !busy,
-                minLines: 14,
-                maxLines: 24,
-                textAlignVertical: TextAlignVertical.top,
-                decoration: const InputDecoration(
-                  hintText: 'Écris ton chapitre ici...',
+              if (isRichContent)
+                _RichChapterPreview(
+                  content: chapter.content,
+                  onOpenEditor: onOpenEditor,
+                  enabled: !busy,
+                )
+              else
+                TextField(
+                  key: const ValueKey<String>('legacy_chapter_content_field'),
+                  controller: contentController,
+                  enabled: !busy,
+                  minLines: 14,
+                  maxLines: 24,
+                  textAlignVertical: TextAlignVertical.top,
+                  decoration: const InputDecoration(
+                    hintText: 'Écris ton chapitre ici...',
+                  ),
                 ),
-              ),
               const SizedBox(height: 20),
               Wrap(
                 spacing: 10,
@@ -342,13 +361,25 @@ class _ChapterDetailForm extends StatelessWidget {
                     ),
                   ),
                   OutlinedButton.icon(
+                    key: const ValueKey<String>('open_full_chapter_editor'),
                     onPressed: busy ? null : onOpenEditor,
                     icon: const Icon(Icons.edit_note_outlined, size: 18),
-                    label: const Text('Ouvrir l’éditeur'),
+                    label: Text(
+                      isRichContent
+                          ? 'Modifier dans l’éditeur complet'
+                          : 'Ouvrir l’éditeur complet',
+                    ),
                   ),
                   FilledButton(
+                    key: const ValueKey<String>('save_chapter_details'),
                     onPressed: busy ? null : onSave,
-                    child: Text(isSaving ? 'Sauvegarde...' : 'Sauvegarder'),
+                    child: Text(
+                      isSaving
+                          ? 'Sauvegarde...'
+                          : isRichContent
+                          ? 'Sauvegarder le titre'
+                          : 'Sauvegarder',
+                    ),
                   ),
                 ],
               ),
@@ -358,6 +389,90 @@ class _ChapterDetailForm extends StatelessWidget {
         const SizedBox(height: 18),
         _PlumoAnalysisCard(chapter: chapter),
       ],
+    );
+  }
+}
+
+class _RichChapterPreview extends StatelessWidget {
+  const _RichChapterPreview({
+    required this.content,
+    required this.onOpenEditor,
+    required this.enabled,
+  });
+
+  final String content;
+  final VoidCallback onOpenEditor;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey<String>('rich_chapter_content_preview'),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: context.colors.background,
+        border: Border.all(color: context.colors.border),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: context.colors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.format_paint_outlined,
+                  color: context.colors.primary,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Chapitre mis en forme',
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'La mise en forme est conservée. Utilise l’éditeur '
+                      'complet pour modifier le texte.',
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          PlumoraRichTextView(content: content, compact: true),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: enabled ? onOpenEditor : null,
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: const Text('Continuer à écrire'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -387,7 +502,7 @@ class _PlumoAnalysisCardState extends ConsumerState<_PlumoAnalysisCard> {
           .read(plumoAiRepositoryProvider)
           .analyzeForBetaReading(
             BetaReadingAnalysisRequest(
-              text: widget.chapter.content,
+              text: PlumoraDocumentCodec.plainText(widget.chapter.content),
               chapterId: widget.chapter.id,
             ),
           );
@@ -403,7 +518,9 @@ class _PlumoAnalysisCardState extends ConsumerState<_PlumoAnalysisCard> {
 
   @override
   Widget build(BuildContext context) {
-    final hasContent = widget.chapter.content.trim().isNotEmpty;
+    final hasContent = PlumoraDocumentCodec.hasMeaningfulContent(
+      widget.chapter.content,
+    );
 
     return PlumoraCard(
       child: Column(
