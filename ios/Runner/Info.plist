@@ -26,6 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Production/staging only ever call HTTPS (api.plumora.fr), so App
+	     Transport Security stays at its strict default there. This exception
+	     only covers local-network/loopback addresses, so a developer running
+	     against http://localhost:8080 on a real device or simulator isn't
+	     blocked by ATS — it does not weaken security for any public host. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - develop
+    tags:
+      - "v*"
   pull_request:
     branches:
       - main
@@ -80,7 +82,15 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter web
-        run: flutter build web --release
+        # A build-only smoke check: a clearly non-resolvable ".invalid"
+        # placeholder (RFC 2606) shows this is a CI validation build, not a
+        # pointer at any real environment. The real production values are
+        # only ever baked in by the docker-publish job below, at image
+        # build time, never committed here.
+        run: |
+          flutter build web --release \
+            --dart-define=APP_ENV=staging \
+            --dart-define=API_BASE_URL=https://ci-validate.plumora.invalid/api/v1
 
       - name: Upload web build
         uses: actions/upload-artifact@v4
@@ -163,3 +173,140 @@ jobs:
           name: plumora-linux-debug-bundle
           path: build/linux/x64/debug/bundle
           if-no-files-found: error
+
+  docker-publish:
+    name: Build and publish Docker image
+    runs-on: ubuntu-latest
+    needs: quality
+    # Push events only — pull_request builds (including from external forks)
+    # never reach this job, regardless of who opened them — and only from
+    # main or a "v*" tag, never from develop or any other branch.
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    timeout-minutes: 30
+    permissions:
+      # Job-level permissions replace the workflow-level default entirely,
+      # so both must be listed even though contents:read also appears above.
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN is sufficient: no PAT, no long-lived credential.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute lowercase image name
+        # Docker/GHCR repository names must be lowercase; github.repository_owner
+        # keeps whatever casing the account/org actually has.
+        id: image
+        run: |
+          echo "name=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/plumora-frontend" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata (tags/labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          # docker/metadata-action's own "latest=auto" default would ALSO tag
+          # a non-prerelease semver tag (e.g. a future "v1.0.0") as latest on
+          # its own heuristic — disable that entirely so "latest" is only
+          # ever produced by the explicit `type=raw` rule below, gated on
+          # is_default_branch (true only for a push to refs/heads/main).
+          flavor: |
+            latest=false
+          # v1.0.0-beta (a "v*" tag push)  -> "v1.0.0-beta" + "sha-<short>"
+          # main (a push to the default branch) -> "sha-<short>" + "latest"
+          #   ("latest" is only ever a complementary alias, never the only tag)
+          tags: |
+            type=semver,pattern={{raw}}
+            type=sha,format=short,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build image locally for smoke testing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            APP_ENV=production
+            API_BASE_URL=https://api.plumora.fr/api/v1
+            WEB_BASE_URL=https://app.plumora.fr
+
+      - name: Smoke test the image (container, healthcheck, SPA fallback)
+        run: |
+          set -euo pipefail
+          image_tag="$(head -n1 <<< "${{ steps.meta.outputs.tags }}")"
+          echo "Smoke testing $image_tag"
+
+          docker run -d --name smoke-test -p 8080:8080 "$image_tag"
+
+          status="starting"
+          for _ in $(seq 1 30); do
+            status="$(docker inspect --format='{{.State.Health.Status}}' smoke-test)"
+            [ "$status" = "healthy" ] && break
+            sleep 2
+          done
+          echo "Final health status: $status"
+          [ "$status" = "healthy" ]
+
+          check() {
+            local path="$1"
+            local code
+            code="$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080${path}")"
+            echo "GET ${path} -> ${code}"
+            [ "$code" = "200" ]
+          }
+          check "/"
+          check "/admin/users"
+          check "/author/manuscripts/42"
+          check "/books/12/read"
+
+      - name: Stop smoke test container
+        if: always()
+        run: docker rm -f smoke-test || true
+
+      - name: Push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            APP_ENV=production
+            API_BASE_URL=https://api.plumora.fr/api/v1
+            WEB_BASE_URL=https://app.plumora.fr
+
+      - name: Publish image tags to the job summary
+        # Explicit and self-contained (doesn't rely on any other action's
+        # implicit summary behavior). Only the tag strings are printed —
+        # never GITHUB_TOKEN or any build secret.
+        run: |
+          {
+            echo "### Published image"
+            echo ""
+            echo "\`${{ steps.image.outputs.name }}\`"
+            echo ""
+            echo "### Tags"
+            echo ""
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
