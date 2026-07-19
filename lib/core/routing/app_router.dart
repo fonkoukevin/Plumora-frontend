@@ -44,6 +44,7 @@ import '../../features/writing/presentation/chapter_editor_screen.dart';
 import '../../features/writing/presentation/create_book_screen.dart';
 import '../../features/writing/presentation/my_books_screen.dart';
 import '../../features/writing/presentation/publish_book_screen.dart';
+import '../widgets/not_found_screen.dart';
 import '../widgets/plumora_placeholder_screen.dart';
 import 'main_shell.dart';
 
@@ -54,6 +55,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.landing,
     refreshListenable: refresh,
+    errorBuilder: (context, state) => const NotFoundScreen(),
     redirect: (context, state) {
       final authState = ref.read(authControllerProvider);
       if (authState.isLoading && !authState.hasValue) {
@@ -427,6 +429,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'admin-ai',
         builder: (context, state) => const AdminAiScreen(),
       ),
+      // Literal target of the "Continuer sur le web" card in the mobile
+      // author space (docs/deployment-frontend.md) — kept as a redirect
+      // alias so that URL stays stable even though the real screen lives at
+      // AppRoutes.authorBookDetail.
+      GoRoute(
+        path: AppRoutes.continueOnWebAuthor,
+        redirect: (context, state) => AppRoutes.authorBookDetailPath(
+          Uri.decodeComponent(state.pathParameters['bookId'] ?? ''),
+        ),
+      ),
     ],
   );
 });
@@ -488,6 +500,11 @@ abstract final class AppRoutes {
   static const String adminReports = '/admin/reports';
   static const String adminAi = '/admin/ai';
   static const String adminAccessDenied = '/admin/access-denied';
+  static const String continueOnWebAuthor = '/author/manuscripts/:bookId';
+
+  static String continueOnWebAuthorPath(String bookId) {
+    return '/author/manuscripts/${Uri.encodeComponent(bookId.trim())}';
+  }
 
   static String authorBookDetailPath(String bookId) {
     final encoded = Uri.encodeComponent(bookId.trim());
