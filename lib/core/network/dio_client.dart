@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../config/app_config.dart';
 import '../storage/secure_token_storage.dart';
-import 'api_config.dart';
 
 class DioClient {
   DioClient({
@@ -10,9 +10,9 @@ class DioClient {
     List<Interceptor> interceptors = const [],
   }) : dio = Dio(
          BaseOptions(
-           baseUrl: baseUrl ?? ApiConfig.baseUrl,
-           connectTimeout: ApiConfig.connectTimeout,
-           receiveTimeout: ApiConfig.receiveTimeout,
+           baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
+           connectTimeout: AppConfig.connectTimeout,
+           receiveTimeout: AppConfig.receiveTimeout,
            headers: const {
              'Accept': 'application/json',
              'Content-Type': 'application/json',

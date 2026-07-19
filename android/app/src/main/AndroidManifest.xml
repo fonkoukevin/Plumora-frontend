@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for every API call to api.plumora.fr: debug builds get this
+         for free from the Flutter tool, but a release build without it
+         cannot reach the network at all. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="plumora_app"
         android:name="${applicationName}"
