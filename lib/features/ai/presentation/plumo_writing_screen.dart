@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/text/plumora_document_codec.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../book/data/models/chapter_model.dart';
@@ -192,15 +193,17 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
       return;
     }
     _hydratedChapterId = chapter.id;
-    final content = chapter.content.trim();
+    final content = PlumoraDocumentCodec.plainText(chapter.content).trim();
     _selectedTextController.text = content.length <= 260
         ? content
         : '${content.substring(0, 260)}...';
-    _contextController.text = chapter.content;
+    _contextController.text = content;
   }
 
   Future<void> _requestSuggestion(AiWritingActionType action) async {
-    final selectedText = _selectedTextController.text.trim();
+    final selectedText = PlumoraDocumentCodec.plainText(
+      _selectedTextController.text,
+    ).trim();
     if (selectedText.isEmpty) {
       setState(() => _error = 'Ajoute un passage à améliorer.');
       return;
@@ -220,7 +223,9 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
               selectedText: selectedText,
               actionType: action,
               chapterId: widget.chapterId,
-              contextText: _contextController.text,
+              contextText: PlumoraDocumentCodec.plainText(
+                _contextController.text,
+              ),
             ),
           );
       setState(() => _suggestion = suggestion);
@@ -244,7 +249,9 @@ class _PlumoWritingScreenState extends ConsumerState<PlumoWritingScreen> {
     if (suggestion == null) {
       return;
     }
-    final controller = TextEditingController(text: suggestion.suggestionText);
+    final controller = TextEditingController(
+      text: PlumoraDocumentCodec.plainText(suggestion.suggestionText),
+    );
     final modified = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -506,17 +513,19 @@ class _SuggestionColumn extends StatelessWidget {
               borderColor: context.colors.primary,
               shadow: false,
               child: Text(
-                suggestion!.suggestionText,
+                PlumoraDocumentCodec.plainText(suggestion!.suggestionText),
                 style: const TextStyle(
                   height: 1.45,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            if (suggestion!.explanation.trim().isNotEmpty) ...[
+            if (PlumoraDocumentCodec.hasMeaningfulContent(
+              suggestion!.explanation,
+            )) ...[
               const SizedBox(height: 12),
               Text(
-                suggestion!.explanation,
+                PlumoraDocumentCodec.plainText(suggestion!.explanation),
                 style: TextStyle(
                   color: context.colors.textSecondary,
                   height: 1.4,

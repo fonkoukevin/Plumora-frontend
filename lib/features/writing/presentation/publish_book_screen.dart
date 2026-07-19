@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/text/plumora_document_codec.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../beta_reading/data/models/beta_comment_model.dart';
@@ -169,7 +170,10 @@ class _PublishContent extends StatelessWidget {
       _CheckItem(
         'Chapitres avec contenu',
         chapters.isNotEmpty &&
-            chapters.every((chapter) => chapter.content.trim().isNotEmpty),
+            chapters.every(
+              (chapter) =>
+                  PlumoraDocumentCodec.hasMeaningfulContent(chapter.content),
+            ),
       ),
       _CheckItem(
         'Retours bêta traités (optionnel)',
