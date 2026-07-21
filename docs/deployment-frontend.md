@@ -60,8 +60,12 @@ Toujours passer `APP_ENV=production` (et explicitement `API_BASE_URL` /
 `WEB_BASE_URL` pour éviter toute ambiguïté) :
 
 ```bash
-# Flutter Web
+# Flutter Web — --no-web-resources-cdn bundles CanvasKit under /canvaskit/
+# (same origin) instead of fetching it from Google's CDN at runtime, which
+# our CSP's script-src (docker/security-headers.conf) does not allow — see
+# section 5.
 flutter build web --release \
+  --no-web-resources-cdn \
   --dart-define=APP_ENV=production \
   --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1 \
   --dart-define=WEB_BASE_URL=https://app.plumora-books.fr
@@ -93,7 +97,7 @@ flutter build macos --release \
 dart format .
 flutter analyze
 flutter test
-flutter build web --release --dart-define=APP_ENV=production \
+flutter build web --release --no-web-resources-cdn --dart-define=APP_ENV=production \
   --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1 \
   --dart-define=WEB_BASE_URL=https://app.plumora-books.fr
 ```
@@ -229,6 +233,17 @@ risquerait de servir du JS périmé après un redéploiement.
 renderer CanvasKit de Flutter Web (wasm same-origin, `worker-src blob:`,
 `style-src 'unsafe-inline'` requis par le moteur Flutter lui-même). Voir les
 commentaires dans `docker/nginx.conf` pour le détail de chaque choix.
+
+**Piège corrigé** : `script-src` n'autorise que `'self'` (pas de CDN tiers).
+Or par défaut, `flutter build web` charge CanvasKit depuis
+`https://www.gstatic.com/flutter-canvaskit/...` au runtime plutôt que depuis
+les fichiers `/canvaskit/` déjà présents dans l'image — ce que cette CSP
+bloque silencieusement (page blanche, aucune erreur serveur, tous les
+fichiers statiques répondent 200 : `curl` ne peut pas détecter ce problème
+puisqu'il n'exécute pas de JS). Le `Dockerfile` compile donc avec
+`--no-web-resources-cdn`, qui force le chargement de CanvasKit depuis la même
+origine et embarque `"useLocalCanvasKit":true` dans `flutter_bootstrap.js` —
+vérifié explicitement par le smoke test CI (section 12).
 
 ### Healthcheck
 
@@ -441,8 +456,10 @@ avant toute publication) :
    variable, aucun secret ;
 2. la charge dans le moteur Docker du runner (`load: true`, pas encore
    poussée) et lance un **smoke test** : démarrage du conteneur, attente de
-   `healthy` (jusqu'à 60s), puis `HTTP 200` sur `/`, `/admin/users`,
-   `/author/manuscripts/42`, `/books/12/read` ;
+   `healthy` (jusqu'à 60s), `HTTP 200` sur `/`, `/admin/users`,
+   `/author/manuscripts/42`, `/books/12/read`, et vérification que
+   `flutter_bootstrap.js` embarque `"useLocalCanvasKit":true` (garde-fou
+   anti-régression contre le piège CSP/CDN de la section 5) ;
 3. seulement si le smoke test réussit, publie l'image dans GitHub Container
    Registry.
 
