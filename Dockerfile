@@ -9,8 +9,8 @@
 #
 # Build (values below are public: a base URL, not a secret):
 #   docker build \
-#     --build-arg API_BASE_URL=https://api.plumora.fr/api/v1 \
-#     --build-arg WEB_BASE_URL=https://app.plumora.fr \
+#     --build-arg API_BASE_URL=https://api.plumora-books.fr/api/v1 \
+#     --build-arg WEB_BASE_URL=https://app.plumora-books.fr \
 #     --build-arg APP_ENV=production \
 #     -t plumora-frontend-web .
 #
@@ -35,8 +35,8 @@ ARG FLUTTER_VERSION=3.44.0
 # Never pass GEMINI_API_KEY, JWT_SECRET, DB passwords or any server key here:
 # this stage's output (build/web) ships to end-user browsers as plain text.
 ARG APP_ENV=production
-ARG API_BASE_URL=https://api.plumora.fr/api/v1
-ARG WEB_BASE_URL=https://app.plumora.fr
+ARG API_BASE_URL=https://api.plumora-books.fr/api/v1
+ARG WEB_BASE_URL=https://app.plumora-books.fr
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       git \

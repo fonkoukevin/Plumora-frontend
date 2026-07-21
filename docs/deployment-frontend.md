@@ -3,7 +3,7 @@
 Ce document décrit comment configurer, construire et héberger le frontend
 Flutter de Plumora pour ses 5 cibles : **Web, Android, iOS, Windows, macOS**,
 face au même backend Spring Boot (hébergé séparément, hors de ce dépôt) :
-`https://api.plumora.fr/api/v1`.
+`https://api.plumora-books.fr/api/v1`.
 
 ## 1. Environnements
 
@@ -15,8 +15,8 @@ vérité) :
 | Variable | Rôle | Défaut dev | Défaut staging | Défaut production |
 |---|---|---|---|---|
 | `APP_ENV` | Sélectionne l'environnement (`development` \| `staging` \| `production`) | `development` | — | — |
-| `API_BASE_URL` | Origine + `/api/v1` de l'API. Écrase toujours la valeur par défaut de `APP_ENV`. | `http://localhost:8080/api/v1` | `https://staging-api.plumora.fr/api/v1` | `https://api.plumora.fr/api/v1` |
-| `WEB_BASE_URL` | Origine publique de l'app web (liens profonds, ex. carte « Continuer sur le web »). | `http://localhost:5000` | `https://staging-app.plumora.fr` | `https://app.plumora.fr` |
+| `API_BASE_URL` | Origine + `/api/v1` de l'API. Écrase toujours la valeur par défaut de `APP_ENV`. | `http://localhost:8080/api/v1` | `https://staging-api.plumora-books.fr/api/v1` | `https://api.plumora-books.fr/api/v1` |
+| `WEB_BASE_URL` | Origine publique de l'app web (liens profonds, ex. carte « Continuer sur le web »). | `http://localhost:5000` | `https://staging-app.plumora-books.fr` | `https://app.plumora-books.fr` |
 
 `API_BASE_URL` et `WEB_BASE_URL` sont optionnels : s'ils sont omis, `AppConfig`
 retombe sur la valeur par défaut de l'environnement choisi via `APP_ENV`. Ne
@@ -50,8 +50,8 @@ flutter run --dart-define=APP_ENV=development
 ```bash
 flutter run \
   --dart-define=APP_ENV=staging \
-  --dart-define=API_BASE_URL=https://staging-api.plumora.fr/api/v1 \
-  --dart-define=WEB_BASE_URL=https://staging-app.plumora.fr
+  --dart-define=API_BASE_URL=https://staging-api.plumora-books.fr/api/v1 \
+  --dart-define=WEB_BASE_URL=https://staging-app.plumora-books.fr
 ```
 
 ## 2. Builds de production
@@ -63,28 +63,28 @@ Toujours passer `APP_ENV=production` (et explicitement `API_BASE_URL` /
 # Flutter Web
 flutter build web --release \
   --dart-define=APP_ENV=production \
-  --dart-define=API_BASE_URL=https://api.plumora.fr/api/v1 \
-  --dart-define=WEB_BASE_URL=https://app.plumora.fr
+  --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1 \
+  --dart-define=WEB_BASE_URL=https://app.plumora-books.fr
 
 # Android (App Bundle, Play Store)
 flutter build appbundle --release \
   --dart-define=APP_ENV=production \
-  --dart-define=API_BASE_URL=https://api.plumora.fr/api/v1
+  --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1
 
 # iOS (IPA — nécessite macOS + Xcode)
 flutter build ipa --release \
   --dart-define=APP_ENV=production \
-  --dart-define=API_BASE_URL=https://api.plumora.fr/api/v1
+  --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1
 
 # Windows
 flutter build windows --release \
   --dart-define=APP_ENV=production \
-  --dart-define=API_BASE_URL=https://api.plumora.fr/api/v1
+  --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1
 
 # macOS (nécessite macOS + Xcode)
 flutter build macos --release \
   --dart-define=APP_ENV=production \
-  --dart-define=API_BASE_URL=https://api.plumora.fr/api/v1
+  --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1
 ```
 
 ### Qualité avant tout build de production
@@ -94,8 +94,8 @@ dart format .
 flutter analyze
 flutter test
 flutter build web --release --dart-define=APP_ENV=production \
-  --dart-define=API_BASE_URL=https://api.plumora.fr/api/v1 \
-  --dart-define=WEB_BASE_URL=https://app.plumora.fr
+  --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1 \
+  --dart-define=WEB_BASE_URL=https://app.plumora-books.fr
 ```
 
 ## 3. Flutter Web
@@ -116,7 +116,7 @@ flutter build web --release --dart-define=APP_ENV=production \
   stockage du token. L'image Docker/nginx ne fait pas elle-même de TLS : en
   production, Caddy (devant le conteneur) doit terminer le HTTPS.
 - **CORS** : à configurer côté backend (hors de ce dépôt) pour autoriser les
-  origines `https://app.plumora.fr` (prod) et `https://staging-app.plumora.fr`
+  origines `https://app.plumora-books.fr` (prod) et `https://staging-app.plumora-books.fr`
   (staging), avec le header `Authorization` dans `Access-Control-Allow-Headers`.
   Une erreur CORS se manifeste dans l'app comme une `DioExceptionType.connectionError`
   (message affiché : « Impossible de joindre le serveur Plumora. ») — voir
@@ -186,8 +186,8 @@ périmètre de cette étape.
 
 ```bash
 docker build \
-  --build-arg API_BASE_URL=https://api.plumora.fr/api/v1 \
-  --build-arg WEB_BASE_URL=https://app.plumora.fr \
+  --build-arg API_BASE_URL=https://api.plumora-books.fr/api/v1 \
+  --build-arg WEB_BASE_URL=https://app.plumora-books.fr \
   --build-arg APP_ENV=production \
   -t plumora-frontend-web .
 ```
@@ -436,8 +436,8 @@ Le job `docker-publish` (`needs: quality`, donc les vérifications rejouent
 avant toute publication) :
 
 1. construit l'image via le `Dockerfile` de la racine, avec
-   `APP_ENV=production`, `API_BASE_URL=https://api.plumora.fr/api/v1`,
-   `WEB_BASE_URL=https://app.plumora.fr` en `--build-arg` — aucune autre
+   `APP_ENV=production`, `API_BASE_URL=https://api.plumora-books.fr/api/v1`,
+   `WEB_BASE_URL=https://app.plumora-books.fr` en `--build-arg` — aucune autre
    variable, aucun secret ;
 2. la charge dans le moteur Docker du runner (`load: true`, pas encore
    poussée) et lance un **smoke test** : démarrage du conteneur, attente de
