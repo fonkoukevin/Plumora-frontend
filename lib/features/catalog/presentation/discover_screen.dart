@@ -1236,6 +1236,26 @@ class _ExternalAsyncRailState extends ConsumerState<_ExternalAsyncRail> {
           );
         }
 
+        // Gutendex being unreachable doesn't fail the request — the backend
+        // falls back to Open Library, which never has a readable full text
+        // (ExternalBook.canOpenExternalDetail). When every single result in
+        // this rail is like that, a row of a dozen inert "Bientôt
+        // disponible" tiles reads as broken rather than temporary — say so
+        // plainly instead.
+        if (page.content.every((book) => !book.canOpenExternalDetail)) {
+          return _DiscoverSectionFrame(
+            title: widget.title,
+            icon: widget.icon,
+            iconColor: iconColor,
+            subtitle: widget.subtitle,
+            child: const _EmptyRail(
+              message:
+                  'Ces livres seront bientôt disponibles à la lecture. '
+                  'Reviens plus tard !',
+            ),
+          );
+        }
+
         return _ExternalBookRail(
           title: widget.title,
           icon: widget.icon,
