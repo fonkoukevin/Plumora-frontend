@@ -479,6 +479,15 @@ class _ExternalActionColumn extends StatelessWidget {
             icon: const Icon(Icons.menu_book_outlined),
             label: const Text('Lecture Plumora indisponible'),
           )
+        else if (book.isOpenLibrary)
+          // These results never carry a real Gutendex id (see
+          // ExternalBook.isOpenLibrary), so
+          // POST /books/import/gutendex/{id} can't work for them.
+          FilledButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.hourglass_empty_outlined),
+            label: const Text('Bientôt disponible sur Plumora'),
+          )
         else
           FilledButton.icon(
             onPressed: importing ? null : onImport,
