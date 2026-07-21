@@ -47,6 +47,19 @@ class ExternalBook {
     return imported && (internalBookId?.trim().isNotEmpty ?? false);
   }
 
+  /// True for results the discovery feed falls back to when Gutendex itself
+  /// is unreachable. These never carry a real Gutendex id, so
+  /// `/external-books/{id}` (and import) always fails for them until they've
+  /// been imported through some other path — callers should treat
+  /// [canOpenExternalDetail] as the tap/navigation gate instead of checking
+  /// [source] directly.
+  bool get isOpenLibrary => source.trim().toUpperCase() == 'OPEN_LIBRARY';
+
+  /// Whether tapping through to [ExternalBookDetailScreen] (keyed by
+  /// [externalId] alone) can work. Already-imported books are always safe —
+  /// they route via [internalBookId] instead, regardless of [source].
+  bool get canOpenExternalDetail => imported || !isOpenLibrary;
+
   ExternalBook copyWith({
     String? externalId,
     String? source,
