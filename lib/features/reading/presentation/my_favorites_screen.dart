@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/theme/breakpoints.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
@@ -21,115 +22,120 @@ class MyFavoritesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final favoritesAsync = ref.watch(myFavoritesProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FigmaBackButton(
-          label: 'Retour',
-          onTap: () => returnToPreviousOr(context, AppRoutes.library),
-        ),
-        const SizedBox(height: 18),
-        PlumoraCard(
-          borderColor: context.colors.destructive.withValues(alpha: 0.35),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const PlumoraIconTile(
-                backgroundColor: Color(0xFFE95858),
-                child: Icon(Icons.favorite, color: Colors.white),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Mes Favoris',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Les livres que vous avez adorés et que vous voulez retrouver facilement.',
-                      style: TextStyle(
-                        color: context.colors.textSecondary,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
+    return FigmaScreen(
+      maxWidth: Breakpoints.wide,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 92),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FigmaBackButton(
+            label: 'Retour',
+            onTap: () => returnToPreviousOr(context, AppRoutes.library),
+          ),
+          const SizedBox(height: 18),
+          PlumoraCard(
+            borderColor: context.colors.destructive.withValues(alpha: 0.35),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PlumoraIconTile(
+                  backgroundColor: Color(0xFFE95858),
+                  child: Icon(Icons.favorite, color: Colors.white),
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        favoritesAsync.when(
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(36),
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          error: (error, _) => FigmaEmptyState(
-            icon: Icons.error_outline,
-            title: 'Favoris indisponibles',
-            message: AppError.messageFor(error),
-            action: FilledButton(
-              onPressed: () => ref.invalidate(myFavoritesProvider),
-              child: const Text('Réessayer'),
-            ),
-          ),
-          data: (favorites) {
-            final normalizedQuery = query.trim();
-            final filteredFavorites = favorites
-                .where(
-                  (favorite) => _matchesFavorite(favorite, normalizedQuery),
-                )
-                .toList(growable: false);
-
-            if (filteredFavorites.isEmpty) {
-              return FigmaEmptyState(
-                icon: normalizedQuery.isEmpty
-                    ? Icons.favorite_border
-                    : Icons.search_off,
-                title: normalizedQuery.isEmpty
-                    ? 'Aucun favori'
-                    : 'Aucun résultat',
-                message: normalizedQuery.isEmpty
-                    ? 'Ajoute des livres depuis leur fiche pour les retrouver ici.'
-                    : 'Aucun favori ne correspond à cette recherche.',
-              );
-            }
-
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 900
-                    ? 4
-                    : constraints.maxWidth >= 620
-                    ? 3
-                    : 2;
-                const spacing = 14.0;
-                final width =
-                    (constraints.maxWidth - spacing * (columns - 1)) / columns;
-
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: 14,
-                  children: [
-                    for (final favorite in filteredFavorites)
-                      SizedBox(
-                        width: width,
-                        child: _FavoriteCard(favorite: favorite),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Mes Favoris',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Les livres que vous avez adorés et que vous voulez retrouver facilement.',
+                        style: TextStyle(
+                          color: context.colors.textSecondary,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          favoritesAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(36),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, _) => FigmaEmptyState(
+              icon: Icons.error_outline,
+              title: 'Favoris indisponibles',
+              message: AppError.messageFor(error),
+              action: FilledButton(
+                onPressed: () => ref.invalidate(myFavoritesProvider),
+                child: const Text('Réessayer'),
+              ),
+            ),
+            data: (favorites) {
+              final normalizedQuery = query.trim();
+              final filteredFavorites = favorites
+                  .where(
+                    (favorite) => _matchesFavorite(favorite, normalizedQuery),
+                  )
+                  .toList(growable: false);
+
+              if (filteredFavorites.isEmpty) {
+                return FigmaEmptyState(
+                  icon: normalizedQuery.isEmpty
+                      ? Icons.favorite_border
+                      : Icons.search_off,
+                  title: normalizedQuery.isEmpty
+                      ? 'Aucun favori'
+                      : 'Aucun résultat',
+                  message: normalizedQuery.isEmpty
+                      ? 'Ajoute des livres depuis leur fiche pour les retrouver ici.'
+                      : 'Aucun favori ne correspond à cette recherche.',
                 );
-              },
-            );
-          },
-        ),
-      ],
+              }
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.maxWidth >= 900
+                      ? 4
+                      : constraints.maxWidth >= 620
+                      ? 3
+                      : 2;
+                  const spacing = 14.0;
+                  final width =
+                      (constraints.maxWidth - spacing * (columns - 1)) /
+                      columns;
+
+                  return Wrap(
+                    spacing: spacing,
+                    runSpacing: 14,
+                    children: [
+                      for (final favorite in filteredFavorites)
+                        SizedBox(
+                          width: width,
+                          child: _FavoriteCard(favorite: favorite),
+                        ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 

@@ -120,12 +120,13 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                         );
                       }
 
-                      return Column(
+                      return FigmaResponsiveGrid(
+                        minTileWidth: 460,
+                        maxColumns: 2,
+                        spacing: 14,
+                        runSpacing: 14,
                         children: [
-                          for (final book in books) ...[
-                            _SearchBookCard(book: book),
-                            const SizedBox(height: 14),
-                          ],
+                          for (final book in books) _SearchBookCard(book: book),
                         ],
                       );
                     },
