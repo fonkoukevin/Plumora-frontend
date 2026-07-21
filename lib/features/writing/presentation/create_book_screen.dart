@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/theme/breakpoints.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart' show resolvePlumoraImageUrl;
@@ -178,6 +179,124 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
 
         final canSubmit = _canSubmit && !_isSubmitting;
 
+        final coverSection = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionLabel('Couverture'),
+            const SizedBox(height: 14),
+            _CoverSection(
+              title: _titleController.text,
+              selectedIndex: _selectedCoverIndex,
+              pickedImageBytes: _coverImageBytes,
+              existingImageUrl: _existingCoverUrl,
+              onSelect: (index) => setState(() {
+                _selectedCoverIndex = index;
+                _coverImageBytes = null;
+                _coverImageName = null;
+                _existingCoverUrl = null;
+              }),
+              onImportTap: _pickCoverImage,
+            ),
+          ],
+        );
+
+        final fieldsSection = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionLabel('Informations'),
+            const SizedBox(height: 16),
+            const _FieldLabel('Titre', required: true),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _titleController,
+              maxLength: 100,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(hintText: 'Ex: La Nuit Rouge'),
+            ),
+            const SizedBox(height: 8),
+            const _FieldLabel('Genre', required: true),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final genre in _genres)
+                  _GenreChip(
+                    label: genre,
+                    selected: _genre == genre,
+                    onTap: () => setState(() => _genre = genre),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const _FieldLabel('Langue'),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: _language,
+              items: [
+                for (final language in _languages)
+                  DropdownMenuItem(value: language, child: Text(language)),
+              ],
+              onChanged: (value) =>
+                  setState(() => _language = value ?? _language),
+            ),
+            const SizedBox(height: 16),
+            const _FieldLabel('Résumé'),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _summaryController,
+              minLines: 4,
+              maxLines: 4,
+              maxLength: 500,
+              decoration: const InputDecoration(
+                hintText:
+                    'Décrivez votre histoire pour attirer les lecteurs...',
+              ),
+            ),
+            const SizedBox(height: 8),
+            const _FieldLabel('Tags'),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _tagsController,
+              decoration: const InputDecoration(
+                hintText:
+                    'magie, amour, aventure... (séparés par des virgules)',
+              ),
+            ),
+            const SizedBox(height: 30),
+            const _SectionLabel('Visibilité'),
+            const SizedBox(height: 12),
+            for (final option in _visibilityOptions)
+              _VisibilityTile(
+                data: option,
+                selected: _visibility == option.id,
+                onTap: () => setState(() => _visibility = option.id),
+              ),
+            const SizedBox(height: 6),
+            _MatureToggle(
+              value: _mature,
+              onChanged: (value) => setState(() => _mature = value),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                style: TextStyle(
+                  color: context.colors.destructive,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            const SizedBox(height: 28),
+            _CreateCta(
+              canSubmit: canSubmit,
+              submitting: _isSubmitting,
+              editing: _editing,
+              onTap: _submit,
+            ),
+          ],
+        );
+
         return ColoredBox(
           color: context.colors.background,
           child: Column(
@@ -190,135 +309,43 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                 onSubmit: _submit,
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 22, 16, 100),
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: _formMaxWidth,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionLabel('Couverture'),
-                          const SizedBox(height: 14),
-                          _CoverSection(
-                            title: _titleController.text,
-                            selectedIndex: _selectedCoverIndex,
-                            pickedImageBytes: _coverImageBytes,
-                            existingImageUrl: _existingCoverUrl,
-                            onSelect: (index) => setState(() {
-                              _selectedCoverIndex = index;
-                              _coverImageBytes = null;
-                              _coverImageName = null;
-                              _existingCoverUrl = null;
-                            }),
-                            onImportTap: _pickCoverImage,
-                          ),
-                          const SizedBox(height: 30),
-                          const _SectionLabel('Informations'),
-                          const SizedBox(height: 16),
-                          const _FieldLabel('Titre', required: true),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: _titleController,
-                            maxLength: 100,
-                            onChanged: (_) => setState(() {}),
-                            decoration: const InputDecoration(
-                              hintText: 'Ex: La Nuit Rouge',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const _FieldLabel('Genre', required: true),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final genre in _genres)
-                                _GenreChip(
-                                  label: genre,
-                                  selected: _genre == genre,
-                                  onTap: () => setState(() => _genre = genre),
+                child: LayoutBuilder(
+                  builder: (context, outerConstraints) {
+                    final isDesktop =
+                        outerConstraints.maxWidth >= Breakpoints.expanded;
+                    // A two-column form reads best around 960px — noticeably
+                    // wider than the 680px mobile column, but text fields
+                    // spanning a full Breakpoints.wide (1280px) row would
+                    // look stretched rather than "desktop-appropriate".
+                    final formMaxWidth = isDesktop ? 960.0 : _formMaxWidth;
+
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 22, 16, 100),
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: formMaxWidth),
+                          child: isDesktop
+                              ? Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(width: 280, child: coverSection),
+                                    const SizedBox(width: 28),
+                                    Expanded(child: fieldsSection),
+                                  ],
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    coverSection,
+                                    const SizedBox(height: 30),
+                                    fieldsSection,
+                                  ],
                                 ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          const _FieldLabel('Langue'),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            initialValue: _language,
-                            items: [
-                              for (final language in _languages)
-                                DropdownMenuItem(
-                                  value: language,
-                                  child: Text(language),
-                                ),
-                            ],
-                            onChanged: (value) =>
-                                setState(() => _language = value ?? _language),
-                          ),
-                          const SizedBox(height: 16),
-                          const _FieldLabel('Résumé'),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: _summaryController,
-                            minLines: 4,
-                            maxLines: 4,
-                            maxLength: 500,
-                            decoration: const InputDecoration(
-                              hintText:
-                                  'Décrivez votre histoire pour attirer les lecteurs...',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const _FieldLabel('Tags'),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: _tagsController,
-                            decoration: const InputDecoration(
-                              hintText:
-                                  'magie, amour, aventure... (séparés par des virgules)',
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-                          const _SectionLabel('Visibilité'),
-                          const SizedBox(height: 12),
-                          for (final option in _visibilityOptions)
-                            _VisibilityTile(
-                              data: option,
-                              selected: _visibility == option.id,
-                              onTap: () =>
-                                  setState(() => _visibility = option.id),
-                            ),
-                          const SizedBox(height: 6),
-                          _MatureToggle(
-                            value: _mature,
-                            onChanged: (value) =>
-                                setState(() => _mature = value),
-                          ),
-                          if (_error != null) ...[
-                            const SizedBox(height: 16),
-                            Text(
-                              _error!,
-                              style: TextStyle(
-                                color: context.colors.destructive,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 28),
-                          _CreateCta(
-                            canSubmit: canSubmit,
-                            submitting: _isSubmitting,
-                            editing: _editing,
-                            onTap: _submit,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ],

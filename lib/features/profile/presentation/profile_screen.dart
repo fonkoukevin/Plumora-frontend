@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_router.dart';
+import '../../../core/theme/breakpoints.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
@@ -67,163 +68,207 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     }
 
-    return FigmaScreen(
-      maxWidth: 860,
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 92),
+    final heroCard = FigmaCard(
+      padding: const EdgeInsets.all(28),
+      borderColor: Colors.transparent,
+      gradient: const LinearGradient(
+        colors: [Color(0xFF8B5E3C), Color(0xFF6D3A5D)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PlumoraAppHeader(
-            title: 'Mon profil',
-            subtitle: '${user.displayName} · ${_roleLabel(roles)}',
-            emoji: '👤',
-            gradient: [context.colors.plumora, context.colors.accent],
-          ),
-          const SizedBox(height: 18),
-          FigmaCard(
-            padding: const EdgeInsets.all(28),
-            borderColor: Colors.transparent,
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8B5E3C), Color(0xFF6D3A5D)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white30, width: 2),
             ),
-            child: Column(
-              children: [
-                Container(
-                  width: 82,
-                  height: 82,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white30, width: 2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _initials(user),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
+            child: Center(
+              child: Text(
+                _initials(user),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  user.displayName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  _roleLabel(roles),
-                  style: const TextStyle(color: Colors.white70, fontSize: 15),
-                ),
-                const SizedBox(height: 22),
-                OutlinedButton.icon(
-                  onPressed: () => setState(() => _showPersonalInfo = true),
-                  icon: const Icon(Icons.person_outline),
-                  label: const Text('Informations du compte'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white30),
-                    backgroundColor: Colors.white.withValues(alpha: 0.10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          const _ProfileStats(),
-          const SizedBox(height: 24),
-          Text(
-            'À propos',
-            style: TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 10),
-          FigmaCard(
-            child: Text(
-              (user.bio ?? '').trim().isEmpty
-                  ? 'Aucune biographie renseignée.'
-                  : user.bio!,
-              style: TextStyle(
-                color: context.colors.textSecondary,
-                fontSize: 14,
-                height: 1.45,
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Text(
-            'Paramètres',
-            style: TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 18,
+            user.displayName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 30,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 10),
-          _SettingsTile(
-            icon: Icons.person_outline,
-            title: 'Informations personnelles',
-            subtitle: 'Nom, email et rôles',
-            color: const Color(0xFF8B5E3C),
-            onTap: () => setState(() => _showPersonalInfo = true),
+          Text(
+            _roleLabel(roles),
+            style: const TextStyle(color: Colors.white70, fontSize: 15),
           ),
-          _SettingsTile(
-            icon: Icons.notifications_none,
-            title: 'Notifications',
-            subtitle: 'Voir les notifications du backend',
-            color: const Color(0xFF6D3A5D),
-            onTap: () => context.push(AppRoutes.notifications),
-          ),
-          _SettingsTile(
-            icon: Icons.auto_awesome,
-            title: 'Assistant Plumo',
-            subtitle: 'Ouvrir les assistants IA',
-            color: const Color(0xFF6D3A5D),
-            onTap: () => context.push(AppRoutes.plumoWriting),
-          ),
-          _SettingsTile(
-            icon: Icons.settings_outlined,
-            title: 'Préférences',
-            subtitle: 'Thème clair ou sombre',
-            color: const Color(0xFF6B6B6B),
-            onTap: () => context.push(AppRoutes.preferences),
-          ),
-          if (roles.any((role) => role.name.trim().toUpperCase() == 'ADMIN'))
-            _SettingsTile(
-              icon: Icons.shield_outlined,
-              title: 'Administration',
-              subtitle: 'Utilisateurs, catalogue, signalements, Plumo IA',
-              color: const Color(0xFFE57373),
-              onTap: () => context.go(AppRoutes.admin),
-            ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 22),
           OutlinedButton.icon(
-            onPressed: _loggingOut ? null : _logout,
-            icon: _loggingOut
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.logout),
-            label: Text(_loggingOut ? 'Déconnexion...' : 'Se déconnecter'),
+            onPressed: () => setState(() => _showPersonalInfo = true),
+            icon: const Icon(Icons.person_outline),
+            label: const Text('Informations du compte'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: context.colors.destructive,
-              side: BorderSide(color: context.colors.destructive),
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white30),
+              backgroundColor: Colors.white.withValues(alpha: 0.10),
             ),
           ),
         ],
       ),
+    );
+
+    final aboutSection = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'À propos',
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        FigmaCard(
+          child: Text(
+            (user.bio ?? '').trim().isEmpty
+                ? 'Aucune biographie renseignée.'
+                : user.bio!,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontSize: 14,
+              height: 1.45,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final settingsSection = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Paramètres',
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _SettingsTile(
+          icon: Icons.person_outline,
+          title: 'Informations personnelles',
+          subtitle: 'Nom, email et rôles',
+          color: const Color(0xFF8B5E3C),
+          onTap: () => setState(() => _showPersonalInfo = true),
+        ),
+        _SettingsTile(
+          icon: Icons.notifications_none,
+          title: 'Notifications',
+          subtitle: 'Voir les notifications du backend',
+          color: const Color(0xFF6D3A5D),
+          onTap: () => context.push(AppRoutes.notifications),
+        ),
+        _SettingsTile(
+          icon: Icons.auto_awesome,
+          title: 'Assistant Plumo',
+          subtitle: 'Ouvrir les assistants IA',
+          color: const Color(0xFF6D3A5D),
+          onTap: () => context.push(AppRoutes.plumoWriting),
+        ),
+        _SettingsTile(
+          icon: Icons.settings_outlined,
+          title: 'Préférences',
+          subtitle: 'Thème clair ou sombre',
+          color: const Color(0xFF6B6B6B),
+          onTap: () => context.push(AppRoutes.preferences),
+        ),
+        if (roles.any((role) => role.name.trim().toUpperCase() == 'ADMIN'))
+          _SettingsTile(
+            icon: Icons.shield_outlined,
+            title: 'Administration',
+            subtitle: 'Utilisateurs, catalogue, signalements, Plumo IA',
+            color: const Color(0xFFE57373),
+            onTap: () => context.go(AppRoutes.admin),
+          ),
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: _loggingOut ? null : _logout,
+          icon: _loggingOut
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.logout),
+          label: Text(_loggingOut ? 'Déconnexion...' : 'Se déconnecter'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: context.colors.destructive,
+            side: BorderSide(color: context.colors.destructive),
+          ),
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, outerConstraints) {
+        final isDesktop = outerConstraints.maxWidth >= Breakpoints.expanded;
+
+        return FigmaScreen(
+          maxWidth: isDesktop ? Breakpoints.wide : 860,
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 92),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              PlumoraAppHeader(
+                title: 'Mon profil',
+                subtitle: '${user.displayName} · ${_roleLabel(roles)}',
+                emoji: '👤',
+                gradient: [context.colors.plumora, context.colors.accent],
+              ),
+              const SizedBox(height: 18),
+              if (isDesktop)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 320, child: heroCard),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _ProfileStats(),
+                          const SizedBox(height: 24),
+                          aboutSection,
+                          const SizedBox(height: 24),
+                          settingsSection,
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              else ...[
+                heroCard,
+                const SizedBox(height: 18),
+                const _ProfileStats(),
+                const SizedBox(height: 24),
+                aboutSection,
+                const SizedBox(height: 24),
+                settingsSection,
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
