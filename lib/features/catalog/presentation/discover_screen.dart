@@ -1307,14 +1307,18 @@ class _ExternalBookTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        final internalBookId = book.internalBookId?.trim();
-        context.push(
-          book.imported && internalBookId != null && internalBookId.isNotEmpty
-              ? AppRoutes.catalogBookDetailPath(internalBookId)
-              : AppRoutes.publicDomainBookDetailPath(book.externalId),
-        );
-      },
+      onTap: book.canOpenExternalDetail
+          ? () {
+              final internalBookId = book.internalBookId?.trim();
+              context.push(
+                book.imported &&
+                        internalBookId != null &&
+                        internalBookId.isNotEmpty
+                    ? AppRoutes.catalogBookDetailPath(internalBookId)
+                    : AppRoutes.publicDomainBookDetailPath(book.externalId),
+              );
+            }
+          : null,
       child: SizedBox(
         width: 112,
         child: Column(
@@ -1369,7 +1373,9 @@ class _ExternalCover extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveBadge = book.imported
         ? 'Importé'
-        : badge ?? 'Domaine public';
+        : book.canOpenExternalDetail
+        ? badge ?? 'Domaine public'
+        : 'Bientôt disponible';
 
     return SizedBox(
       width: 112,
@@ -1396,7 +1402,9 @@ class _ExternalCover extends StatelessWidget {
               label: effectiveBadge,
               backgroundColor: book.imported
                   ? context.colors.success.withValues(alpha: 0.9)
-                  : context.colors.primary.withValues(alpha: 0.9),
+                  : book.canOpenExternalDetail
+                  ? context.colors.primary.withValues(alpha: 0.9)
+                  : context.colors.textSecondary.withValues(alpha: 0.9),
             ),
           ),
         ],

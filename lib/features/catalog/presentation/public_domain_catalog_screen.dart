@@ -447,14 +447,18 @@ class _ExternalBookCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PlumoraCard(
-      onTap: () {
-        final internalBookId = book.internalBookId?.trim();
-        context.push(
-          book.imported && internalBookId != null && internalBookId.isNotEmpty
-              ? AppRoutes.catalogBookDetailPath(internalBookId)
-              : AppRoutes.publicDomainBookDetailPath(book.externalId),
-        );
-      },
+      onTap: book.canOpenExternalDetail
+          ? () {
+              final internalBookId = book.internalBookId?.trim();
+              context.push(
+                book.imported &&
+                        internalBookId != null &&
+                        internalBookId.isNotEmpty
+                    ? AppRoutes.catalogBookDetailPath(internalBookId)
+                    : AppRoutes.publicDomainBookDetailPath(book.externalId),
+              );
+            }
+          : null,
       padding: const EdgeInsets.all(16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,13 +514,23 @@ class _ExternalBookCard extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     PlumoraBadge(
-                      label: book.imported ? 'Importé' : 'Domaine public',
+                      label: book.imported
+                          ? 'Importé'
+                          : book.canOpenExternalDetail
+                          ? 'Domaine public'
+                          : 'Bientôt disponible',
                       backgroundColor: book.imported
                           ? context.colors.success.withValues(alpha: 0.14)
-                          : context.colors.primary.withValues(alpha: 0.12),
+                          : book.canOpenExternalDetail
+                          ? context.colors.primary.withValues(alpha: 0.12)
+                          : context.colors.textSecondary.withValues(
+                              alpha: 0.12,
+                            ),
                       foregroundColor: book.imported
                           ? context.colors.success
-                          : context.colors.primary,
+                          : book.canOpenExternalDetail
+                          ? context.colors.primary
+                          : context.colors.textSecondary,
                     ),
                     if (book.languages.isNotEmpty)
                       PlumoraBadge(
@@ -540,21 +554,22 @@ class _ExternalBookCard extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_right, color: context.colors.textSecondary),
-              const SizedBox(height: 6),
-              Text(
-                'Détails',
-                style: TextStyle(
-                  color: context.colors.primary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
+          if (book.canOpenExternalDetail)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.chevron_right, color: context.colors.textSecondary),
+                const SizedBox(height: 6),
+                Text(
+                  'Détails',
+                  style: TextStyle(
+                    color: context.colors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

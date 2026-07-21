@@ -223,8 +223,10 @@ class _ExternalBookCard extends ConsumerWidget {
                   child: const Text('Voir catalogue'),
                 )
               : AdminPrimaryButton(
-                  label: 'Importer',
-                  onPressed: () => _confirmImport(context, ref),
+                  label: book.isOpenLibrary ? 'Bientôt disponible' : 'Importer',
+                  onPressed: book.isOpenLibrary
+                      ? null
+                      : () => _confirmImport(context, ref),
                 ),
         ],
       ),
