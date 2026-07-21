@@ -43,13 +43,13 @@ abstract final class AppConfig {
 
   static final AppEnvironment environment = AppEnvironment.fromName(_envName);
 
-  /// Full API origin + `/api/v1`, e.g. `https://api.plumora.fr/api/v1`.
+  /// Full API origin + `/api/v1`, e.g. `https://api.plumora-books.fr/api/v1`.
   static final String apiBaseUrl = () {
     final url = resolveApiBaseUrl(environment, _apiBaseUrlOverride);
     assert(
       !(environment == AppEnvironment.production && isLocalUrl(url)),
       'Production build is pointing at a local/non-routable API URL: $url. '
-      'Pass --dart-define=API_BASE_URL=https://api.plumora.fr/api/v1',
+      'Pass --dart-define=API_BASE_URL=https://api.plumora-books.fr/api/v1',
     );
     return url;
   }();
@@ -77,9 +77,11 @@ abstract final class AppConfig {
 
     switch (env) {
       case AppEnvironment.production:
-        return 'https://api.plumora.fr$apiPath';
+        return 'https://api.plumora-books.fr$apiPath';
+      // Not a provisioned environment yet — best-guess naming, update once
+      // a real staging backend exists.
       case AppEnvironment.staging:
-        return 'https://staging-api.plumora.fr$apiPath';
+        return 'https://staging-api.plumora-books.fr$apiPath';
       case AppEnvironment.development:
         return 'http://localhost:8080$apiPath';
     }
@@ -93,9 +95,10 @@ abstract final class AppConfig {
 
     switch (env) {
       case AppEnvironment.production:
-        return 'https://app.plumora.fr';
+        return 'https://app.plumora-books.fr';
+      // Same caveat as resolveApiBaseUrl's staging case above.
       case AppEnvironment.staging:
-        return 'https://staging-app.plumora.fr';
+        return 'https://staging-app.plumora-books.fr';
       case AppEnvironment.development:
         return 'http://localhost:5000';
     }
