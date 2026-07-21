@@ -65,7 +65,15 @@ RUN flutter pub get
 
 COPY . .
 
+# --no-web-resources-cdn bundles CanvasKit under /canvaskit/ (same origin)
+# instead of the default behavior of fetching it from
+# https://www.gstatic.com/flutter-canvaskit/... at runtime — which our CSP's
+# `script-src 'self' 'wasm-unsafe-eval'` (docker/security-headers.conf) does
+# not allow, and would otherwise leave the app unable to render anything
+# (blank page, CSP violation in the browser console) despite every static
+# file serving with a 200.
 RUN flutter build web --release \
+      --no-web-resources-cdn \
       --dart-define=APP_ENV="${APP_ENV}" \
       --dart-define=API_BASE_URL="${API_BASE_URL}" \
       --dart-define=WEB_BASE_URL="${WEB_BASE_URL}"
