@@ -244,8 +244,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             APP_ENV=production
-            API_BASE_URL=https://api.plumora.fr/api/v1
-            WEB_BASE_URL=https://app.plumora.fr
+            API_BASE_URL=https://api.plumora-books.fr/api/v1
+            WEB_BASE_URL=https://app.plumora-books.fr
 
       - name: Smoke test the image (container, healthcheck, SPA fallback)
         run: |
@@ -291,8 +291,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             APP_ENV=production
-            API_BASE_URL=https://api.plumora.fr/api/v1
-            WEB_BASE_URL=https://app.plumora.fr
+            API_BASE_URL=https://api.plumora-books.fr/api/v1
+            WEB_BASE_URL=https://app.plumora-books.fr
 
       - name: Publish image tags to the job summary
         # Explicit and self-contained (doesn't rely on any other action's
