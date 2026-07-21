@@ -89,6 +89,7 @@ jobs:
         # build time, never committed here.
         run: |
           flutter build web --release \
+            --no-web-resources-cdn \
             --dart-define=APP_ENV=staging \
             --dart-define=API_BASE_URL=https://ci-validate.plumora.invalid/api/v1
 
@@ -244,8 +245,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             APP_ENV=production
-            API_BASE_URL=https://api.plumora.fr/api/v1
-            WEB_BASE_URL=https://app.plumora.fr
+            API_BASE_URL=https://api.plumora-books.fr/api/v1
+            WEB_BASE_URL=https://app.plumora-books.fr
 
       - name: Smoke test the image (container, healthcheck, SPA fallback)
         run: |
@@ -276,6 +277,15 @@ jobs:
           check "/author/manuscripts/42"
           check "/books/12/read"
 
+          # Regression guard: our CSP's script-src only allows same-origin
+          # scripts, so CanvasKit must be served from this image (/canvaskit/)
+          # rather than fetched from Google's CDN at runtime, or the app
+          # renders a blank page despite every static file 200'ing (curl
+          # can't detect this — it never executes JS). See Dockerfile's
+          # --no-web-resources-cdn comment.
+          bootstrap="$(curl -s http://localhost:8080/flutter_bootstrap.js)"
+          echo "$bootstrap" | grep -q '"useLocalCanvasKit":true'
+
       - name: Stop smoke test container
         if: always()
         run: docker rm -f smoke-test || true
@@ -291,8 +301,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             APP_ENV=production
-            API_BASE_URL=https://api.plumora.fr/api/v1
-            WEB_BASE_URL=https://app.plumora.fr
+            API_BASE_URL=https://api.plumora-books.fr/api/v1
+            WEB_BASE_URL=https://app.plumora-books.fr
 
       - name: Publish image tags to the job summary
         # Explicit and self-contained (doesn't rely on any other action's
