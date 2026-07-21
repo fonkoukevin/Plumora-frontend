@@ -157,6 +157,29 @@ class _PublicDomainCatalogScreenState
 
     return Column(
       children: [
+        // Same reasoning as discover_screen.dart's rails: when Gutendex is
+        // unreachable, every result here falls back to Open Library, which
+        // has no readable full text yet — flag that plainly once instead of
+        // letting the whole grid look inert/broken.
+        if (_books.every((book) => !book.canOpenExternalDetail)) ...[
+          FigmaCard(
+            shadow: false,
+            child: Row(
+              children: [
+                Icon(Icons.schedule, color: context.colors.textSecondary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Ces livres seront bientôt disponibles à la lecture. '
+                    'Reviens plus tard !',
+                    style: TextStyle(color: context.colors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
         FigmaResponsiveGrid(
           minTileWidth: 460,
           maxColumns: 2,
