@@ -49,14 +49,14 @@ void main() {
     test('staging defaults to the staging API origin', () {
       expect(
         AppConfig.resolveApiBaseUrl(AppEnvironment.staging, ''),
-        'https://staging-api.plumora.fr/api/v1',
+        'https://staging-api.plumora-books.fr/api/v1',
       );
     });
 
     test('production defaults to the production API origin', () {
       expect(
         AppConfig.resolveApiBaseUrl(AppEnvironment.production, ''),
-        'https://api.plumora.fr/api/v1',
+        'https://api.plumora-books.fr/api/v1',
       );
     });
 
@@ -75,11 +75,11 @@ void main() {
     test('resolves the public web origin per environment', () {
       expect(
         AppConfig.resolveWebBaseUrl(AppEnvironment.production, ''),
-        'https://app.plumora.fr',
+        'https://app.plumora-books.fr',
       );
       expect(
         AppConfig.resolveWebBaseUrl(AppEnvironment.staging, ''),
-        'https://staging-app.plumora.fr',
+        'https://staging-app.plumora-books.fr',
       );
     });
 
@@ -106,9 +106,12 @@ void main() {
     });
 
     test('does not flag the real production/staging origins', () {
-      expect(AppConfig.isLocalUrl('https://api.plumora.fr/api/v1'), isFalse);
       expect(
-        AppConfig.isLocalUrl('https://staging-api.plumora.fr/api/v1'),
+        AppConfig.isLocalUrl('https://api.plumora-books.fr/api/v1'),
+        isFalse,
+      );
+      expect(
+        AppConfig.isLocalUrl('https://staging-api.plumora-books.fr/api/v1'),
         isFalse,
       );
     });
