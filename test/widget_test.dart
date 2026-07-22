@@ -287,7 +287,9 @@ void main() {
     expect(tester.takeException(), isNull);
 
     await tester.binding.setSurfaceSize(const Size(1280, 600));
-    await tester.pumpAndSettle();
+    // Not pumpAndSettle: at this width the header mounts the waving-hand
+    // greeting, which repeats forever and would never let settle finish.
+    await tester.pump(const Duration(milliseconds: 500));
 
     final quoteCard = find.byKey(const ValueKey('home_quote_card'));
     final quoteCardSize = tester.getSize(quoteCard);
@@ -362,6 +364,162 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Home recommends "Figures of speech" when there is no active reading',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(768, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(_TestAuthController.new),
+            popularCatalogBooksProvider.overrideWith((ref) async => []),
+            latestCatalogBooksProvider.overrideWith((ref) async => []),
+            betaInvitationsProvider.overrideWith((ref) async => []),
+            myNotificationsProvider.overrideWith((ref) async => []),
+            unreadNotificationsCountProvider.overrideWith((ref) async => 0),
+            myReadingProgressProvider.overrideWith((ref) async => const []),
+            externalBookDetailProvider.overrideWith(
+              (ref, id) async => const ExternalBook(
+                externalId: '79120',
+                source: 'GUTENDEX',
+                title: 'Figures of speech',
+                authors: ['Tuttle, W. C. (Wilbur C.)'],
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            theme: PlumoraTheme.light,
+            home: const Scaffold(body: HomeScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Figures of speech'), findsOneWidget);
+      expect(
+        find.text('Par Tuttle, W. C. (Wilbur C.) · Domaine public'),
+        findsOneWidget,
+      );
+      expect(find.text('Recommandé pour toi'), findsOneWidget);
+      expect(find.text('Aucune lecture en cours'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Home book rails do not draw ranking numbers on covers', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(768, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const books = [
+      CatalogBookModel(
+        id: 'alpha',
+        title: 'Alpha',
+        description: '',
+        authorName: 'Autrice',
+      ),
+      CatalogBookModel(
+        id: 'bravo',
+        title: 'Bravo',
+        description: '',
+        authorName: 'Auteur',
+      ),
+      CatalogBookModel(
+        id: 'charlie',
+        title: 'Charlie',
+        description: '',
+        authorName: 'Auteur',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
+          popularCatalogBooksProvider.overrideWith((ref) async => books),
+          latestCatalogBooksProvider.overrideWith((ref) async => []),
+          betaInvitationsProvider.overrideWith((ref) async => []),
+          myNotificationsProvider.overrideWith((ref) async => []),
+          unreadNotificationsCountProvider.overrideWith((ref) async => 0),
+          myReadingProgressProvider.overrideWith((ref) async => const []),
+          externalBookDetailProvider.overrideWith(
+            (ref, id) async => throw Exception('network error'),
+          ),
+        ],
+        child: MaterialApp(
+          theme: PlumoraTheme.light,
+          home: const Scaffold(body: HomeScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alpha'), findsOneWidget);
+    expect(find.text('Bravo'), findsOneWidget);
+    expect(find.text('Charlie'), findsOneWidget);
+    expect(find.text('1'), findsNothing);
+    expect(find.text('2'), findsNothing);
+    expect(find.text('3'), findsNothing);
+
+    final alphaTile = find.byKey(const ValueKey('home_book_tile_alpha'));
+    final alphaCover = find.byKey(const ValueKey('home_book_cover_alpha'));
+    final alphaCoverAnimation = find.descendant(
+      of: alphaCover,
+      matching: find.byType(AnimatedContainer),
+    );
+    final alphaCta = find.byKey(const ValueKey('home_book_hover_cta_alpha'));
+    expect(tester.widget<AnimatedOpacity>(alphaCta).opacity, 0);
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(alphaTile));
+    await tester.pump(const Duration(milliseconds: 260));
+
+    final hoveredCover = tester.widget<AnimatedContainer>(alphaCoverAnimation);
+    expect(hoveredCover.transform!.storage[13], lessThan(0));
+    expect(tester.widget<AnimatedOpacity>(alphaCta).opacity, 1);
+    await mouse.removePointer();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Home falls back to the generic empty state if the recommended book '
+    'cannot be fetched',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(768, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(_TestAuthController.new),
+            popularCatalogBooksProvider.overrideWith((ref) async => []),
+            latestCatalogBooksProvider.overrideWith((ref) async => []),
+            betaInvitationsProvider.overrideWith((ref) async => []),
+            myNotificationsProvider.overrideWith((ref) async => []),
+            unreadNotificationsCountProvider.overrideWith((ref) async => 0),
+            myReadingProgressProvider.overrideWith((ref) async => const []),
+            externalBookDetailProvider.overrideWith(
+              (ref, id) async => throw Exception('network error'),
+            ),
+          ],
+          child: MaterialApp(
+            theme: PlumoraTheme.light,
+            home: const Scaffold(body: HomeScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aucune lecture en cours'), findsOneWidget);
+      expect(find.text('Figures of speech'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Home uses figma_sombre surfaces and dark controls', (
     tester,
@@ -524,13 +682,51 @@ void main() {
     final railRect = tester.getRect(
       find.byKey(const ValueKey('plumora_books_scroll')),
     );
+    final firstBookTile = find.byKey(
+      const ValueKey('discover_plumora_book_tile_plumora-0'),
+    );
+    final firstBookCover = find.byKey(
+      const ValueKey('discover_plumora_book_cover_plumora-0'),
+    );
+    final firstBookCoverAnimation = find.descendant(
+      of: firstBookCover,
+      matching: find.byType(AnimatedContainer),
+    );
+    expect(tester.getSize(firstBookTile).width, closeTo(118, 0.1));
+    var firstBookCoverContainer = tester.widget<AnimatedContainer>(
+      firstBookCoverAnimation,
+    );
+    expect(firstBookCoverContainer.transform?.storage[13] ?? 0, 0);
     final nextButton = find.byKey(const ValueKey('plumora_books_next'));
-    expect(tester.widget<AnimatedOpacity>(nextButton).opacity, 0);
+    expect(
+      tester.widget<AnimatedOpacity>(nextButton).opacity,
+      closeTo(0.86, 0.01),
+    );
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     await mouse.moveTo(railRect.center);
     await tester.pumpAndSettle();
     expect(tester.widget<AnimatedOpacity>(nextButton).opacity, 1);
+    await mouse.moveTo(tester.getCenter(firstBookTile));
+    await tester.pump(const Duration(milliseconds: 220));
+    firstBookCoverContainer = tester.widget<AnimatedContainer>(
+      firstBookCoverAnimation,
+    );
+    final hoveredDecoration =
+        firstBookCoverContainer.decoration! as BoxDecoration;
+    final hoveredBorder = hoveredDecoration.border! as Border;
+    expect(firstBookCoverContainer.transform!.storage[13], lessThan(0));
+    expect(hoveredBorder.top.width, 1.4);
+    expect(
+      hoveredBorder.top.color,
+      PlumoraColors.light.primary.withValues(alpha: 0.42),
+    );
+    expect(find.text('Voir le livre'), findsWidgets);
+    final hoverCta = find.descendant(
+      of: firstBookCover,
+      matching: find.byKey(const ValueKey('discover_book_hover_cta')),
+    );
+    expect(tester.widget<AnimatedOpacity>(hoverCta).opacity, 1);
     final nextButtonRect = tester.getRect(nextButton);
     expect(nextButtonRect.right, closeTo(railRect.right, 0.1));
     await tester.tap(nextButton);
@@ -552,7 +748,7 @@ void main() {
             find.byKey(const ValueKey('plumora_books_previous')),
           )
           .opacity,
-      0,
+      closeTo(0.86, 0.01),
     );
 
     await tester.binding.setSurfaceSize(const Size(700, 700));
@@ -565,6 +761,169 @@ void main() {
     expect(plumoRect.top, greaterThan(searchRect.bottom));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Discover clears search results as soon as the field is emptied, '
+      'without needing Enter', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
+          unreadNotificationsCountProvider.overrideWith((ref) async => 0),
+          plumoraCatalogBooksProvider.overrideWith((ref, query) async => []),
+          externalBookSearchProvider.overrideWith(
+            (ref, query) async => const ExternalBookPage(
+              content: [],
+              page: 0,
+              size: 0,
+              totalElements: 0,
+              totalPages: 0,
+              first: true,
+              last: true,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: PlumoraTheme.light,
+          home: const Scaffold(body: DiscoverScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Résultats'), findsNothing);
+
+    final search = find.descendant(
+      of: find.byKey(const ValueKey('discover_search_field')),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(search, 'tolkien');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Résultats'), findsOneWidget);
+
+    await tester.enterText(search, '');
+    await tester.pump();
+
+    expect(find.text('Résultats'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Discover keeps external covers visible inside a clipped scroll viewport',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      const coverUrl = 'https://covers.example.test/book.jpg';
+      const externalPage = ExternalBookPage(
+        content: [
+          ExternalBook(
+            externalId: 'gutendex-1',
+            source: 'GUTENDEX',
+            title: 'Livre externe',
+            authors: ['Autrice'],
+            coverUrl: coverUrl,
+          ),
+        ],
+        page: 0,
+        size: 1,
+        totalElements: 1,
+        totalPages: 1,
+        first: true,
+        last: true,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(_TestAuthController.new),
+            unreadNotificationsCountProvider.overrideWith((ref) async => 0),
+            plumoraCatalogBooksProvider.overrideWith((ref, query) async => []),
+            externalBookSearchProvider.overrideWith(
+              (ref, query) async => externalPage,
+            ),
+          ],
+          child: MaterialApp(
+            theme: PlumoraTheme.light,
+            home: const Scaffold(body: DiscoverScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final externalCoverProviders = tester
+          .widgetList<Image>(find.byType(Image))
+          .map((image) => image.image)
+          .whereType<NetworkImage>()
+          .where((provider) => provider.url == coverUrl)
+          .toList();
+      expect(externalCoverProviders, isNotEmpty);
+      expect(
+        externalCoverProviders.every(
+          (provider) =>
+              provider.webHtmlElementStrategy ==
+              WebHtmlElementStrategy.fallback,
+        ),
+        isTrue,
+      );
+      expect(find.text('Domaine public'), findsNothing);
+      expect(find.text('Importé'), findsNothing);
+      expect(find.text('NOUVEAU'), findsNothing);
+      expect(find.text('Bientôt disponible'), findsNothing);
+
+      final header = find.byKey(const ValueKey('discover_header'));
+      final viewport = find.byKey(const ValueKey('discover_scroll_viewport'));
+      final scrollView = find.byKey(const ValueKey('discover_scroll_view'));
+      final headerRectBeforeScroll = tester.getRect(header);
+      final viewportRectBeforeScroll = tester.getRect(viewport);
+
+      expect(
+        find.ancestor(of: header, matching: find.byType(CustomScrollView)),
+        findsNothing,
+      );
+      expect(
+        viewportRectBeforeScroll.top,
+        closeTo(headerRectBeforeScroll.bottom, 0.1),
+      );
+      expect(
+        viewportRectBeforeScroll.overlaps(headerRectBeforeScroll),
+        isFalse,
+      );
+      expect(tester.widget<ClipRect>(viewport).clipBehavior, Clip.hardEdge);
+      expect(
+        tester.widget<CustomScrollView>(scrollView).clipBehavior,
+        Clip.hardEdge,
+      );
+      expect(
+        find.descendant(of: header, matching: find.byType(BackdropFilter)),
+        findsNothing,
+      );
+      final headerDecoration =
+          tester.widget<DecoratedBox>(header).decoration as BoxDecoration;
+      expect(headerDecoration.color, PlumoraColors.light.background);
+      expect(headerDecoration.color!.a, 1);
+
+      await tester.drag(scrollView, const Offset(0, -350));
+      await tester.pumpAndSettle();
+
+      final headerRectAfterScroll = tester.getRect(header);
+      final viewportRectAfterScroll = tester.getRect(viewport);
+      expect(
+        headerRectAfterScroll.top,
+        closeTo(headerRectBeforeScroll.top, 0.1),
+      );
+      expect(
+        viewportRectAfterScroll.top,
+        closeTo(headerRectAfterScroll.bottom, 0.1),
+      );
+      expect(viewportRectAfterScroll.overlaps(headerRectAfterScroll), isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Author dashboard has no forced light structural surface', (
     tester,
