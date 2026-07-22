@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_theme.dart';
+import '../../../core/widgets/plumora_user_avatar.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import 'admin_colors.dart';
 import 'providers/admin_nav_providers.dart';
@@ -511,26 +512,10 @@ class _AdminAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AdminColors.plumora, AdminColors.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initials,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
+    return PlumoraUserAvatar(
+      initials: initials,
+      size: 32,
+      semanticLabel: 'Profil administrateur',
     );
   }
 }

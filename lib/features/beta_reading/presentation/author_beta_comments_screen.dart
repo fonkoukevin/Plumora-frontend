@@ -12,6 +12,8 @@ import '../../book/data/repositories/book_repository.dart';
 import '../data/models/beta_comment_model.dart';
 import '../data/repositories/beta_reading_repository.dart';
 
+const double _betaFeedbackMaxContentWidth = 1488;
+
 class AuthorBetaCommentsScreen extends ConsumerStatefulWidget {
   const AuthorBetaCommentsScreen({
     this.bookId,
@@ -47,7 +49,11 @@ class _AuthorBetaCommentsScreenState
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 92),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1040),
+          // The surrounding 16 px padding brings the complete frame to the
+          // same 1520 px footprint as the Discover page.
+          constraints: const BoxConstraints(
+            maxWidth: _betaFeedbackMaxContentWidth,
+          ),
           child: widget.bookId == null
               ? content
               : Column(
@@ -292,18 +298,24 @@ class _CommentsContent extends StatelessWidget {
             subtitle: 'Change de type ou de statut pour revoir les retours.',
           )
         else
-          for (final comment in filtered) ...[
-            _AuthorCommentCard(
-              comment: comment,
-              bookTitle: bookTitles[comment.bookId],
-              busy: busyCommentId == comment.id,
-              onResolve: () =>
-                  onUpdateStatus(comment, BetaCommentStatus.resolved),
-              onIgnore: () =>
-                  onUpdateStatus(comment, BetaCommentStatus.ignored),
-            ),
-            const SizedBox(height: 14),
-          ],
+          FigmaResponsiveGrid(
+            minTileWidth: 620,
+            maxColumns: 2,
+            spacing: 14,
+            runSpacing: 14,
+            children: [
+              for (final comment in filtered)
+                _AuthorCommentCard(
+                  comment: comment,
+                  bookTitle: bookTitles[comment.bookId],
+                  busy: busyCommentId == comment.id,
+                  onResolve: () =>
+                      onUpdateStatus(comment, BetaCommentStatus.resolved),
+                  onIgnore: () =>
+                      onUpdateStatus(comment, BetaCommentStatus.ignored),
+                ),
+            ],
+          ),
       ],
     );
   }

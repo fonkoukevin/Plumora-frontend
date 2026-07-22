@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/theme/breakpoints.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
@@ -18,87 +19,93 @@ class MyReviewsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reviewsAsync = ref.watch(myReviewsProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FigmaBackButton(
-          label: 'Retour',
-          onTap: () => returnToPreviousOr(context, AppRoutes.library),
-        ),
-        const SizedBox(height: 18),
-        PlumoraCard(
-          borderColor: context.colors.warning.withValues(alpha: 0.35),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              PlumoraIconTile(
-                backgroundColor: context.colors.warning.withValues(alpha: 0.12),
-                child: Icon(Icons.star, color: context.colors.warning),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Mes avis',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Retrouvez les avis que vous avez publiés sur les livres Plumora.',
-                      style: TextStyle(
-                        color: context.colors.textSecondary,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return FigmaScreen(
+      maxWidth: Breakpoints.wide,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 92),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FigmaBackButton(
+            label: 'Retour',
+            onTap: () => returnToPreviousOr(context, AppRoutes.library),
           ),
-        ),
-        const SizedBox(height: 18),
-        reviewsAsync.when(
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(36),
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          error: (error, _) => FigmaEmptyState(
-            icon: Icons.error_outline,
-            title: 'Avis indisponibles',
-            message: AppError.messageFor(error),
-            action: FilledButton(
-              onPressed: () => ref.invalidate(myReviewsProvider),
-              child: const Text('Réessayer'),
-            ),
-          ),
-          data: (reviews) {
-            if (reviews.isEmpty) {
-              return const FigmaEmptyState(
-                icon: Icons.rate_review_outlined,
-                title: 'Aucun avis publié',
-                message:
-                    'Les avis que tu laisseras depuis les fiches livres apparaîtront ici.',
-              );
-            }
-
-            return Column(
+          const SizedBox(height: 18),
+          PlumoraCard(
+            borderColor: context.colors.warning.withValues(alpha: 0.35),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final review in reviews) ...[
-                  _MyReviewCard(review: review),
-                  const SizedBox(height: 14),
-                ],
+                PlumoraIconTile(
+                  backgroundColor: context.colors.warning.withValues(
+                    alpha: 0.12,
+                  ),
+                  child: Icon(Icons.star, color: context.colors.warning),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Mes avis',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Retrouvez les avis que vous avez publiés sur les livres Plumora.',
+                        style: TextStyle(
+                          color: context.colors.textSecondary,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            );
-          },
-        ),
-      ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          reviewsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(36),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, _) => FigmaEmptyState(
+              icon: Icons.error_outline,
+              title: 'Avis indisponibles',
+              message: AppError.messageFor(error),
+              action: FilledButton(
+                onPressed: () => ref.invalidate(myReviewsProvider),
+                child: const Text('Réessayer'),
+              ),
+            ),
+            data: (reviews) {
+              if (reviews.isEmpty) {
+                return const FigmaEmptyState(
+                  icon: Icons.rate_review_outlined,
+                  title: 'Aucun avis publié',
+                  message:
+                      'Les avis que tu laisseras depuis les fiches livres apparaîtront ici.',
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final review in reviews) ...[
+                    _MyReviewCard(review: review),
+                    const SizedBox(height: 14),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

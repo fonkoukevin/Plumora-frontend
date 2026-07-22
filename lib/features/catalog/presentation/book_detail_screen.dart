@@ -7,6 +7,7 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../../core/widgets/plumora_user_avatar.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../../reading/data/models/review_model.dart';
 import '../../reading/data/repositories/favorite_repository.dart';
@@ -122,12 +123,6 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       ref.invalidate(bookReviewsProvider(widget.bookId));
       ref.invalidate(myReviewsProvider);
       ref.invalidate(catalogBookDetailProvider(widget.bookId));
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Avis publié.')));
-      }
     } catch (error) {
       if (mounted) {
         setState(() => _reviewError = AppError.messageFor(error));
@@ -448,16 +443,10 @@ class _AuthorCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: context.colors.primary,
-            child: Text(
-              initials.isEmpty ? 'P' : initials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+          PlumoraUserAvatar(
+            initials: initials.isEmpty ? 'P' : initials,
+            size: 64,
+            semanticLabel: 'Avatar de l’auteur',
           ),
           const SizedBox(width: 14),
           Expanded(

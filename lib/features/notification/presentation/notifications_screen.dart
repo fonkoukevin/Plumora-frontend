@@ -41,7 +41,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 920),
+              constraints: const BoxConstraints(maxWidth: 1040),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -133,9 +133,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         );
                       }
 
-                      return Column(
+                      return FigmaResponsiveGrid(
+                        minTileWidth: 480,
+                        maxColumns: 2,
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
-                          for (final notification in notifications) ...[
+                          for (final notification in notifications)
                             _NotificationCard(
                               notification: notification,
                               busy: _busyNotificationId == notification.id,
@@ -143,8 +147,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                   ? null
                                   : () => _markAsRead(notification.id),
                             ),
-                            const SizedBox(height: 12),
-                          ],
                         ],
                       );
                     },

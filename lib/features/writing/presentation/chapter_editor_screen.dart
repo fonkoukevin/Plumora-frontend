@@ -3803,7 +3803,7 @@ class _PlumoResultSheetState extends State<_PlumoResultSheet> {
                 widget.onUseAsTitle(title);
                 Navigator.of(context).pop();
               },
-              onCopy: () => _copy(context, title),
+              onCopy: () => _copy(title),
             ),
             const SizedBox(height: 8),
           ],
@@ -3937,7 +3937,7 @@ class _PlumoResultSheetState extends State<_PlumoResultSheet> {
                 label: const Text('Ajuster'),
               ),
               TextButton.icon(
-                onPressed: () => _copy(context, suggestion),
+                onPressed: () => _copy(suggestion),
                 icon: const Icon(Icons.copy_outlined, size: 18),
                 label: const Text('Copier'),
               ),
@@ -4099,11 +4099,8 @@ class _PlumoResultSheetState extends State<_PlumoResultSheet> {
     ];
   }
 
-  void _copy(BuildContext context, String text) {
+  void _copy(String text) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Copié dans le presse-papiers.')),
-    );
   }
 }
 

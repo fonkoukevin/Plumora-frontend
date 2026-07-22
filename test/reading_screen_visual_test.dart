@@ -215,7 +215,7 @@ void main() {
       'Une lecture vraiment captivante.',
     );
     expect(find.text('CHAPTER I'), findsOneWidget);
-    expect(find.text('Avis publié.'), findsOneWidget);
+    expect(find.text('Avis publié.'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

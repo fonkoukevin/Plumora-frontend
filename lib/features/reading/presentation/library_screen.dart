@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
@@ -19,6 +18,8 @@ import '../data/models/favorite_model.dart';
 import '../data/models/reading_progress_model.dart';
 import '../data/repositories/favorite_repository.dart';
 import '../data/repositories/reading_repository.dart';
+
+const double _libraryMaxContentWidth = 1520;
 
 /// Livre beta-lu par l'utilisateur, qu'il vienne d'une invitation acceptee
 /// ou d'une campagne ouverte rejointe et commentee sans invitation.
@@ -112,7 +113,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             SliverToBoxAdapter(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1280),
+                  constraints: const BoxConstraints(
+                    maxWidth: _libraryMaxContentWidth,
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
                     child: _activeTab == 'readings'
@@ -174,81 +177,80 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.colors.background.withValues(alpha: 0.95),
-            border: Border(bottom: BorderSide(color: context.colors.border)),
-            boxShadow: overlapsContent
-                ? const [
-                    BoxShadow(
-                      color: Color(0x0F000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1280),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    PlumoraAppHeader(
-                      title: 'Bibliothèque',
-                      subtitle: 'Vos lectures, vos favoris, votre univers',
-                      emoji: '📚',
-                      gradient: [context.colors.accent, context.colors.plumora],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 48,
-                      child: TextField(
-                        controller: searchController,
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.search),
-                          hintText: 'Rechercher un livre ou auteur...',
-                        ),
-                        onChanged: (_) => onSearchChanged(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          FigmaPillTab(
-                            label: 'Lectures',
-                            icon: Icons.menu_book_outlined,
-                            selected: activeTab == 'readings',
-                            onTap: () => onTabSelected('readings'),
-                          ),
-                          const SizedBox(width: 8),
-                          FigmaPillTab(
-                            label: 'Favoris',
-                            icon: Icons.favorite_border,
-                            selected: activeTab == 'favorites',
-                            onTap: () => onTabSelected('favorites'),
-                          ),
-                          const SizedBox(width: 8),
-                          FigmaPillTab(
-                            label: 'Bêta',
-                            icon: Icons.edit_note_outlined,
-                            selected: activeTab == 'beta',
-                            badgeCount: betaBadgeCount,
-                            onTap: () => onTabSelected('beta'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        // Fully opaque: this pins above the book-cover rails, which are
+        // saturated enough that any translucency here let them show
+        // through legibly on scroll instead of just tinting the blur.
+        color: context.colors.background,
+        border: Border(bottom: BorderSide(color: context.colors.border)),
+        boxShadow: overlapsContent
+            ? const [
+                BoxShadow(
+                  color: Color(0x0F000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
-              ),
+              ]
+            : null,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _libraryMaxContentWidth),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PlumoraAppHeader(
+                  title: 'Bibliothèque',
+                  subtitle: 'Vos lectures, vos favoris, votre univers',
+                  emoji: '📚',
+                  gradient: [context.colors.accent, context.colors.plumora],
+                  trailing: const ThemeToggleButton(),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 48,
+                  child: TextField(
+                    controller: searchController,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Rechercher un livre ou auteur...',
+                    ),
+                    onChanged: (_) => onSearchChanged(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      FigmaPillTab(
+                        label: 'Lectures',
+                        icon: Icons.menu_book_outlined,
+                        selected: activeTab == 'readings',
+                        onTap: () => onTabSelected('readings'),
+                      ),
+                      const SizedBox(width: 8),
+                      FigmaPillTab(
+                        label: 'Favoris',
+                        icon: Icons.favorite_border,
+                        selected: activeTab == 'favorites',
+                        onTap: () => onTabSelected('favorites'),
+                      ),
+                      const SizedBox(width: 8),
+                      FigmaPillTab(
+                        label: 'Bêta',
+                        icon: Icons.edit_note_outlined,
+                        selected: activeTab == 'beta',
+                        badgeCount: betaBadgeCount,
+                        onTap: () => onTabSelected('beta'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -333,7 +335,7 @@ class _ReadingsTab extends StatelessWidget {
             else
               FigmaResponsiveGrid(
                 minTileWidth: 420,
-                maxColumns: 2,
+                maxColumns: 3,
                 children: [
                   for (final reading in filtered)
                     _ReadingTile(reading: reading),
@@ -486,7 +488,7 @@ class _BetaTab extends ConsumerWidget {
             else
               FigmaResponsiveGrid(
                 minTileWidth: 420,
-                maxColumns: 2,
+                maxColumns: 3,
                 children: [
                   for (final entry in filtered) _BetaTile(entry: entry),
                 ],
@@ -734,7 +736,11 @@ class _FavoritesGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 720 ? 6 : 3;
+        final columns = constraints.maxWidth >= 1320
+            ? 8
+            : constraints.maxWidth >= 720
+            ? 6
+            : 3;
         final spacing = 12.0;
         final width =
             (constraints.maxWidth - spacing * (columns - 1)) / columns;
@@ -754,50 +760,86 @@ class _FavoritesGrid extends StatelessWidget {
   }
 }
 
-class _FavoriteTile extends ConsumerWidget {
+class _FavoriteTile extends ConsumerStatefulWidget {
   const _FavoriteTile({required this.favorite});
 
   final FavoriteModel favorite;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final book = favorite.book;
+  ConsumerState<_FavoriteTile> createState() => _FavoriteTileState();
+}
+
+class _FavoriteTileState extends ConsumerState<_FavoriteTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final book = widget.favorite.book;
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
-    return InkWell(
-      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: 2 / 3,
-            child: PlumoraBookCover(
-              width: double.infinity,
-              height: double.infinity,
-              colors: _coverColors(book.id),
-              imageUrl: book.coverUrl,
-              imageBytes: cachedCover,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
+        hoverColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashColor: context.colors.primary.withValues(alpha: 0.08),
+        child: Column(
+          key: ValueKey('library_favorite_tile_${book.id}'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 2 / 3,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return PlumoraHoverBookCover(
+                    key: ValueKey('library_favorite_cover_${book.id}'),
+                    hovered: _hovered,
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    radius: 12,
+                    actionKey: ValueKey(
+                      'library_favorite_hover_cta_${book.id}',
+                    ),
+                    child: PlumoraBookCover(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      radius: 12,
+                      colors: _coverColors(book.id),
+                      imageUrl: book.coverUrl,
+                      imageBytes: cachedCover,
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            book.title.isEmpty ? 'Livre sans titre' : book.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              height: 1.1,
+            const SizedBox(height: 8),
+            Text(
+              book.title.isEmpty ? 'Livre sans titre' : book.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: _hovered
+                    ? context.colors.primary
+                    : context.colors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                height: 1.1,
+              ),
             ),
-          ),
-          Text(
-            book.authorName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: context.colors.textSecondary, fontSize: 10),
-          ),
-        ],
+            Text(
+              book.authorName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

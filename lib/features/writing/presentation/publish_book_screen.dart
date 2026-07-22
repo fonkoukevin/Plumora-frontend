@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/text/plumora_document_codec.dart';
+import '../../../core/theme/breakpoints.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../beta_reading/data/models/beta_comment_model.dart';
@@ -37,69 +38,79 @@ class _PublishBookScreenState extends ConsumerState<PublishBookScreen> {
       betaCommentsForBookProvider(widget.bookId),
     );
 
-    return FigmaScreen(
-      maxWidth: 840,
-      padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FigmaBackButton(
-            label: 'Retour',
-            onTap: () => returnToPreviousOr(
-              context,
-              AppRoutes.authorBookDetailPath(widget.bookId),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Préparer la publication',
-            style: TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'La publication est directe dans le catalogue Plumora.',
-            style: TextStyle(color: context.colors.textSecondary, fontSize: 15),
-          ),
-          const SizedBox(height: 24),
-          bookAsync.when(
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(48),
-                child: CircularProgressIndicator(),
-              ),
-            ),
-            error: (error, _) => _ErrorPanel(
-              message: AppError.messageFor(error),
-              onRetry: () => ref.invalidate(authorBookProvider(widget.bookId)),
-            ),
-            data: (book) => chaptersAsync.when(
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(48),
-                  child: CircularProgressIndicator(),
+    return LayoutBuilder(
+      builder: (context, outerConstraints) {
+        final isDesktop = outerConstraints.maxWidth >= Breakpoints.expanded;
+
+        return FigmaScreen(
+          maxWidth: isDesktop ? 1040 : 840,
+          padding: const EdgeInsets.fromLTRB(16, 26, 16, 92),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FigmaBackButton(
+                label: 'Retour',
+                onTap: () => returnToPreviousOr(
+                  context,
+                  AppRoutes.authorBookDetailPath(widget.bookId),
                 ),
               ),
-              error: (error, _) => _ErrorPanel(
-                message: AppError.messageFor(error),
-                onRetry: () =>
-                    ref.invalidate(bookChaptersProvider(widget.bookId)),
+              const SizedBox(height: 18),
+              Text(
+                'Préparer la publication',
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 36,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-              data: (chapters) => _PublishContent(
-                book: book,
-                chapters: chapters,
-                betaCommentsAsync: betaCommentsAsync,
-                isPublishing: _isPublishing,
-                error: _error,
-                onPublish: _publish,
+              const SizedBox(height: 6),
+              Text(
+                'La publication est directe dans le catalogue Plumora.',
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  fontSize: 15,
+                ),
               ),
-            ),
+              const SizedBox(height: 24),
+              bookAsync.when(
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(48),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                error: (error, _) => _ErrorPanel(
+                  message: AppError.messageFor(error),
+                  onRetry: () =>
+                      ref.invalidate(authorBookProvider(widget.bookId)),
+                ),
+                data: (book) => chaptersAsync.when(
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(48),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  error: (error, _) => _ErrorPanel(
+                    message: AppError.messageFor(error),
+                    onRetry: () =>
+                        ref.invalidate(bookChaptersProvider(widget.bookId)),
+                  ),
+                  data: (chapters) => _PublishContent(
+                    book: book,
+                    chapters: chapters,
+                    betaCommentsAsync: betaCommentsAsync,
+                    isPublishing: _isPublishing,
+                    error: _error,
+                    onPublish: _publish,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -188,164 +199,217 @@ class _PublishContent extends StatelessWidget {
         checklist.where((item) => item.required).every((item) => item.done) &&
         book.canPublish;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FigmaCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final progressCard = FigmaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          book.title.isEmpty ? 'Livre sans titre' : book.title,
-                          style: TextStyle(
-                            color: context.colors.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          book.status.shortFrenchLabel,
-                          style: TextStyle(color: context.colors.textSecondary),
-                        ),
-                      ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      book.title.isEmpty ? 'Livre sans titre' : book.title,
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      book.status.shortFrenchLabel,
+                      style: TextStyle(color: context.colors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${(progress * 100).round()}%',
+                style: TextStyle(
+                  color: context.colors.primary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          FigmaProgressBar(value: progress, height: 10),
+        ],
+      ),
+    );
+
+    final checklistCard = FigmaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Checklist de publication',
+            style: TextStyle(
+              color: context.colors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 14),
+          for (final item in checklist) ...[
+            Container(
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                color: item.done
+                    ? context.colors.success.withValues(alpha: 0.08)
+                    : context.colors.muted.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    item.done
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: item.done
+                        ? context.colors.success
+                        : context.colors.textSecondary,
                   ),
-                  Text(
-                    '${(progress * 100).round()}%',
-                    style: TextStyle(
-                      color: context.colors.primary,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item.label,
+                      style: TextStyle(
+                        color: item.done
+                            ? context.colors.textPrimary
+                            : context.colors.textSecondary,
+                        fontWeight: item.done
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              FigmaProgressBar(value: progress, height: 10),
-            ],
+            ),
+            const SizedBox(height: 9),
+          ],
+        ],
+      ),
+    );
+
+    final infoBanner = FigmaCard(
+      color: context.colors.primary.withValues(alpha: 0.06),
+      borderColor: context.colors.primary.withValues(alpha: 0.18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: context.colors.primary),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              "Paiements, royalties, abonnements et validation admin ne sont pas inclus dans le MVP actuel.",
+              style: TextStyle(height: 1.4),
+            ),
           ),
-        ),
-        const SizedBox(height: 18),
-        FigmaCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Checklist de publication',
-                style: TextStyle(
-                  color: context.colors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 14),
-              for (final item in checklist) ...[
-                Container(
-                  padding: const EdgeInsets.all(13),
-                  decoration: BoxDecoration(
-                    color: item.done
-                        ? context.colors.success.withValues(alpha: 0.08)
-                        : context.colors.muted.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        item.done
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        color: item.done
-                            ? context.colors.success
-                            : context.colors.textSecondary,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          item.label,
-                          style: TextStyle(
-                            color: item.done
-                                ? context.colors.textPrimary
-                                : context.colors.textSecondary,
-                            fontWeight: item.done
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 9),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        FigmaCard(
-          color: context.colors.primary.withValues(alpha: 0.06),
-          borderColor: context.colors.primary.withValues(alpha: 0.18),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.info_outline, color: context.colors.primary),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Paiements, royalties, abonnements et validation admin ne sont pas inclus dans le MVP actuel.",
-                  style: TextStyle(height: 1.4),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (error != null) ...[
-          const SizedBox(height: 14),
-          Text(
+        ],
+      ),
+    );
+
+    final errorText = error == null
+        ? null
+        : Text(
             error!,
             style: TextStyle(
               color: context.colors.destructive,
               fontWeight: FontWeight.w700,
             ),
-          ),
-        ],
-        const SizedBox(height: 20),
-        Row(
+          );
+
+    final continueLater = OutlinedButton(
+      onPressed: isPublishing
+          ? null
+          : () => returnToPreviousOr(
+              context,
+              AppRoutes.authorBookDetailPath(book.id),
+            ),
+      child: const Text('Continuer plus tard'),
+    );
+
+    final publishButton = FilledButton.icon(
+      onPressed: canPublish && !isPublishing ? onPublish : null,
+      icon: isPublishing
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.send_outlined),
+      label: Text(isPublishing ? 'Publication...' : 'Publier'),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= Breakpoints.expanded;
+
+        if (!isDesktop) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              progressCard,
+              const SizedBox(height: 18),
+              checklistCard,
+              const SizedBox(height: 18),
+              infoBanner,
+              if (errorText != null) ...[const SizedBox(height: 14), errorText],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: continueLater),
+                  const SizedBox(width: 14),
+                  Expanded(child: publishButton),
+                ],
+              ),
+            ],
+          );
+        }
+
+        // Checklist as the main content on the left, a persistent
+        // summary/action sidebar on the right — rather than everything
+        // stacked in a single narrow column.
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: OutlinedButton(
-                onPressed: isPublishing
-                    ? null
-                    : () => returnToPreviousOr(
-                        context,
-                        AppRoutes.authorBookDetailPath(book.id),
-                      ),
-                child: const Text('Continuer plus tard'),
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  progressCard,
+                  const SizedBox(height: 18),
+                  checklistCard,
+                ],
               ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: canPublish && !isPublishing ? onPublish : null,
-                icon: isPublishing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send_outlined),
-                label: Text(isPublishing ? 'Publication...' : 'Publier'),
+            const SizedBox(width: 24),
+            SizedBox(
+              width: 300,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  infoBanner,
+                  if (errorText != null) ...[
+                    const SizedBox(height: 14),
+                    errorText,
+                  ],
+                  const SizedBox(height: 20),
+                  publishButton,
+                  const SizedBox(height: 10),
+                  continueLater,
+                ],
               ),
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
