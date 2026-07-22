@@ -152,98 +152,130 @@ class MyFavoritesScreen extends ConsumerWidget {
   }
 }
 
-class _FavoriteCard extends ConsumerWidget {
+class _FavoriteCard extends ConsumerStatefulWidget {
   const _FavoriteCard({required this.favorite});
 
   final FavoriteModel favorite;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final book = favorite.book;
+  ConsumerState<_FavoriteCard> createState() => _FavoriteCardState();
+}
+
+class _FavoriteCardState extends ConsumerState<_FavoriteCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final book = widget.favorite.book;
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
-    return PlumoraCard(
-      padding: EdgeInsets.zero,
-      clip: true,
-      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: 2 / 3,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: PlumoraBookCover(
-                    colors: _coverColors(book),
-                    imageUrl: book.coverUrl,
-                    imageBytes: cachedCover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    radius: 0,
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: FigmaCard(
+        key: ValueKey('favorites_page_tile_${book.id}'),
+        padding: EdgeInsets.zero,
+        clip: false,
+        onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 2 / 3,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return PlumoraHoverBookCover(
+                    key: ValueKey('favorites_page_cover_${book.id}'),
+                    hovered: _hovered,
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    radius: 16,
+                    actionKey: ValueKey('favorites_page_hover_cta_${book.id}'),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: PlumoraBookCover(
+                            colors: _coverColors(book),
+                            imageUrl: book.coverUrl,
+                            imageBytes: cachedCover,
+                            width: constraints.maxWidth,
+                            height: constraints.maxHeight,
+                            radius: 16,
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.favorite,
+                              color: Color(0xFFE95858),
+                              size: 17,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.favorite,
-                      color: Color(0xFFE95858),
-                      size: 17,
-                    ),
-                  ),
-                ),
-              ],
+                  );
+                },
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  book.title.isEmpty ? 'Livre sans titre' : book.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    book.title.isEmpty ? 'Livre sans titre' : book.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: _hovered
+                          ? context.colors.primary
+                          : context.colors.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  book.authorName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: context.colors.textSecondary,
-                    fontSize: 11,
+                  const SizedBox(height: 4),
+                  Text(
+                    book.authorName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 7),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Color(0xFFF5C84C), size: 14),
-                    const SizedBox(width: 3),
-                    Text(
-                      book.rating == 0 ? '-' : book.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+                  const SizedBox(height: 7),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.star,
+                        color: Color(0xFFF5C84C),
+                        size: 14,
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 3),
+                      Text(
+                        book.rating == 0 ? '-' : book.rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

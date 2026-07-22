@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
@@ -16,6 +16,8 @@ import '../data/models/catalog_book_model.dart';
 import '../data/models/external_book_model.dart';
 import '../data/repositories/catalog_repository.dart';
 import '../data/repositories/external_book_repository.dart';
+
+const double _discoverMaxContentWidth = 1520;
 
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
@@ -26,9 +28,11 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   final _searchController = TextEditingController();
+  final _pageScrollController = ScrollController();
   String _query = '';
   String? _language;
   _DiscoverFilter _activeFilter = _filters.first;
+  bool _headerOverlapsContent = false;
 
   static const _filters = [
     _DiscoverFilter(label: 'Tous'),
@@ -42,9 +46,29 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageScrollController.addListener(_updateHeaderShadow);
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _pageScrollController
+      ..removeListener(_updateHeaderShadow)
+      ..dispose();
     super.dispose();
+  }
+
+  void _updateHeaderShadow() {
+    if (!_pageScrollController.hasClients) {
+      return;
+    }
+
+    final overlapsContent = _pageScrollController.offset > 0.5;
+    if (overlapsContent != _headerOverlapsContent) {
+      setState(() => _headerOverlapsContent = overlapsContent);
+    }
   }
 
   @override
@@ -66,130 +90,156 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           color: context.colors.background,
           child: SafeArea(
             bottom: false,
-            child: CustomScrollView(
-              slivers: [
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _DiscoverHeaderDelegate(
+            child: Column(
+              children: [
+                SizedBox(
+                  height: _DiscoverHeader.heightFor(inlineHeaderControls),
+                  child: _DiscoverHeader(
                     searchController: _searchController,
                     onSearch: _submitSearch,
+                    onSearchChanged: _onSearchChanged,
                     onPlumoTap: () =>
                         context.push(AppRoutes.plumoRecommendation),
                     inlineControls: inlineHeaderControls,
+                    overlapsContent: _headerOverlapsContent,
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1280),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 92),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _DiscoverFilterTabs(
-                              filters: _filters,
-                              activeFilter: _activeFilter,
-                              onSelected: (filter) =>
-                                  setState(() => _activeFilter = filter),
+                Expanded(
+                  child: ClipRect(
+                    key: const ValueKey('discover_scroll_viewport'),
+                    clipBehavior: Clip.hardEdge,
+                    child: CustomScrollView(
+                      key: const ValueKey('discover_scroll_view'),
+                      controller: _pageScrollController,
+                      clipBehavior: Clip.hardEdge,
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: _discoverMaxContentWidth,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  16,
+                                  16,
+                                  92,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _DiscoverFilterTabs(
+                                      filters: _filters,
+                                      activeFilter: _activeFilter,
+                                      onSelected: (filter) => setState(
+                                        () => _activeFilter = filter,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _LanguageTabs(
+                                      language: _language,
+                                      onSelected: (language) =>
+                                          setState(() => _language = language),
+                                    ),
+                                    const SizedBox(height: 30),
+                                    if (hasCategory) ...[
+                                      _PlumoraAsyncRail(
+                                        title: 'Œuvres Plumora',
+                                        icon: Icons.auto_stories_outlined,
+                                        iconColor: context.colors.plumora,
+                                        query: plumoraQuery,
+                                      ),
+                                      const SizedBox(height: 32),
+                                      _ExternalAsyncRail(
+                                        title: _activeFilter.label,
+                                        icon: _iconForFilter(_activeFilter),
+                                        iconColor:
+                                            _activeFilter.label == 'Romance'
+                                            ? const Color(0xFFEC4899)
+                                            : context.colors.primary,
+                                        query: _queryForCategory(
+                                          searchQuery,
+                                          activeCategory,
+                                        ),
+                                        subtitle: _language == null
+                                            ? 'Gutendex'
+                                            : _language!.toUpperCase(),
+                                      ),
+                                    ] else ...[
+                                      _PlumoraAsyncRail(
+                                        title: 'Œuvres Plumora',
+                                        icon: Icons.auto_stories_outlined,
+                                        iconColor: context.colors.plumora,
+                                        query: plumoraQuery,
+                                      ),
+                                      const SizedBox(height: 32),
+                                      if (searchQuery.isNotEmpty) ...[
+                                        _ExternalAsyncRail(
+                                          title: 'Résultats',
+                                          icon: Icons.search,
+                                          query: ExternalBookSearchQuery(
+                                            search: searchQuery,
+                                            language: _language,
+                                          ),
+                                          subtitle: 'Gutendex',
+                                        ),
+                                        const SizedBox(height: 32),
+                                      ],
+                                      _ExternalAsyncRail(
+                                        title: 'Tendances',
+                                        icon: Icons.trending_up,
+                                        query: ExternalBookSearchQuery(
+                                          language: _language,
+                                        ),
+                                        subtitle: "Mis à jour aujourd'hui",
+                                      ),
+                                      const SizedBox(height: 32),
+                                      _ExternalAsyncRail(
+                                        title: 'Nouveautés',
+                                        icon: Icons.bolt_outlined,
+                                        iconColor: context.colors.accent,
+                                        query: ExternalBookSearchQuery(
+                                          language: _language,
+                                          page: 1,
+                                        ),
+                                        loadDelay: const Duration(
+                                          milliseconds: 250,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 32),
+                                      _ExternalAsyncRail(
+                                        title: 'Fantasy',
+                                        icon: Icons.auto_awesome,
+                                        query: ExternalBookSearchQuery(
+                                          search: 'fantasy',
+                                          language: _language,
+                                        ),
+                                        loadDelay: const Duration(
+                                          milliseconds: 650,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 32),
+                                      _ExternalAsyncRail(
+                                        title: 'Romance',
+                                        icon: Icons.favorite,
+                                        iconColor: const Color(0xFFEC4899),
+                                        query: ExternalBookSearchQuery(
+                                          search: 'romance',
+                                          language: _language,
+                                        ),
+                                        loadDelay: const Duration(
+                                          milliseconds: 950,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
                             ),
-                            const SizedBox(height: 12),
-                            _LanguageTabs(
-                              language: _language,
-                              onSelected: (language) =>
-                                  setState(() => _language = language),
-                            ),
-                            const SizedBox(height: 30),
-                            if (hasCategory) ...[
-                              _PlumoraAsyncRail(
-                                title: 'Œuvres Plumora',
-                                icon: Icons.auto_stories_outlined,
-                                iconColor: context.colors.plumora,
-                                query: plumoraQuery,
-                              ),
-                              const SizedBox(height: 32),
-                              _ExternalAsyncRail(
-                                title: _activeFilter.label,
-                                icon: _iconForFilter(_activeFilter),
-                                iconColor: _activeFilter.label == 'Romance'
-                                    ? const Color(0xFFEC4899)
-                                    : context.colors.primary,
-                                query: _queryForCategory(
-                                  searchQuery,
-                                  activeCategory,
-                                ),
-                                rankItems: true,
-                                subtitle: _language == null
-                                    ? 'Gutendex'
-                                    : _language!.toUpperCase(),
-                              ),
-                            ] else ...[
-                              _PlumoraAsyncRail(
-                                title: 'Œuvres Plumora',
-                                icon: Icons.auto_stories_outlined,
-                                iconColor: context.colors.plumora,
-                                query: plumoraQuery,
-                              ),
-                              const SizedBox(height: 32),
-                              if (searchQuery.isNotEmpty) ...[
-                                _ExternalAsyncRail(
-                                  title: 'Résultats',
-                                  icon: Icons.search,
-                                  query: ExternalBookSearchQuery(
-                                    search: searchQuery,
-                                    language: _language,
-                                  ),
-                                  rankItems: true,
-                                  subtitle: 'Gutendex',
-                                ),
-                                const SizedBox(height: 32),
-                              ],
-                              _ExternalAsyncRail(
-                                title: 'Tendances',
-                                icon: Icons.trending_up,
-                                query: ExternalBookSearchQuery(
-                                  language: _language,
-                                ),
-                                rankItems: true,
-                                subtitle: "Mis à jour aujourd'hui",
-                              ),
-                              const SizedBox(height: 32),
-                              _ExternalAsyncRail(
-                                title: 'Nouveautés',
-                                icon: Icons.bolt_outlined,
-                                iconColor: context.colors.accent,
-                                query: ExternalBookSearchQuery(
-                                  language: _language,
-                                  page: 1,
-                                ),
-                                badge: 'NOUVEAU',
-                                loadDelay: const Duration(milliseconds: 250),
-                              ),
-                              const SizedBox(height: 32),
-                              _ExternalAsyncRail(
-                                title: 'Fantasy',
-                                icon: Icons.auto_awesome,
-                                query: ExternalBookSearchQuery(
-                                  search: 'fantasy',
-                                  language: _language,
-                                ),
-                                loadDelay: const Duration(milliseconds: 650),
-                              ),
-                              const SizedBox(height: 32),
-                              _ExternalAsyncRail(
-                                title: 'Romance',
-                                icon: Icons.favorite,
-                                iconColor: const Color(0xFFEC4899),
-                                query: ExternalBookSearchQuery(
-                                  search: 'romance',
-                                  language: _language,
-                                ),
-                                loadDelay: const Duration(milliseconds: 950),
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -212,6 +262,16 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 
   void _submitSearch() {
     setState(() => _query = _searchController.text.trim());
+  }
+
+  // Submitting (Enter / the search button) is still required to *run* a
+  // search, but clearing the field should return to the default browsing
+  // view immediately -- without this, the stale results stuck around until
+  // the user pressed Enter again on an empty field.
+  void _onSearchChanged(String value) {
+    if (value.trim().isEmpty && _query.isNotEmpty) {
+      setState(() => _query = '');
+    }
   }
 
   ExternalBookSearchQuery _queryForCategory(String search, String category) {
@@ -246,33 +306,27 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   }
 }
 
-class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _DiscoverHeaderDelegate({
+class _DiscoverHeader extends StatelessWidget {
+  const _DiscoverHeader({
     required this.searchController,
     required this.onSearch,
+    required this.onSearchChanged,
     required this.onPlumoTap,
     required this.inlineControls,
+    required this.overlapsContent,
   });
 
   final TextEditingController searchController;
   final VoidCallback onSearch;
+  final ValueChanged<String> onSearchChanged;
   final VoidCallback onPlumoTap;
   final bool inlineControls;
+  final bool overlapsContent;
 
-  double get _height => inlineControls ? 150 : 234;
-
-  @override
-  double get minExtent => _height;
+  static double heightFor(bool inlineControls) => inlineControls ? 150 : 234;
 
   @override
-  double get maxExtent => _height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context) {
     final searchField = SizedBox(
       key: const ValueKey('discover_search_field'),
       height: 50,
@@ -280,6 +334,7 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
         controller: searchController,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => onSearch(),
+        onChanged: onSearchChanged,
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search),
           hintText: 'Titre, auteur, genre...',
@@ -292,91 +347,76 @@ class _DiscoverHeaderDelegate extends SliverPersistentHeaderDelegate {
       ),
     );
 
-    return ClipRect(
+    return DecoratedBox(
       key: const ValueKey('discover_header'),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.colors.background.withValues(alpha: 0.95),
-            border: Border(bottom: BorderSide(color: context.colors.border)),
-            boxShadow: overlapsContent
-                ? const [
-                    BoxShadow(
-                      color: Color(0x0F000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1280),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    PlumoraAppHeader(
-                      title: 'Découvrir',
-                      subtitle: "Explorez des milliers d'histoires inédites",
-                      emoji: '🔍',
-                      gradient: [
-                        context.colors.plumora,
-                        context.colors.primary,
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (inlineControls)
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          const gap = 12.0;
-                          final controlWidth = (constraints.maxWidth - gap) / 2;
-
-                          return SizedBox(
-                            height: 50,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SizedBox(
-                                  width: controlWidth,
-                                  child: searchField,
-                                ),
-                                const SizedBox(width: gap),
-                                SizedBox(
-                                  width: controlWidth,
-                                  child: _PlumoHeaderCard(
-                                    onTap: onPlumoTap,
-                                    compact: true,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      )
-                    else ...[
-                      searchField,
-                      const SizedBox(height: 12),
-                      _PlumoHeaderCard(onTap: onPlumoTap),
-                    ],
-                  ],
+      decoration: BoxDecoration(
+        // Fully opaque: this pins above the book-cover rails, which are
+        // saturated enough that any translucency here let them show
+        // through legibly on scroll instead of just tinting the blur.
+        color: context.colors.background,
+        border: Border(bottom: BorderSide(color: context.colors.border)),
+        boxShadow: overlapsContent
+            ? const [
+                BoxShadow(
+                  color: Color(0x0F000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
-              ),
+              ]
+            : null,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _discoverMaxContentWidth),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PlumoraAppHeader(
+                  title: 'Découvrir',
+                  subtitle: "Explorez des milliers d'histoires inédites",
+                  emoji: '🔍',
+                  gradient: [context.colors.plumora, context.colors.primary],
+                  trailing: const ThemeToggleButton(),
+                ),
+                const SizedBox(height: 12),
+                if (inlineControls)
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const gap = 12.0;
+                      final controlWidth = (constraints.maxWidth - gap) / 2;
+
+                      return SizedBox(
+                        height: 50,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(width: controlWidth, child: searchField),
+                            const SizedBox(width: gap),
+                            SizedBox(
+                              width: controlWidth,
+                              child: _PlumoHeaderCard(
+                                onTap: onPlumoTap,
+                                compact: true,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  )
+                else ...[
+                  searchField,
+                  const SizedBox(height: 12),
+                  _PlumoHeaderCard(onTap: onPlumoTap),
+                ],
+              ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  @override
-  bool shouldRebuild(covariant _DiscoverHeaderDelegate oldDelegate) {
-    return oldDelegate.searchController != searchController ||
-        oldDelegate.onSearch != onSearch ||
-        oldDelegate.onPlumoTap != onPlumoTap ||
-        oldDelegate.inlineControls != inlineControls;
   }
 }
 
@@ -735,7 +775,92 @@ class _PlumoraBookRail extends StatelessWidget {
       iconColor: iconColor,
       itemCount: books.length,
       keyPrefix: 'plumora_books',
-      itemBuilder: (context, index) => _PlumoraBookTile(book: books[index]),
+      itemBuilder: (context, index, metrics) =>
+          _PlumoraBookTile(book: books[index], metrics: metrics),
+    );
+  }
+}
+
+typedef _DiscoverRailItemBuilder =
+    Widget Function(
+      BuildContext context,
+      int index,
+      _DiscoverBookTileMetrics metrics,
+    );
+
+class _DiscoverBookTileMetrics {
+  const _DiscoverBookTileMetrics({
+    required this.tileWidth,
+    required this.coverHeight,
+    required this.railHeight,
+    required this.spacing,
+    required this.radius,
+    required this.titleFontSize,
+    required this.metaFontSize,
+    required this.smallMetaFontSize,
+  });
+
+  final double tileWidth;
+  final double coverHeight;
+  final double railHeight;
+  final double spacing;
+  final double radius;
+  final double titleFontSize;
+  final double metaFontSize;
+  final double smallMetaFontSize;
+
+  double get badgeTop => tileWidth >= 150 ? 10 : 8;
+  double get badgeRight => badgeTop;
+
+  static _DiscoverBookTileMetrics forWidth(double width) {
+    if (width >= 1440) {
+      return const _DiscoverBookTileMetrics(
+        tileWidth: 124,
+        coverHeight: 178,
+        railHeight: 286,
+        spacing: 28,
+        radius: 17,
+        titleFontSize: 12.5,
+        metaFontSize: 11.5,
+        smallMetaFontSize: 10.5,
+      );
+    }
+
+    if (width >= 1100) {
+      return const _DiscoverBookTileMetrics(
+        tileWidth: 118,
+        coverHeight: 170,
+        railHeight: 276,
+        spacing: 24,
+        radius: 16,
+        titleFontSize: 12,
+        metaFontSize: 11,
+        smallMetaFontSize: 10,
+      );
+    }
+
+    if (width >= 760) {
+      return const _DiscoverBookTileMetrics(
+        tileWidth: 112,
+        coverHeight: 160,
+        railHeight: 264,
+        spacing: 18,
+        radius: 16,
+        titleFontSize: 12,
+        metaFontSize: 11,
+        smallMetaFontSize: 10,
+      );
+    }
+
+    return const _DiscoverBookTileMetrics(
+      tileWidth: 112,
+      coverHeight: 160,
+      railHeight: 262,
+      spacing: 12,
+      radius: 16,
+      titleFontSize: 12,
+      metaFontSize: 11,
+      smallMetaFontSize: 10,
     );
   }
 }
@@ -756,7 +881,7 @@ class _DiscoverCarouselRail extends StatefulWidget {
   final Color? iconColor;
   final String? subtitle;
   final int itemCount;
-  final IndexedWidgetBuilder itemBuilder;
+  final _DiscoverRailItemBuilder itemBuilder;
   final String? keyPrefix;
 
   @override
@@ -845,6 +970,7 @@ class _DiscoverCarouselRailState extends State<_DiscoverCarouselRail> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final metrics = _DiscoverBookTileMetrics.forWidth(constraints.maxWidth);
         final showClickControls = constraints.maxWidth >= 560;
         final showPrevious = showClickControls && _canScrollBack;
         final showNext = showClickControls && _canScrollForward;
@@ -869,7 +995,7 @@ class _DiscoverCarouselRailState extends State<_DiscoverCarouselRail> {
             ),
             const SizedBox(height: 14),
             SizedBox(
-              height: 262,
+              height: metrics.railHeight,
               child: MouseRegion(
                 onEnter: (_) => _setHovered(true),
                 onExit: (_) => _setHovered(false),
@@ -880,30 +1006,30 @@ class _DiscoverCarouselRailState extends State<_DiscoverCarouselRail> {
                           ? null
                           : ValueKey('${widget.keyPrefix}_scroll'),
                       controller: _scrollController,
+                      padding: const EdgeInsets.only(top: 8, bottom: 8),
                       scrollDirection: Axis.horizontal,
                       itemCount: widget.itemCount,
-                      separatorBuilder: (_, _) => const SizedBox(width: 12),
-                      itemBuilder: widget.itemBuilder,
+                      separatorBuilder: (_, _) =>
+                          SizedBox(width: metrics.spacing),
+                      itemBuilder: (context, index) =>
+                          widget.itemBuilder(context, index, metrics),
                     ),
                     if (showPrevious)
                       Positioned(
                         top: 0,
                         bottom: 0,
                         left: 0,
-                        width: 48,
+                        width: 64,
                         child: AnimatedOpacity(
                           key: widget.keyPrefix == null
                               ? null
                               : ValueKey('${widget.keyPrefix}_previous'),
-                          opacity: _hovered ? 1 : 0,
+                          opacity: _hovered ? 1 : 0.86,
                           duration: const Duration(milliseconds: 180),
-                          child: IgnorePointer(
-                            ignoring: !_hovered,
-                            child: _DiscoverRailButton(
-                              icon: Icons.chevron_left_rounded,
-                              tooltip: 'Livres précédents',
-                              onTap: () => _scrollByPage(-1),
-                            ),
+                          child: _DiscoverRailButton(
+                            icon: Icons.chevron_left_rounded,
+                            tooltip: 'Livres précédents',
+                            onTap: () => _scrollByPage(-1),
                           ),
                         ),
                       ),
@@ -912,20 +1038,17 @@ class _DiscoverCarouselRailState extends State<_DiscoverCarouselRail> {
                         top: 0,
                         right: 0,
                         bottom: 0,
-                        width: 48,
+                        width: 64,
                         child: AnimatedOpacity(
                           key: widget.keyPrefix == null
                               ? null
                               : ValueKey('${widget.keyPrefix}_next'),
-                          opacity: _hovered ? 1 : 0,
+                          opacity: _hovered ? 1 : 0.86,
                           duration: const Duration(milliseconds: 180),
-                          child: IgnorePointer(
-                            ignoring: !_hovered,
-                            child: _DiscoverRailButton(
-                              icon: Icons.chevron_right_rounded,
-                              tooltip: 'Livres suivants',
-                              onTap: () => _scrollByPage(1),
-                            ),
+                          child: _DiscoverRailButton(
+                            icon: Icons.chevron_right_rounded,
+                            tooltip: 'Livres suivants',
+                            onTap: () => _scrollByPage(1),
                           ),
                         ),
                       ),
@@ -957,25 +1080,27 @@ class _DiscoverRailButton extends StatelessWidget {
       button: true,
       label: tooltip,
       child: Center(
-        child: SizedBox.square(
-          dimension: 40,
-          child: IconButton(
-            onPressed: onTap,
-            padding: EdgeInsets.zero,
-            icon: Icon(
-              icon,
-              size: 32,
-              color: Colors.white,
-              shadows: const [
-                Shadow(
-                  color: Color(0xB3000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
+        child: Tooltip(
+          message: tooltip,
+          child: Material(
+            color: context.colors.cards.withValues(alpha: 0.96),
+            elevation: 8,
+            shadowColor: context.colors.primary.withValues(alpha: 0.26),
+            shape: CircleBorder(
+              side: BorderSide(
+                color: context.colors.primary.withValues(alpha: 0.22),
+              ),
             ),
-            hoverColor: Colors.white.withValues(alpha: 0.10),
-            highlightColor: Colors.white.withValues(alpha: 0.16),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              hoverColor: context.colors.primary.withValues(alpha: 0.10),
+              highlightColor: context.colors.primary.withValues(alpha: 0.16),
+              child: SizedBox.square(
+                dimension: 44,
+                child: Icon(icon, size: 32, color: context.colors.primary),
+              ),
+            ),
           ),
         ),
       ),
@@ -983,43 +1108,61 @@ class _DiscoverRailButton extends StatelessWidget {
   }
 }
 
-class _PlumoraBookTile extends ConsumerWidget {
-  const _PlumoraBookTile({required this.book});
+class _PlumoraBookTile extends ConsumerStatefulWidget {
+  const _PlumoraBookTile({required this.book, required this.metrics});
 
   final CatalogBookModel book;
+  final _DiscoverBookTileMetrics metrics;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
-    final genre = book.genre?.trim();
+  ConsumerState<_PlumoraBookTile> createState() => _PlumoraBookTileState();
+}
 
-    return InkWell(
-      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
+class _PlumoraBookTileState extends ConsumerState<_PlumoraBookTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cachedCover = ref.watch(bookCoverBytesProvider(widget.book.id));
+    final genre = widget.book.genre?.trim();
+
+    return _HoverableBookTile(
+      onTap: () =>
+          context.push(AppRoutes.catalogBookDetailPath(widget.book.id)),
+      onHoverChanged: (hovered) => setState(() => _hovered = hovered),
       child: SizedBox(
-        width: 112,
+        key: ValueKey('discover_plumora_book_tile_${widget.book.id}'),
+        width: widget.metrics.tileWidth,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 112,
-              height: 160,
+            PlumoraHoverBookCover(
+              key: ValueKey('discover_plumora_book_cover_${widget.book.id}'),
+              hovered: _hovered,
+              width: widget.metrics.tileWidth,
+              height: widget.metrics.coverHeight,
+              radius: widget.metrics.radius,
+              overlayKey: const ValueKey('discover_book_hover_overlay'),
+              actionKey: const ValueKey('discover_book_hover_cta'),
               child: Stack(
                 children: [
                   Positioned.fill(
                     child: PlumoraBookCover(
                       colors: _coverColors(
-                        book.id.isEmpty ? book.title : book.id,
+                        widget.book.id.isEmpty
+                            ? widget.book.title
+                            : widget.book.id,
                       ),
-                      imageUrl: book.coverUrl,
+                      imageUrl: widget.book.coverUrl,
                       imageBytes: cachedCover,
-                      width: 112,
-                      height: 160,
-                      radius: 16,
+                      width: widget.metrics.tileWidth,
+                      height: widget.metrics.coverHeight,
+                      radius: widget.metrics.radius,
                     ),
                   ),
                   Positioned(
-                    top: 8,
-                    right: 8,
+                    top: widget.metrics.badgeTop,
+                    right: widget.metrics.badgeRight,
                     child: _CoverBadge(
                       label: 'Plumora',
                       backgroundColor: context.colors.plumora.withValues(
@@ -1032,23 +1175,27 @@ class _PlumoraBookTile extends ConsumerWidget {
             ),
             const SizedBox(height: 9),
             Text(
-              book.title.isEmpty ? 'Livre sans titre' : book.title,
+              widget.book.title.isEmpty
+                  ? 'Livre sans titre'
+                  : widget.book.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: context.colors.textPrimary,
-                fontSize: 12,
+                color: _hovered
+                    ? context.colors.primary
+                    : context.colors.textPrimary,
+                fontSize: widget.metrics.titleFontSize,
                 fontWeight: FontWeight.w900,
                 height: 1.15,
               ),
             ),
             Text(
-              book.authorName,
+              widget.book.authorName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: context.colors.textSecondary,
-                fontSize: 11,
+                fontSize: widget.metrics.metaFontSize,
               ),
             ),
             if (genre != null && genre.isNotEmpty)
@@ -1063,12 +1210,12 @@ class _PlumoraBookTile extends ConsumerWidget {
               )
             else
               Text(
-                '${book.chapterCount} chapitres',
+                '${widget.book.chapterCount} chapitres',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: context.colors.textSecondary,
-                  fontSize: 10,
+                  fontSize: widget.metrics.smallMetaFontSize,
                 ),
               ),
           ],
@@ -1085,8 +1232,6 @@ class _ExternalAsyncRail extends ConsumerStatefulWidget {
     required this.query,
     this.iconColor,
     this.subtitle,
-    this.badge,
-    this.rankItems = false,
     this.loadDelay = Duration.zero,
   });
 
@@ -1095,8 +1240,6 @@ class _ExternalAsyncRail extends ConsumerStatefulWidget {
   final Color? iconColor;
   final ExternalBookSearchQuery query;
   final String? subtitle;
-  final String? badge;
-  final bool rankItems;
   final Duration loadDelay;
 
   @override
@@ -1262,8 +1405,6 @@ class _ExternalAsyncRailState extends ConsumerState<_ExternalAsyncRail> {
           iconColor: iconColor,
           subtitle: widget.subtitle,
           books: page.content.take(12).toList(),
-          badge: widget.badge,
-          rankItems: widget.rankItems,
         );
       },
     );
@@ -1285,9 +1426,7 @@ class _ExternalBookRail extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.books,
-    required this.rankItems,
     this.subtitle,
-    this.badge,
   });
 
   final String title;
@@ -1295,8 +1434,6 @@ class _ExternalBookRail extends StatelessWidget {
   final Color iconColor;
   final String? subtitle;
   final List<ExternalBook> books;
-  final String? badge;
-  final bool rankItems;
 
   @override
   Widget build(BuildContext context) {
@@ -1306,73 +1443,86 @@ class _ExternalBookRail extends StatelessWidget {
       iconColor: iconColor,
       subtitle: subtitle,
       itemCount: books.length,
-      itemBuilder: (context, index) {
-        return _ExternalBookTile(
-          book: books[index],
-          rank: rankItems ? index + 1 : null,
-          badge: badge,
-        );
-      },
+      itemBuilder: (context, index, metrics) =>
+          _ExternalBookTile(book: books[index], metrics: metrics),
     );
   }
 }
 
-class _ExternalBookTile extends StatelessWidget {
-  const _ExternalBookTile({required this.book, this.rank, this.badge});
+class _ExternalBookTile extends StatefulWidget {
+  const _ExternalBookTile({required this.book, required this.metrics});
 
   final ExternalBook book;
-  final int? rank;
-  final String? badge;
+  final _DiscoverBookTileMetrics metrics;
+
+  @override
+  State<_ExternalBookTile> createState() => _ExternalBookTileState();
+}
+
+class _ExternalBookTileState extends State<_ExternalBookTile> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: book.canOpenExternalDetail
+    return _HoverableBookTile(
+      onTap: widget.book.canOpenExternalDetail
           ? () {
-              final internalBookId = book.internalBookId?.trim();
+              final internalBookId = widget.book.internalBookId?.trim();
               context.push(
-                book.imported &&
+                widget.book.imported &&
                         internalBookId != null &&
                         internalBookId.isNotEmpty
                     ? AppRoutes.catalogBookDetailPath(internalBookId)
-                    : AppRoutes.publicDomainBookDetailPath(book.externalId),
+                    : AppRoutes.publicDomainBookDetailPath(
+                        widget.book.externalId,
+                      ),
               );
             }
           : null,
+      onHoverChanged: (hovered) => setState(() => _hovered = hovered),
       child: SizedBox(
-        width: 112,
+        key: ValueKey('discover_external_book_tile_${widget.book.externalId}'),
+        width: widget.metrics.tileWidth,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ExternalCover(book: book, rank: rank, badge: badge),
+            _ExternalCover(
+              book: widget.book,
+              metrics: widget.metrics,
+              hovered: _hovered,
+            ),
             const SizedBox(height: 9),
             Text(
-              book.title.isEmpty ? 'Livre sans titre' : book.title,
+              widget.book.title.isEmpty
+                  ? 'Livre sans titre'
+                  : widget.book.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: context.colors.textPrimary,
-                fontSize: 12,
+                color: _hovered
+                    ? context.colors.primary
+                    : context.colors.textPrimary,
+                fontSize: widget.metrics.titleFontSize,
                 fontWeight: FontWeight.w900,
                 height: 1.15,
               ),
             ),
             Text(
-              book.authorLabel,
+              widget.book.authorLabel,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: context.colors.textSecondary,
-                fontSize: 11,
+                fontSize: widget.metrics.metaFontSize,
               ),
             ),
             Text(
-              '${book.downloadCount} lectures',
+              '${widget.book.downloadCount} lectures',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: context.colors.textSecondary,
-                fontSize: 10,
+                fontSize: widget.metrics.smallMetaFontSize,
               ),
             ),
           ],
@@ -1383,23 +1533,27 @@ class _ExternalBookTile extends StatelessWidget {
 }
 
 class _ExternalCover extends StatelessWidget {
-  const _ExternalCover({required this.book, this.rank, this.badge});
+  const _ExternalCover({
+    required this.book,
+    required this.metrics,
+    required this.hovered,
+  });
 
   final ExternalBook book;
-  final int? rank;
-  final String? badge;
+  final _DiscoverBookTileMetrics metrics;
+  final bool hovered;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBadge = book.imported
-        ? 'Importé'
-        : book.canOpenExternalDetail
-        ? badge ?? 'Domaine public'
-        : 'Bientôt disponible';
-
-    return SizedBox(
-      width: 112,
-      height: 160,
+    return PlumoraHoverBookCover(
+      key: ValueKey('discover_external_book_cover_${book.externalId}'),
+      hovered: hovered,
+      canOpen: book.canOpenExternalDetail,
+      width: metrics.tileWidth,
+      height: metrics.coverHeight,
+      radius: metrics.radius,
+      overlayKey: const ValueKey('discover_book_hover_overlay'),
+      actionKey: const ValueKey('discover_book_hover_cta'),
       child: Stack(
         children: [
           Positioned.fill(
@@ -1408,26 +1562,40 @@ class _ExternalCover extends StatelessWidget {
                 book.externalId.isEmpty ? book.title : book.externalId,
               ),
               imageUrl: book.coverUrl,
-              width: 112,
-              height: 160,
-              radius: 16,
-            ),
-          ),
-          if (rank != null)
-            Positioned(top: 8, left: 8, child: _RoundBadge(label: '$rank')),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: _CoverBadge(
-              label: effectiveBadge,
-              backgroundColor: book.imported
-                  ? context.colors.success.withValues(alpha: 0.9)
-                  : book.canOpenExternalDetail
-                  ? context.colors.primary.withValues(alpha: 0.9)
-                  : context.colors.textSecondary.withValues(alpha: 0.9),
+              width: metrics.tileWidth,
+              height: metrics.coverHeight,
+              radius: metrics.radius,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HoverableBookTile extends StatelessWidget {
+  const _HoverableBookTile({
+    required this.child,
+    required this.onTap,
+    required this.onHoverChanged,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final ValueChanged<bool> onHoverChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
+      onEnter: (_) => onHoverChanged(true),
+      onExit: (_) => onHoverChanged(false),
+      child: InkWell(
+        onTap: onTap,
+        hoverColor: Colors.transparent,
+        splashColor: context.colors.primary.withValues(alpha: 0.08),
+        highlightColor: Colors.transparent,
+        child: child,
       ),
     );
   }
@@ -1487,64 +1655,43 @@ class _EmptyRail extends StatelessWidget {
   }
 }
 
-class _RoundBadge extends StatelessWidget {
-  const _RoundBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: context.colors.primary,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _LoadingRail extends StatelessWidget {
   const _LoadingRail();
 
   @override
   Widget build(BuildContext context) {
-    return FigmaAdaptiveRail(
-      itemCount: 6,
-      railHeight: 262,
-      itemBuilder: (context, index) => SizedBox(
-        width: 112,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 112,
-              height: 160,
-              decoration: BoxDecoration(
-                color: context.colors.muted,
-                borderRadius: BorderRadius.circular(16),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final metrics = _DiscoverBookTileMetrics.forWidth(constraints.maxWidth);
+
+        return FigmaAdaptiveRail(
+          itemCount: 6,
+          railHeight: metrics.railHeight,
+          spacing: metrics.spacing,
+          itemBuilder: (context, index) => SizedBox(
+            width: metrics.tileWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: metrics.tileWidth,
+                  height: metrics.coverHeight,
+                  decoration: BoxDecoration(
+                    color: context.colors.muted,
+                    borderRadius: BorderRadius.circular(metrics.radius),
+                  ),
+                ),
+                const SizedBox(height: 9),
+                _SkeletonLine(width: metrics.tileWidth * 0.86),
+                const SizedBox(height: 5),
+                _SkeletonLine(width: metrics.tileWidth * 0.64),
+                const SizedBox(height: 5),
+                _SkeletonLine(width: metrics.tileWidth * 0.52),
+              ],
             ),
-            const SizedBox(height: 9),
-            const _SkeletonLine(width: 96),
-            const SizedBox(height: 5),
-            const _SkeletonLine(width: 72),
-            const SizedBox(height: 5),
-            const _SkeletonLine(width: 58),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
