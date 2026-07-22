@@ -19,10 +19,25 @@ class GoogleAuthService {
           clientSecret: GoogleAuthConfig.isDesktopOAuthFlow
               ? GoogleAuthConfig.desktopClientSecret
               : null,
-          scopes: const [
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/userinfo.email',
-          ],
+          // Deliberately empty: the backend only ever needs the ID token
+          // (POST /auth/google), and the ID token already carries email +
+          // name + picture as OpenID Connect claims -- no OAuth2 API scope
+          // needed for any of that (docs/api-contract.md).
+          //
+          // This used to request userinfo.profile/email as OAuth2 scopes,
+          // which broke sign-in on web: `google_sign_in_all_platforms_mobile`
+          // (shared by the web implementation) unconditionally calls
+          // `user.authorizationClient.authorizeScopes(scopes)` for ANY
+          // non-empty scopes list inside `genCreds()`, itself invoked from
+          // `authenticationEvents.listen(...).then(...)` -- an async
+          // callback, not the original click. Browsers require window.open()
+          // to be synchronous with a user gesture, so that popup is silently
+          // blocked ("Maybe blocked by the browser?"), `genCreds()` then
+          // returns null because its accessToken is null (even though the ID
+          // token it already had was perfectly valid), and `onSignIn` never
+          // fires. See the package's own comment on `authorizeScopes`: "this
+          // may show a popup; ensure you call this from a user gesture".
+          scopes: const [],
         ),
       );
 
