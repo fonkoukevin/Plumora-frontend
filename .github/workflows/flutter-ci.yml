@@ -301,14 +301,18 @@ jobs:
           main_js="$(curl -s http://localhost:8080/main.dart.js)"
           grep -q '813993268745-n6e5pe24ac22rvfajdgvf45dtlbjth0d.apps.googleusercontent.com' <<< "$main_js"
 
-          # Regression guard: the CSP must allow accounts.google.com in both
-          # script-src (Google Identity Services' web SDK) and frame-src (its
-          # rendered button/prompt), or the sign-in flow silently never
-          # completes despite the button being visible (see
-          # docker/security-headers.conf's comment).
+          # Regression guard: the CSP must allow accounts.google.com in
+          # script-src (Google Identity Services' web SDK), frame-src (its
+          # rendered button/prompt) AND style-src (its stylesheet,
+          # gsi/style) — missing any one is a silent CSP violation and the
+          # sign-in flow never completes despite the button being visible
+          # (see docker/security-headers.conf's comment; the style-src case
+          # is exactly what slipped through the first two rounds of this
+          # guard and only surfaced in live testing).
           csp_header="$(curl -sI http://localhost:8080/ | grep -i '^content-security-policy:')"
           grep -q "script-src[^;]*https://accounts.google.com" <<< "$csp_header"
           grep -q "frame-src[^;]*https://accounts.google.com" <<< "$csp_header"
+          grep -q "style-src[^;]*https://accounts.google.com" <<< "$csp_header"
 
       - name: Stop smoke test container
         if: always()
