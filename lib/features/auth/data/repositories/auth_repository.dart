@@ -82,9 +82,20 @@ class AuthRepository {
     return AuthSession(user: user, roles: roles);
   }
 
+  /// Native/desktop flow: obtains the Google ID token itself via
+  /// [GoogleAuthService.signInAndGetIdToken] (not supported on web — see
+  /// [loginWithGoogleIdToken]).
   Future<AuthSession> loginWithGoogle() async {
-    await _tokenStorage.clearAccessToken();
     final idToken = await _googleAuthService.signInAndGetIdToken();
+    return loginWithGoogleIdToken(idToken);
+  }
+
+  /// Web flow: the ID token was already obtained by Google Identity
+  /// Services' own rendered button (see
+  /// `GoogleAuthService.webSignInButton`), so this only performs the
+  /// Plumora-side exchange.
+  Future<AuthSession> loginWithGoogleIdToken(String idToken) async {
+    await _tokenStorage.clearAccessToken();
     final response = await _apiService.loginWithGoogle(idToken);
     await _tokenStorage.saveAccessToken(response.accessToken);
 

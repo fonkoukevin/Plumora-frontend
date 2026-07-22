@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in_all_platforms/google_sign_in_all_platforms.dart'
+    show GoogleSignInCredentials;
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/routing/app_router.dart';
@@ -8,6 +11,7 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../data/models/login_request.dart';
 import '../data/models/role_model.dart';
+import '../data/services/google_auth_service.dart';
 import 'controllers/auth_controller.dart';
 import 'widgets/auth_screen_shell.dart';
 
@@ -33,6 +37,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  // Built once (not per-build): Google Identity Services' web SDK renders
+  // this into its own DOM node, so recreating it on every rebuild would
+  // tear down and re-mount that node for no reason. Null on non-web
+  // platforms, where the native flow drives itself from a plain button
+  // instead (see _submitGoogle).
+  Widget? _webGoogleSignInButton;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      _webGoogleSignInButton = ref
+          .read(googleAuthServiceProvider)
+          .webSignInButton(onSignIn: _onGoogleCredentials);
+    }
+  }
 
   @override
   void dispose() {
@@ -65,6 +86,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submitGoogle() async {
     await ref.read(authControllerProvider.notifier).loginWithGoogle();
+
+    final session = ref.read(authControllerProvider).valueOrNull;
+    if (!mounted || session?.isAuthenticated != true) {
+      return;
+    }
+
+    context.go(_postLoginDestination(session!.roles));
+  }
+
+  /// Web counterpart of [_submitGoogle]: called once Google Identity
+  /// Services' own button (see [_webGoogleSignInButton]) has already
+  /// completed the browser-side flow and handed back credentials.
+  Future<void> _onGoogleCredentials(GoogleSignInCredentials credentials) async {
+    final idToken = credentials.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      return;
+    }
+
+    await ref
+        .read(authControllerProvider.notifier)
+        .loginWithGoogleIdToken(idToken);
 
     final session = ref.read(authControllerProvider).valueOrNull;
     if (!mounted || session?.isAuthenticated != true) {
@@ -182,11 +224,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 22),
                   const AuthDivider(),
                   const SizedBox(height: 18),
-                  _SocialButton(
-                    icon: const GoogleLogo(),
-                    label: 'Continuer avec Google',
-                    onPressed: isLoading ? null : _submitGoogle,
-                  ),
+                  if (_webGoogleSignInButton != null)
+                    SizedBox(
+                      height: 40,
+                      child: Opacity(
+                        opacity: isLoading ? 0.6 : 1,
+                        child: IgnorePointer(
+                          ignoring: isLoading,
+                          child: Center(child: _webGoogleSignInButton),
+                        ),
+                      ),
+                    )
+                  else
+                    _SocialButton(
+                      icon: const GoogleLogo(),
+                      label: 'Continuer avec Google',
+                      onPressed: isLoading ? null : _submitGoogle,
+                    ),
                   const SizedBox(height: 12),
                   _SocialButton(
                     icon: Icon(Icons.code, color: context.colors.textPrimary),

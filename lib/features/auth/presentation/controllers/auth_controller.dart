@@ -37,6 +37,19 @@ class AuthController extends AsyncNotifier<AuthSession> {
     }
   }
 
+  /// Web counterpart of [loginWithGoogle] — see
+  /// `AuthRepository.loginWithGoogleIdToken`.
+  Future<void> loginWithGoogleIdToken(String idToken) async {
+    invalidateUserScopedCaches(ref);
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() {
+      return ref.read(authRepositoryProvider).loginWithGoogleIdToken(idToken);
+    });
+    if (state.hasValue) {
+      invalidateUserScopedCaches(ref);
+    }
+  }
+
   Future<void> register(RegisterRequest request) async {
     invalidateUserScopedCaches(ref);
     state = const AsyncLoading();
