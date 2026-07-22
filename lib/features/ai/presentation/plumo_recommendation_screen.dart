@@ -9,6 +9,7 @@ import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../../catalog/data/repositories/catalog_repository.dart';
+import '../../reading/data/repositories/favorite_repository.dart';
 import '../data/models/ai_models.dart';
 import '../data/repositories/ai_repository.dart';
 
@@ -400,7 +401,7 @@ class _PlumoResults extends StatelessWidget {
           else
             for (final recommendation in recommendations) ...[
               _RecommendationCard(recommendation: recommendation),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
             ],
           Center(
             child: OutlinedButton(
@@ -414,13 +415,23 @@ class _PlumoResults extends StatelessWidget {
   }
 }
 
-class _RecommendationCard extends ConsumerWidget {
+class _RecommendationCard extends ConsumerStatefulWidget {
   const _RecommendationCard({required this.recommendation});
 
   final AiRecommendedBookModel recommendation;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RecommendationCard> createState() =>
+      _RecommendationCardState();
+}
+
+class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
+  bool _favoriteMutating = false;
+  String? _favoriteError;
+
+  @override
+  Widget build(BuildContext context) {
+    final recommendation = widget.recommendation;
     final thinBook = recommendation.book;
     // The recommendation payload only carries id/title/coverUrl -- enrich
     // with the real author/genre/rating/reading time from the catalog so
@@ -430,152 +441,436 @@ class _RecommendationCard extends ConsumerWidget {
     final detailAsync = ref.watch(catalogBookDetailProvider(thinBook.id));
     final book = detailAsync.valueOrNull?.summary ?? thinBook;
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+    final favoriteAsync = book.id.isEmpty
+        ? null
+        : ref.watch(favoriteStatusProvider(book.id));
+    final isFavorite = favoriteAsync?.valueOrNull ?? false;
+    final favoriteLoading =
+        _favoriteMutating || (favoriteAsync?.isLoading ?? false);
+    final reasons = recommendation.reasons
+        .map((reason) => reason.trim())
+        .where((reason) => reason.isNotEmpty)
+        .toList();
+    if (reasons.isEmpty) {
+      reasons.add(
+        book.genre?.trim().isNotEmpty ?? false
+            ? 'Correspond à ton envie de lire un livre ${book.genre!.trim()}.'
+            : 'Sélectionné par Plumo à partir de tes préférences de lecture.',
+      );
+    }
 
     return FigmaCard(
+      key: ValueKey('plumo_recommendation_${book.id}'),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 700;
-          final cover = PlumoraBookCover(
-            width: wide ? 170 : double.infinity,
-            height: wide ? 250 : 250,
-            colors: _coverColors(book.id),
-            imageUrl: book.coverUrl,
-            imageBytes: cachedCover,
-            radius: 14,
-          );
-          final detail = Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            book.title.isEmpty
-                                ? 'Livre sans titre'
-                                : book.title,
-                            style: TextStyle(
-                              color: context.colors.textPrimary,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          Text(
-                            book.authorName,
-                            style: TextStyle(
-                              color: context.colors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (recommendation.matchScore > 0)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: context.colors.primary,
-                              ),
-                              Text(
-                                '${recommendation.matchScore}%',
-                                style: TextStyle(
-                                  color: context.colors.primary,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            'Correspondance',
-                            style: TextStyle(
-                              color: context.colors.textSecondary,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    if (book.genre != null) FigmaBadge(label: book.genre!),
-                    if (book.estimatedReadingMinutes > 0)
-                      FigmaBadge(label: '${book.estimatedReadingMinutes} min'),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 17),
-                    Text(' ${book.rating.toStringAsFixed(1)}'),
-                    const SizedBox(width: 18),
-                    const Icon(Icons.menu_book_outlined, size: 17),
-                    Text(' ${book.readCount} lectures'),
-                  ],
-                ),
-                if (recommendation.reasons.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  FigmaCard(
-                    color: context.colors.primary.withValues(alpha: 0.06),
-                    shadow: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final reason in recommendation.reasons)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Text(
-                              reason,
-                              style: const TextStyle(height: 1.4),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: book.id.isEmpty
-                        ? null
-                        : () => context.push(
-                            AppRoutes.catalogBookDetailPath(book.id),
-                          ),
-                    icon: const Icon(Icons.menu_book_outlined),
-                    label: const Text('En savoir plus'),
-                  ),
-                ),
-              ],
+          final wide = constraints.maxWidth >= 760;
+          final actionsInline = constraints.maxWidth >= 560;
+          final coverWidth = wide
+              ? 192.0
+              : constraints.maxWidth.clamp(150.0, 180.0).toDouble();
+          final coverHeight = wide ? 360.0 : 264.0;
+          final cover = Align(
+            alignment: wide ? Alignment.topLeft : Alignment.topCenter,
+            child: PlumoraBookCover(
+              key: ValueKey('plumo_recommendation_cover_${book.id}'),
+              width: coverWidth,
+              height: coverHeight,
+              colors: _coverColors(book.id),
+              imageUrl: book.coverUrl,
+              imageBytes: cachedCover,
+              radius: 16,
             ),
           );
+          final details = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _RecommendationHeading(
+                title: book.title.isEmpty ? 'Livre sans titre' : book.title,
+                author: book.authorName,
+                matchScore: recommendation.matchScore,
+                compact: !wide,
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (book.genre?.trim().isNotEmpty ?? false)
+                    FigmaBadge(label: book.genre!.trim()),
+                  if (book.estimatedReadingMinutes > 0)
+                    FigmaBadge(
+                      label: _formatReadingDuration(
+                        book.estimatedReadingMinutes,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _RecommendationStats(
+                rating: book.rating,
+                readCount: book.readCount,
+              ),
+              const SizedBox(height: 16),
+              _RecommendationReasons(reasons: reasons),
+              const SizedBox(height: 16),
+              _RecommendationActions(
+                inline: actionsInline,
+                bookId: book.id,
+                isFavorite: isFavorite,
+                favoriteLoading: favoriteLoading,
+                onOpen: book.id.isEmpty
+                    ? null
+                    : () => context.push(
+                        AppRoutes.catalogBookDetailPath(book.id),
+                      ),
+                onToggleFavorite: book.id.isEmpty || favoriteLoading
+                    ? null
+                    : () => _toggleFavorite(book.id, isFavorite),
+              ),
+              if (_favoriteError != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _favoriteError!,
+                  style: TextStyle(
+                    color: context.colors.destructive,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
+          );
+
           if (!wide) {
             return Column(
-              children: [
-                cover,
-                const SizedBox(height: 18),
-                Row(children: [detail]),
-              ],
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [cover, const SizedBox(height: 22), details],
             );
           }
+
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [cover, const SizedBox(width: 22), detail],
+            children: [
+              cover,
+              const SizedBox(width: 24),
+              Expanded(child: details),
+            ],
           );
         },
       ),
     );
   }
+
+  Future<void> _toggleFavorite(String bookId, bool isFavorite) async {
+    setState(() {
+      _favoriteMutating = true;
+      _favoriteError = null;
+    });
+
+    try {
+      final repository = ref.read(favoriteRepositoryProvider);
+      if (isFavorite) {
+        await repository.removeFavorite(bookId);
+      } else {
+        await repository.addFavorite(bookId);
+      }
+      ref.invalidate(favoriteStatusProvider(bookId));
+      ref.invalidate(myFavoritesProvider);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _favoriteError = AppError.messageFor(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _favoriteMutating = false);
+      }
+    }
+  }
+}
+
+class _RecommendationHeading extends StatelessWidget {
+  const _RecommendationHeading({
+    required this.title,
+    required this.author,
+    required this.matchScore,
+    required this.compact,
+  });
+
+  final String title;
+  final String author;
+  final int matchScore;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: compact ? 21 : 24,
+                  fontWeight: FontWeight.w900,
+                  height: 1.08,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                author,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (matchScore > 0) ...[
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
+                    color: context.colors.primary,
+                    size: compact ? 19 : 22,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$matchScore%',
+                    style: TextStyle(
+                      color: context.colors.primary,
+                      fontSize: compact ? 21 : 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Correspondance',
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  fontSize: 10.5,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _RecommendationStats extends StatelessWidget {
+  const _RecommendationStats({required this.rating, required this.readCount});
+
+  final double rating;
+  final int readCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 18,
+      runSpacing: 8,
+      children: [
+        _RecommendationStat(
+          icon: Icons.star_rounded,
+          iconColor: const Color(0xFFFFB800),
+          label: rating.toStringAsFixed(1),
+        ),
+        _RecommendationStat(
+          icon: Icons.menu_book_outlined,
+          iconColor: context.colors.textSecondary,
+          label: '$readCount lectures',
+        ),
+      ],
+    );
+  }
+}
+
+class _RecommendationStat extends StatelessWidget {
+  const _RecommendationStat({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: iconColor, size: 17),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecommendationReasons extends StatelessWidget {
+  const _RecommendationReasons({required this.reasons});
+
+  final List<String> reasons;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('plumo_recommendation_reasons'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
+      decoration: BoxDecoration(
+        color: context.colors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, color: context.colors.primary, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Pourquoi ce livre ?',
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (final reason in reasons)
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 7),
+                    child: Container(
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: context.colors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      reason,
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendationActions extends StatelessWidget {
+  const _RecommendationActions({
+    required this.inline,
+    required this.bookId,
+    required this.isFavorite,
+    required this.favoriteLoading,
+    required this.onOpen,
+    required this.onToggleFavorite,
+  });
+
+  final bool inline;
+  final String bookId;
+  final bool isFavorite;
+  final bool favoriteLoading;
+  final VoidCallback? onOpen;
+  final VoidCallback? onToggleFavorite;
+
+  @override
+  Widget build(BuildContext context) {
+    final openButton = SizedBox(
+      key: ValueKey('plumo_recommendation_open_$bookId'),
+      height: 48,
+      child: FilledButton.icon(
+        onPressed: onOpen,
+        icon: const Icon(Icons.menu_book_outlined, size: 19),
+        label: const Text('En savoir plus'),
+      ),
+    );
+    final favoriteButton = SizedBox(
+      key: ValueKey('plumo_recommendation_favorite_$bookId'),
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: onToggleFavorite,
+        icon: favoriteLoading
+            ? const SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+        label: Text(isFavorite ? 'Dans ma liste' : 'Ajouter à ma liste'),
+      ),
+    );
+
+    if (!inline) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [openButton, const SizedBox(height: 10), favoriteButton],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: openButton),
+        const SizedBox(width: 12),
+        SizedBox(width: 200, child: favoriteButton),
+      ],
+    );
+  }
+}
+
+String _formatReadingDuration(int minutes) {
+  if (minutes < 60) {
+    return '$minutes min';
+  }
+
+  final hours = minutes ~/ 60;
+  final remainingMinutes = minutes % 60;
+  if (remainingMinutes == 0) {
+    return '${hours}h';
+  }
+
+  return '${hours}h${remainingMinutes.toString().padLeft(2, '0')}';
 }
 
 List<Color> _coverColors(String key) {
