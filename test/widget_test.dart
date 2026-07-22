@@ -412,28 +412,37 @@ void main() {
   testWidgets('Home book rails do not draw ranking numbers on covers', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(768, 900));
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    const books = [
-      CatalogBookModel(
+    final books = [
+      const CatalogBookModel(
         id: 'alpha',
         title: 'Alpha',
         description: '',
         authorName: 'Autrice',
+        genre: 'Fantasy',
       ),
-      CatalogBookModel(
+      const CatalogBookModel(
         id: 'bravo',
         title: 'Bravo',
         description: '',
         authorName: 'Auteur',
+        externalSource: 'GUTENDEX',
       ),
-      CatalogBookModel(
+      const CatalogBookModel(
         id: 'charlie',
         title: 'Charlie',
         description: '',
         authorName: 'Auteur',
       ),
+      for (var index = 0; index < 11; index++)
+        CatalogBookModel(
+          id: 'extra-$index',
+          title: 'Livre supplémentaire ${index + 4}',
+          description: '',
+          authorName: 'Auteur',
+        ),
     ];
 
     await tester.pumpWidget(
@@ -456,7 +465,8 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
 
     expect(find.text('Alpha'), findsOneWidget);
     expect(find.text('Bravo'), findsOneWidget);
@@ -467,11 +477,27 @@ void main() {
 
     final alphaTile = find.byKey(const ValueKey('home_book_tile_alpha'));
     final alphaCover = find.byKey(const ValueKey('home_book_cover_alpha'));
+    final bravoCover = find.byKey(const ValueKey('home_book_cover_bravo'));
     final alphaCoverAnimation = find.descendant(
       of: alphaCover,
       matching: find.byType(AnimatedContainer),
     );
     final alphaCta = find.byKey(const ValueKey('home_book_hover_cta_alpha'));
+    expect(tester.getSize(alphaTile).width, closeTo(118, 0.1));
+    expect(tester.getSize(alphaCover), const Size(118, 170));
+    expect(
+      find.descendant(of: alphaCover, matching: find.text('Plumora')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: bravoCover, matching: find.text('Plumora')),
+      findsNothing,
+    );
+    expect(find.text('Fantasy'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('home_trending_books_next')),
+      findsOneWidget,
+    );
     expect(tester.widget<AnimatedOpacity>(alphaCta).opacity, 0);
 
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -483,6 +509,22 @@ void main() {
     expect(hoveredCover.transform!.storage[13], lessThan(0));
     expect(tester.widget<AnimatedOpacity>(alphaCta).opacity, 1);
     await mouse.removePointer();
+
+    await tester.binding.setSurfaceSize(const Size(1920, 900));
+    // The desktop greeting contains a looping waving-hand animation.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final wideRail = find.byKey(const ValueKey('home_trending_books_scroll'));
+    final highlights = find.byKey(const ValueKey('home_highlights_row'));
+    expect(tester.getSize(wideRail).width, closeTo(1488, 0.1));
+    expect(tester.getSize(highlights).width, closeTo(1488, 0.1));
+    expect(
+      tester.getCenter(wideRail).dx,
+      closeTo(tester.getCenter(highlights).dx, 0.1),
+    );
+    expect(tester.getSize(alphaTile).width, closeTo(124, 0.1));
+    expect(tester.getSize(alphaCover), const Size(124, 178));
     expect(tester.takeException(), isNull);
   });
 
@@ -962,7 +1004,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Author dashboard keeps a compact three-column desktop grid', (
+  testWidgets('Author dashboard fills wide screens with four compact columns', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1440, 900));
@@ -1037,7 +1079,7 @@ void main() {
     final storiesStatBorder = storiesStatDecoration.border! as Border;
     final manuscriptsTitle = find.text('Mes manuscrits');
 
-    expect(tester.getSize(firstCard).width, closeTo(382.7, 0.1));
+    expect(tester.getSize(firstCard).width, closeTo(338, 0.1));
     expect(tester.widget<Text>(manuscriptsTitle).style?.color, Colors.black);
     expect(
       find.ancestor(of: manuscriptsTitle, matching: find.byType(ShaderMask)),
@@ -1052,8 +1094,8 @@ void main() {
       closeTo(tester.getTopLeft(thirdCard).dy, 0.1),
     );
     expect(
-      tester.getTopLeft(fourthCard).dy,
-      greaterThan(tester.getBottomLeft(firstCard).dy),
+      tester.getTopLeft(thirdCard).dy,
+      closeTo(tester.getTopLeft(fourthCard).dy, 0.1),
     );
     expect(firstCardBorder.top.width, 0.8);
     expect(firstCardDecoration.borderRadius, BorderRadius.circular(18));

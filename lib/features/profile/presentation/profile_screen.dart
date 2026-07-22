@@ -16,6 +16,8 @@ import '../../book/data/repositories/book_repository.dart';
 import '../../reading/data/repositories/favorite_repository.dart';
 import '../../reading/data/repositories/reading_repository.dart';
 
+const double _profileMaxContentWidth = 1488;
+
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -136,6 +138,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ],
     );
 
+    final settingsTiles = <Widget>[
+      _SettingsTile(
+        icon: Icons.person_outline,
+        title: 'Informations personnelles',
+        subtitle: 'Nom, email et rôles',
+        color: const Color(0xFF8B5E3C),
+        onTap: () => setState(() => _showPersonalInfo = true),
+      ),
+      _SettingsTile(
+        icon: Icons.notifications_none,
+        title: 'Notifications',
+        subtitle: 'Voir les notifications du backend',
+        color: const Color(0xFF6D3A5D),
+        onTap: () => context.push(AppRoutes.notifications),
+      ),
+      _SettingsTile(
+        icon: Icons.auto_awesome,
+        title: 'Assistant Plumo',
+        subtitle: 'Ouvrir les assistants IA',
+        color: const Color(0xFF6D3A5D),
+        onTap: () => context.push(AppRoutes.plumoWriting),
+      ),
+      _SettingsTile(
+        icon: Icons.settings_outlined,
+        title: 'Préférences',
+        subtitle: 'Thème clair ou sombre',
+        color: const Color(0xFF6B6B6B),
+        onTap: () => context.push(AppRoutes.preferences),
+      ),
+      if (roles.any((role) => role.name.trim().toUpperCase() == 'ADMIN'))
+        _SettingsTile(
+          icon: Icons.shield_outlined,
+          title: 'Administration',
+          subtitle: 'Utilisateurs, catalogue, signalements, Plumo IA',
+          color: const Color(0xFFE57373),
+          onTap: () => context.go(AppRoutes.admin),
+        ),
+    ];
+
     final settingsSection = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -148,42 +189,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        _SettingsTile(
-          icon: Icons.person_outline,
-          title: 'Informations personnelles',
-          subtitle: 'Nom, email et rôles',
-          color: const Color(0xFF8B5E3C),
-          onTap: () => setState(() => _showPersonalInfo = true),
+        FigmaResponsiveGrid(
+          minTileWidth: 500,
+          maxColumns: 2,
+          spacing: 12,
+          runSpacing: 0,
+          children: settingsTiles,
         ),
-        _SettingsTile(
-          icon: Icons.notifications_none,
-          title: 'Notifications',
-          subtitle: 'Voir les notifications du backend',
-          color: const Color(0xFF6D3A5D),
-          onTap: () => context.push(AppRoutes.notifications),
-        ),
-        _SettingsTile(
-          icon: Icons.auto_awesome,
-          title: 'Assistant Plumo',
-          subtitle: 'Ouvrir les assistants IA',
-          color: const Color(0xFF6D3A5D),
-          onTap: () => context.push(AppRoutes.plumoWriting),
-        ),
-        _SettingsTile(
-          icon: Icons.settings_outlined,
-          title: 'Préférences',
-          subtitle: 'Thème clair ou sombre',
-          color: const Color(0xFF6B6B6B),
-          onTap: () => context.push(AppRoutes.preferences),
-        ),
-        if (roles.any((role) => role.name.trim().toUpperCase() == 'ADMIN'))
-          _SettingsTile(
-            icon: Icons.shield_outlined,
-            title: 'Administration',
-            subtitle: 'Utilisateurs, catalogue, signalements, Plumo IA',
-            color: const Color(0xFFE57373),
-            onTap: () => context.go(AppRoutes.admin),
-          ),
         const SizedBox(height: 14),
         OutlinedButton.icon(
           onPressed: _loggingOut ? null : _logout,
@@ -208,7 +220,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         final isDesktop = outerConstraints.maxWidth >= Breakpoints.expanded;
 
         return FigmaScreen(
-          maxWidth: isDesktop ? Breakpoints.wide : 860,
+          // 1488 px plus this screen's 16 px padding on both sides matches
+          // the 1520 px frame used by the Discover navigation page.
+          maxWidth: isDesktop ? _profileMaxContentWidth : 860,
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 92),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

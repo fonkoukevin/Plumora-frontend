@@ -21,7 +21,9 @@ import '../../notification/data/repositories/notification_repository.dart';
 import '../../reading/data/models/reading_progress_model.dart';
 import '../../reading/data/repositories/reading_repository.dart';
 
-const double _homeBookRailHeight = 224;
+const double _homeMaxContentWidth = 1520;
+const double _homeDashboardMaxWidth = 1280;
+const double _homeBookRailHeight = 276;
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -70,7 +72,9 @@ class HomeScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1280),
+                  constraints: const BoxConstraints(
+                    maxWidth: _homeMaxContentWidth,
+                  ),
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
                       16,
@@ -113,20 +117,34 @@ class HomeScreen extends ConsumerWidget {
                               ref.invalidate(latestCatalogBooksProvider),
                         ),
                         SizedBox(height: sectionGap),
-                        _ActivityList(notificationsAsync: notificationsAsync),
-                        const SizedBox(height: 16),
-                        betaAsync.when(
-                          loading: () => const _LoadingCard(height: 92),
-                          error: (_, _) => _BetaSummaryCard(count: 0),
-                          data: (invitations) {
-                            final pending = invitations
-                                .where((invitation) => invitation.isPending)
-                                .length;
-                            final accepted = invitations
-                                .where((invitation) => invitation.isAccepted)
-                                .length;
-                            return _BetaSummaryCard(count: pending + accepted);
-                          },
+                        _HomeCenteredSection(
+                          child: Column(
+                            children: [
+                              _ActivityList(
+                                notificationsAsync: notificationsAsync,
+                              ),
+                              const SizedBox(height: 16),
+                              betaAsync.when(
+                                loading: () => const _LoadingCard(height: 92),
+                                error: (_, _) => _BetaSummaryCard(count: 0),
+                                data: (invitations) {
+                                  final pending = invitations
+                                      .where(
+                                        (invitation) => invitation.isPending,
+                                      )
+                                      .length;
+                                  final accepted = invitations
+                                      .where(
+                                        (invitation) => invitation.isAccepted,
+                                      )
+                                      .length;
+                                  return _BetaSummaryCard(
+                                    count: pending + accepted,
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -157,6 +175,22 @@ class HomeScreen extends ConsumerWidget {
     }
 
     return 'Plumora';
+  }
+}
+
+class _HomeCenteredSection extends StatelessWidget {
+  const _HomeCenteredSection({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _homeDashboardMaxWidth),
+        child: SizedBox(width: double.infinity, child: child),
+      ),
+    );
   }
 }
 
@@ -198,7 +232,7 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1280),
+          constraints: const BoxConstraints(maxWidth: _homeMaxContentWidth),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: PlumoraAppHeader(
@@ -1073,7 +1107,7 @@ class _BookRail extends StatelessWidget {
           title: title,
           icon: icon,
           iconColor: iconColor,
-          showAccent: false,
+          showAccent: true,
           trailing: TextButton(
             onPressed: onSeeAll,
             style: TextButton.styleFrom(
@@ -1103,13 +1137,11 @@ class _BookRail extends StatelessWidget {
                 icon: Icons.menu_book_outlined,
               );
             }
-            return FigmaAdaptiveRail(
-              itemCount: books.length,
-              railHeight: _homeBookRailHeight,
-              itemBuilder: (context, index) {
-                final book = books[index];
-                return _BookTile(book: book);
-              },
+            return _HomeBookCarousel(
+              books: books,
+              keyPrefix: title == 'Tendances'
+                  ? 'home_trending_books'
+                  : 'home_latest_books',
             );
           },
         ),
@@ -1118,10 +1150,275 @@ class _BookRail extends StatelessWidget {
   }
 }
 
+class _HomeBookMetrics {
+  const _HomeBookMetrics({
+    required this.tileWidth,
+    required this.coverHeight,
+    required this.railHeight,
+    required this.spacing,
+    required this.radius,
+    required this.titleFontSize,
+    required this.metaFontSize,
+    required this.smallMetaFontSize,
+  });
+
+  final double tileWidth;
+  final double coverHeight;
+  final double railHeight;
+  final double spacing;
+  final double radius;
+  final double titleFontSize;
+  final double metaFontSize;
+  final double smallMetaFontSize;
+
+  double get badgeOffset => tileWidth >= 150 ? 10 : 8;
+
+  static _HomeBookMetrics forWidth(double width) {
+    if (width >= 1440) {
+      return const _HomeBookMetrics(
+        tileWidth: 124,
+        coverHeight: 178,
+        railHeight: 286,
+        spacing: 28,
+        radius: 17,
+        titleFontSize: 12.5,
+        metaFontSize: 11.5,
+        smallMetaFontSize: 10.5,
+      );
+    }
+    if (width >= 1100) {
+      return const _HomeBookMetrics(
+        tileWidth: 118,
+        coverHeight: 170,
+        railHeight: 276,
+        spacing: 24,
+        radius: 16,
+        titleFontSize: 12,
+        metaFontSize: 11,
+        smallMetaFontSize: 10,
+      );
+    }
+    if (width >= 760) {
+      return const _HomeBookMetrics(
+        tileWidth: 112,
+        coverHeight: 160,
+        railHeight: 264,
+        spacing: 18,
+        radius: 16,
+        titleFontSize: 12,
+        metaFontSize: 11,
+        smallMetaFontSize: 10,
+      );
+    }
+    return const _HomeBookMetrics(
+      tileWidth: 112,
+      coverHeight: 160,
+      railHeight: 262,
+      spacing: 12,
+      radius: 16,
+      titleFontSize: 12,
+      metaFontSize: 11,
+      smallMetaFontSize: 10,
+    );
+  }
+}
+
+class _HomeBookCarousel extends StatefulWidget {
+  const _HomeBookCarousel({required this.books, required this.keyPrefix});
+
+  final List<CatalogBookModel> books;
+  final String keyPrefix;
+
+  @override
+  State<_HomeBookCarousel> createState() => _HomeBookCarouselState();
+}
+
+class _HomeBookCarouselState extends State<_HomeBookCarousel> {
+  final ScrollController _scrollController = ScrollController();
+  bool _canScrollBack = false;
+  bool _canScrollForward = false;
+  bool _hovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_updateScrollButtons);
+    _scheduleScrollButtonUpdate();
+  }
+
+  @override
+  void didUpdateWidget(covariant _HomeBookCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _scheduleScrollButtonUpdate();
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_updateScrollButtons)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _scheduleScrollButtonUpdate() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updateScrollButtons();
+    });
+  }
+
+  void _updateScrollButtons() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final canScrollBack = position.pixels > position.minScrollExtent + 1;
+    final canScrollForward = position.pixels < position.maxScrollExtent - 1;
+    if (canScrollBack == _canScrollBack &&
+        canScrollForward == _canScrollForward) {
+      return;
+    }
+    setState(() {
+      _canScrollBack = canScrollBack;
+      _canScrollForward = canScrollForward;
+    });
+  }
+
+  Future<void> _scrollByPage(double direction) async {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final target =
+        (position.pixels + position.viewportDimension * 0.82 * direction)
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble();
+    await _scrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _setHovered(bool hovered) {
+    if (_hovered == hovered) return;
+    setState(() => _hovered = hovered);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final metrics = _HomeBookMetrics.forWidth(constraints.maxWidth);
+        final showControls = constraints.maxWidth >= 560;
+        final showPrevious = showControls && _canScrollBack;
+        final showNext = showControls && _canScrollForward;
+
+        return SizedBox(
+          height: metrics.railHeight,
+          child: MouseRegion(
+            onEnter: (_) => _setHovered(true),
+            onExit: (_) => _setHovered(false),
+            child: Stack(
+              children: [
+                ListView.separated(
+                  key: ValueKey('${widget.keyPrefix}_scroll'),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(top: 8, bottom: 8),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: widget.books.length,
+                  separatorBuilder: (_, _) => SizedBox(width: metrics.spacing),
+                  itemBuilder: (context, index) =>
+                      _BookTile(book: widget.books[index], metrics: metrics),
+                ),
+                if (showPrevious)
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    width: 64,
+                    child: AnimatedOpacity(
+                      key: ValueKey('${widget.keyPrefix}_previous'),
+                      opacity: _hovered ? 1 : 0.86,
+                      duration: const Duration(milliseconds: 180),
+                      child: _HomeRailButton(
+                        icon: Icons.chevron_left_rounded,
+                        tooltip: 'Livres précédents',
+                        onTap: () => _scrollByPage(-1),
+                      ),
+                    ),
+                  ),
+                if (showNext)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: 64,
+                    child: AnimatedOpacity(
+                      key: ValueKey('${widget.keyPrefix}_next'),
+                      opacity: _hovered ? 1 : 0.86,
+                      duration: const Duration(milliseconds: 180),
+                      child: _HomeRailButton(
+                        icon: Icons.chevron_right_rounded,
+                        tooltip: 'Livres suivants',
+                        onTap: () => _scrollByPage(1),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HomeRailButton extends StatelessWidget {
+  const _HomeRailButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: Center(
+        child: Tooltip(
+          message: tooltip,
+          child: Material(
+            color: context.colors.cards.withValues(alpha: 0.96),
+            elevation: 8,
+            shadowColor: context.colors.primary.withValues(alpha: 0.26),
+            shape: CircleBorder(
+              side: BorderSide(
+                color: context.colors.primary.withValues(alpha: 0.22),
+              ),
+            ),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              hoverColor: context.colors.primary.withValues(alpha: 0.10),
+              highlightColor: context.colors.primary.withValues(alpha: 0.16),
+              child: SizedBox.square(
+                dimension: 44,
+                child: Icon(icon, size: 32, color: context.colors.primary),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _BookTile extends ConsumerStatefulWidget {
-  const _BookTile({required this.book});
+  const _BookTile({required this.book, required this.metrics});
 
   final CatalogBookModel book;
+  final _HomeBookMetrics metrics;
 
   @override
   ConsumerState<_BookTile> createState() => _BookTileState();
@@ -1134,6 +1431,8 @@ class _BookTileState extends ConsumerState<_BookTile> {
   Widget build(BuildContext context) {
     final book = widget.book;
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
+    final genre = book.genre?.trim();
+    final metrics = widget.metrics;
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -1148,24 +1447,44 @@ class _BookTileState extends ConsumerState<_BookTile> {
           splashColor: context.colors.primary.withValues(alpha: 0.08),
           child: SizedBox(
             key: ValueKey('home_book_tile_${book.id}'),
-            width: 112,
+            width: metrics.tileWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 PlumoraHoverBookCover(
                   key: ValueKey('home_book_cover_${book.id}'),
                   hovered: _hovered,
-                  width: 112,
-                  height: 160,
-                  radius: 16,
+                  width: metrics.tileWidth,
+                  height: metrics.coverHeight,
+                  radius: metrics.radius,
+                  overlayKey: ValueKey('home_book_hover_overlay_${book.id}'),
                   actionKey: ValueKey('home_book_hover_cta_${book.id}'),
-                  child: PlumoraBookCover(
-                    width: 112,
-                    height: 160,
-                    radius: 16,
-                    colors: _coverColors(book.id),
-                    imageUrl: book.coverUrl,
-                    imageBytes: cachedCover,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: PlumoraBookCover(
+                          width: metrics.tileWidth,
+                          height: metrics.coverHeight,
+                          radius: metrics.radius,
+                          colors: _coverColors(
+                            book.id.isEmpty ? book.title : book.id,
+                          ),
+                          imageUrl: book.coverUrl,
+                          imageBytes: cachedCover,
+                        ),
+                      ),
+                      if (book.isPlumoraOriginal)
+                        Positioned(
+                          top: metrics.badgeOffset,
+                          right: metrics.badgeOffset,
+                          child: _HomeCoverBadge(
+                            label: 'Plumora',
+                            backgroundColor: context.colors.plumora.withValues(
+                              alpha: 0.9,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 9),
@@ -1177,24 +1496,72 @@ class _BookTileState extends ConsumerState<_BookTile> {
                     color: _hovered
                         ? context.colors.primary
                         : context.colors.textPrimary,
-                    fontSize: 12,
+                    fontSize: metrics.titleFontSize,
                     height: 1.15,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 3),
                 Text(
                   book.authorName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: context.colors.textSecondary,
-                    fontSize: 11,
+                    fontSize: metrics.metaFontSize,
                   ),
                 ),
+                if (genre != null && genre.isNotEmpty)
+                  Text(
+                    genre,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: metrics.smallMetaFontSize,
+                    ),
+                  )
+                else
+                  Text(
+                    '${book.chapterCount} chapitres',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: metrics.smallMetaFontSize,
+                    ),
+                  ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCoverBadge extends StatelessWidget {
+  const _HomeCoverBadge({required this.label, required this.backgroundColor});
+
+  final String label;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 82),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
