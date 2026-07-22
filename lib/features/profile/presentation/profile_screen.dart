@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/breakpoints.dart';
 import '../../../core/theme/plumora_colors.dart';
+import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../../core/widgets/plumora_user_avatar.dart';
 import '../../auth/data/models/role_model.dart';
 import '../../auth/data/models/user_model.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
@@ -78,25 +80,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Column(
         children: [
-          Container(
-            width: 82,
-            height: 82,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white30, width: 2),
-            ),
-            child: Center(
-              child: Text(
-                _initials(user),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ),
+          PlumoraUserAvatar(name: user.displayName, size: 82),
           const SizedBox(height: 16),
           Text(
             user.displayName,
@@ -234,6 +218,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 subtitle: '${user.displayName} · ${_roleLabel(roles)}',
                 emoji: '👤',
                 gradient: [context.colors.plumora, context.colors.accent],
+                trailing: const ThemeToggleButton(),
               ),
               const SizedBox(height: 18),
               if (isDesktop)
@@ -331,26 +316,7 @@ class _PersonalInfoView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Container(
-            width: 96,
-            height: 96,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF8B5E3C), Color(0xFF6D3A5D)],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                _initials(user),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ),
+          PlumoraUserAvatar(name: user.displayName, size: 96),
           const SizedBox(height: 18),
           for (final field in fields) ...[
             _InfoField(icon: field.$1, label: field.$2, value: field.$3),
@@ -603,18 +569,6 @@ class _SettingsTile extends StatelessWidget {
       ),
     );
   }
-}
-
-String _initials(UserModel user) {
-  final parts = [
-    user.firstname,
-    user.lastname,
-  ].map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
-  if (parts.isEmpty) {
-    final source = (user.username ?? user.email).trim();
-    return source.isEmpty ? 'P' : source.substring(0, 1).toUpperCase();
-  }
-  return parts.take(2).map((part) => part.substring(0, 1).toUpperCase()).join();
 }
 
 String _roleLabel(List<RoleModel> roles) {
