@@ -126,4 +126,55 @@ void main() {
     await mouse.removePointer();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('library favorites fill a very wide screen with eight columns', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1920, 1080));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final favorites = List.generate(
+      8,
+      (index) => FavoriteModel(
+        id: 'favorite-$index',
+        book: CatalogBookModel(
+          id: 'wide-book-$index',
+          title: 'Livre large ${index + 1}',
+          description: '',
+          authorName: 'Auteur ${index + 1}',
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          myReadingProgressProvider.overrideWith((ref) async => const []),
+          myFavoritesProvider.overrideWith((ref) async => favorites),
+          betaInvitationsProvider.overrideWith((ref) async => const []),
+          betaNewOpportunitiesCountProvider.overrideWithValue(0),
+        ],
+        child: MaterialApp(
+          theme: PlumoraTheme.light,
+          home: const Scaffold(body: LibraryScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Favoris'));
+    await tester.pumpAndSettle();
+
+    final first = find.byKey(
+      const ValueKey('library_favorite_tile_wide-book-0'),
+    );
+    final last = find.byKey(
+      const ValueKey('library_favorite_tile_wide-book-7'),
+    );
+    expect(tester.getSize(first).width, closeTo(175.5, 0.1));
+    expect(
+      tester.getTopLeft(last).dy,
+      closeTo(tester.getTopLeft(first).dy, 0.1),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

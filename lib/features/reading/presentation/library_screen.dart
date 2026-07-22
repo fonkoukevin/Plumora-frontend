@@ -19,6 +19,8 @@ import '../data/models/reading_progress_model.dart';
 import '../data/repositories/favorite_repository.dart';
 import '../data/repositories/reading_repository.dart';
 
+const double _libraryMaxContentWidth = 1520;
+
 /// Livre beta-lu par l'utilisateur, qu'il vienne d'une invitation acceptee
 /// ou d'une campagne ouverte rejointe et commentee sans invitation.
 class _BetaLibraryEntry {
@@ -111,7 +113,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             SliverToBoxAdapter(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1280),
+                  constraints: const BoxConstraints(
+                    maxWidth: _libraryMaxContentWidth,
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
                     child: _activeTab == 'readings'
@@ -192,7 +196,7 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1280),
+          constraints: const BoxConstraints(maxWidth: _libraryMaxContentWidth),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
             child: Column(
@@ -331,7 +335,7 @@ class _ReadingsTab extends StatelessWidget {
             else
               FigmaResponsiveGrid(
                 minTileWidth: 420,
-                maxColumns: 2,
+                maxColumns: 3,
                 children: [
                   for (final reading in filtered)
                     _ReadingTile(reading: reading),
@@ -484,7 +488,7 @@ class _BetaTab extends ConsumerWidget {
             else
               FigmaResponsiveGrid(
                 minTileWidth: 420,
-                maxColumns: 2,
+                maxColumns: 3,
                 children: [
                   for (final entry in filtered) _BetaTile(entry: entry),
                 ],
@@ -732,7 +736,11 @@ class _FavoritesGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 720 ? 6 : 3;
+        final columns = constraints.maxWidth >= 1320
+            ? 8
+            : constraints.maxWidth >= 720
+            ? 6
+            : 3;
         final spacing = 12.0;
         final width =
             (constraints.maxWidth - spacing * (columns - 1)) / columns;

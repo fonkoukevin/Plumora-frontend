@@ -212,6 +212,28 @@ void main() {
       expect(settingsRect.top, greaterThan(heroRect.bottom));
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('uses two settings columns on a very wide screen', (
+      tester,
+    ) async {
+      await _pumpAt(
+        tester,
+        const Size(1920, 1080),
+        const ProfileScreen(),
+        overrides: overrides,
+      );
+
+      final personalInfo = tester.getRect(
+        find.text('Informations personnelles'),
+      );
+      final notifications = tester.getRect(find.text('Notifications'));
+      final plumo = tester.getRect(find.text('Assistant Plumo'));
+
+      expect(notifications.left, greaterThan(personalInfo.right));
+      expect(notifications.top, closeTo(personalInfo.top, 0.1));
+      expect(plumo.top, greaterThan(personalInfo.bottom));
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('CreateBookScreen (new book — no async provider needed)', () {
