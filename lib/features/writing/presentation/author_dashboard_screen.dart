@@ -16,6 +16,7 @@ const _writeAccent = Color(0xFF7C5CFF);
 const _writeAccentLight = Color(0xFF9B80FF);
 const _writeGold = Color(0xFFD6B25E);
 const _writeGreen = Color(0xFF3FBF7F);
+const double _authorDashboardMaxWidth = 1480;
 
 const _writeTabs = ['Toutes', 'En cours', 'Bêta-test', 'Publiées'];
 
@@ -93,7 +94,9 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     return RefreshIndicator(
       onRefresh: () => ref.refresh(myBooksProvider.future),
       child: FigmaScreen(
-        maxWidth: 1180,
+        // FigmaScreen adds 20 px of horizontal padding on each side. This
+        // keeps the whole dashboard aligned with Discover's 1520 px frame.
+        maxWidth: _authorDashboardMaxWidth,
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 88),
         physics: const AlwaysScrollableScrollPhysics(),
         child: booksAsync.when(
@@ -276,8 +279,8 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                   )
                 else
                   FigmaResponsiveGrid(
-                    minTileWidth: 340,
-                    maxColumns: 3,
+                    minTileWidth: 320,
+                    maxColumns: 4,
                     spacing: 16,
                     runSpacing: 16,
                     children: [
@@ -1072,17 +1075,20 @@ class _GradientMiniButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 9),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, size: 13, color: Colors.white),
                 const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      height: 1,
+                    ),
                   ),
                 ),
               ],
@@ -1121,17 +1127,20 @@ class _OutlineMiniButton extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 13, color: context.colors.textPrimary),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: context.colors.textPrimary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
                 ),
               ),
             ],

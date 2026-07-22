@@ -8,7 +8,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../features/auth/data/models/role_model.dart';
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../theme/plumora_colors.dart';
+import '../theme/theme_mode_controller.dart';
+import '../theme/theme_toggle_button.dart';
 import '../widgets/plumora_logo_mark.dart';
+import '../widgets/plumora_user_avatar.dart';
 import 'app_router.dart';
 
 class MainShell extends StatelessWidget {
@@ -62,16 +65,16 @@ class MainShell extends StatelessWidget {
       path: AppRoutes.home,
     ),
     ShellDestination(
-      label: 'Écrire',
-      icon: Icons.edit_note_outlined,
-      selectedIcon: Icons.edit_note,
-      path: AppRoutes.manuscripts,
-    ),
-    ShellDestination(
       label: 'Découvrir',
       icon: Icons.menu_book_outlined,
       selectedIcon: Icons.menu_book,
       path: AppRoutes.discover,
+    ),
+    ShellDestination(
+      label: 'Écrire',
+      icon: Icons.edit_note_outlined,
+      selectedIcon: Icons.edit_note,
+      path: AppRoutes.manuscripts,
     ),
     ShellDestination(
       label: 'Bibliothèque',
@@ -618,6 +621,48 @@ class _SidebarFooter extends ConsumerWidget {
     final isAdmin = roles.any(
       (role) => role.name.trim().toUpperCase() == 'ADMIN',
     );
+    final isDark = ref.watch(themeModeControllerProvider) == ThemeMode.dark;
+    final themeToggleRow = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => toggleThemeMode(context, ref),
+        hoverColor: context.colors.background,
+        child: SizedBox(
+          height: 44,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: showLabels ? 12 : 0),
+            child: Row(
+              mainAxisAlignment: showLabels
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                  color: context.colors.textSecondary,
+                  size: 20,
+                ),
+                if (showLabels) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      isDark ? 'Thème clair' : 'Thème sombre',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
     final adminButton = Material(
       color: Colors.transparent,
       child: InkWell(
@@ -659,27 +704,7 @@ class _SidebarFooter extends ConsumerWidget {
         ),
       ),
     );
-    final avatar = Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [context.colors.primary, context.colors.plumora],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        _initialsFor(displayName),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
+    final avatar = PlumoraUserAvatar(name: displayName, size: 32);
     final profileCard = Container(
       padding: EdgeInsets.symmetric(
         horizontal: showLabels ? 12 : 0,
@@ -724,6 +749,37 @@ class _SidebarFooter extends ConsumerWidget {
                 ],
               ),
             ),
+            Tooltip(
+              message: 'Se déconnecter',
+              child: Semantics(
+                button: true,
+                label: 'Se déconnecter de Plumora',
+                child: Material(
+                  color: Colors.transparent,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    hoverColor: (isDark ? Colors.white : Colors.black)
+                        .withValues(alpha: 0.1),
+                    onTap: () async {
+                      await ref.read(authControllerProvider.notifier).logout();
+                      if (context.mounted) {
+                        context.go(AppRoutes.landing);
+                      }
+                    },
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: Icon(
+                        Icons.logout_rounded,
+                        size: 20,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -750,6 +806,14 @@ class _SidebarFooter extends ConsumerWidget {
             const SizedBox(height: 8),
           ],
           if (showLabels)
+            themeToggleRow
+          else
+            Tooltip(
+              message: isDark ? 'Thème clair' : 'Thème sombre',
+              child: themeToggleRow,
+            ),
+          const SizedBox(height: 8),
+          if (showLabels)
             profileCard
           else
             Tooltip(message: displayName, child: profileCard),
@@ -757,22 +821,6 @@ class _SidebarFooter extends ConsumerWidget {
       ),
     );
   }
-}
-
-String _initialsFor(String? name) {
-  final trimmed = name?.trim() ?? '';
-  if (trimmed.isEmpty) {
-    return '?';
-  }
-  final parts = trimmed
-      .split(RegExp(r'\s+'))
-      .where((p) => p.isNotEmpty)
-      .toList();
-  if (parts.length == 1) {
-    return parts.first.substring(0, 1).toUpperCase();
-  }
-  return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
-      .toUpperCase();
 }
 
 String _roleLabel(List<RoleModel> roles) {

@@ -82,6 +82,7 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                     controller: _controller,
                     textInputAction: TextInputAction.search,
                     onSubmitted: _search,
+                    onChanged: _onQueryChanged,
                     decoration: InputDecoration(
                       hintText: 'Rechercher un livre ou un auteur...',
                       prefixIcon: const Icon(Icons.search),
@@ -120,12 +121,13 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                         );
                       }
 
-                      return Column(
+                      return FigmaResponsiveGrid(
+                        minTileWidth: 460,
+                        maxColumns: 2,
+                        spacing: 14,
+                        runSpacing: 14,
                         children: [
-                          for (final book in books) ...[
-                            _SearchBookCard(book: book),
-                            const SizedBox(height: 14),
-                          ],
+                          for (final book in books) _SearchBookCard(book: book),
                         ],
                       );
                     },
@@ -143,6 +145,16 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
     final query = value.trim();
     setState(() => _query = query);
     context.go(AppRoutes.catalogSearchPath(query));
+  }
+
+  // Submitting (Enter / the search button) is still required to *run* a
+  // search, but clearing the field should return to the empty state
+  // immediately -- without this, the stale results stuck around until the
+  // user pressed Enter again on an empty field.
+  void _onQueryChanged(String value) {
+    if (value.trim().isEmpty && _query.isNotEmpty) {
+      _search(value);
+    }
   }
 }
 

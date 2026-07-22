@@ -9,6 +9,7 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
+import '../../../core/widgets/plumora_user_avatar.dart';
 import '../../reading/data/models/review_model.dart';
 import '../../reading/data/repositories/favorite_repository.dart';
 import '../../reading/data/repositories/review_repository.dart';
@@ -139,25 +140,11 @@ class _ExternalBookDetailScreenState
     });
 
     try {
-      final importedBookId = await _importAndRememberBook(book);
+      await _importAndRememberBook(book);
 
       if (!mounted) {
         return;
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Livre disponible dans Plumora.'),
-          action: importedBookId.isEmpty
-              ? null
-              : SnackBarAction(
-                  label: 'Lire',
-                  onPressed: () {
-                    context.push(AppRoutes.readingPath(importedBookId));
-                  },
-                ),
-        ),
-      );
     } catch (error) {
       if (!mounted) {
         return;
@@ -219,14 +206,6 @@ class _ExternalBookDetailScreenState
       if (!mounted) {
         return;
       }
-
-      _showMessage(
-        isFavorite
-            ? 'Livre retiré des favoris.'
-            : needsImport
-            ? 'Livre importé et ajouté aux favoris.'
-            : 'Livre ajouté aux favoris.',
-      );
     } catch (error) {
       if (!mounted) {
         return;
@@ -266,8 +245,6 @@ class _ExternalBookDetailScreenState
       if (!mounted) {
         return;
       }
-
-      _showMessage('Avis publié.');
     } catch (error) {
       if (!mounted) {
         return;
@@ -764,16 +741,10 @@ class _AuthorCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: context.colors.primary,
-            child: Text(
-              initials.isEmpty ? 'A' : initials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+          PlumoraUserAvatar(
+            initials: initials.isEmpty ? 'A' : initials,
+            size: 64,
+            semanticLabel: 'Avatar de l’auteur',
           ),
           const SizedBox(width: 14),
           Expanded(
