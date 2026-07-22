@@ -284,15 +284,22 @@ jobs:
           # renders a blank page despite every static file 200'ing (curl
           # can't detect this — it never executes JS). See Dockerfile's
           # --no-web-resources-cdn comment.
+          #
+          # Every check below uses `grep -q ... <<< "$var"` (a herestring),
+          # never `echo "$var" | grep -q ...`: under `set -o pipefail`, `-q`
+          # makes grep exit the instant it finds a match, which can SIGPIPE
+          # the still-writing `echo` and fail the pipeline even though the
+          # match *was* found — a real, non-hypothetical failure (this exact
+          # pipe pattern broke the v1.0.0-beta.5 release).
           bootstrap="$(curl -s http://localhost:8080/flutter_bootstrap.js)"
-          echo "$bootstrap" | grep -q '"useLocalCanvasKit":true'
+          grep -q '"useLocalCanvasKit":true' <<< "$bootstrap"
 
           # Regression guard: GOOGLE_WEB_CLIENT_ID must actually be compiled
           # into the bundle, or GoogleAuthConfig.isConfigured is false and
           # "Connexion avec Google" fails with a not-configured error instead
           # of ever reaching the backend (see Dockerfile's ARG comment).
           main_js="$(curl -s http://localhost:8080/main.dart.js)"
-          echo "$main_js" | grep -q '813993268745-n6e5pe24ac22rvfajdgvf45dtlbjth0d.apps.googleusercontent.com'
+          grep -q '813993268745-n6e5pe24ac22rvfajdgvf45dtlbjth0d.apps.googleusercontent.com' <<< "$main_js"
 
           # Regression guard: the CSP must allow accounts.google.com in both
           # script-src (Google Identity Services' web SDK) and frame-src (its
@@ -300,8 +307,8 @@ jobs:
           # completes despite the button being visible (see
           # docker/security-headers.conf's comment).
           csp_header="$(curl -sI http://localhost:8080/ | grep -i '^content-security-policy:')"
-          echo "$csp_header" | grep -q "script-src[^;]*https://accounts.google.com"
-          echo "$csp_header" | grep -q "frame-src[^;]*https://accounts.google.com"
+          grep -q "script-src[^;]*https://accounts.google.com" <<< "$csp_header"
+          grep -q "frame-src[^;]*https://accounts.google.com" <<< "$csp_header"
 
       - name: Stop smoke test container
         if: always()
