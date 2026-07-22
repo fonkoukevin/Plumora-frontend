@@ -236,10 +236,12 @@ risquerait de servir du JS périmé après un redéploiement.
 ### En-têtes de sécurité
 
 `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
-`Permissions-Policy` et une `Content-Security-Policy` compatible avec le
-renderer CanvasKit de Flutter Web (wasm same-origin, `worker-src blob:`,
-`style-src 'unsafe-inline'` requis par le moteur Flutter lui-même). Voir les
-commentaires dans `docker/nginx.conf` pour le détail de chaque choix.
+`Permissions-Policy`, `Cross-Origin-Opener-Policy` et une
+`Content-Security-Policy` compatible avec le renderer CanvasKit de Flutter
+Web (wasm same-origin, `worker-src blob:`, `style-src 'unsafe-inline'`
+requis par le moteur Flutter lui-même) et avec la connexion Google (voir
+« Piège corrigé » ci-dessous). Voir les commentaires dans
+`docker/security-headers.conf` pour le détail de chaque choix.
 
 **Piège corrigé** : `script-src` n'autorise que `'self'` (pas de CDN tiers).
 Or par défaut, `flutter build web` charge CanvasKit depuis
@@ -251,6 +253,16 @@ puisqu'il n'exécute pas de JS). Le `Dockerfile` compile donc avec
 `--no-web-resources-cdn`, qui force le chargement de CanvasKit depuis la même
 origine et embarque `"useLocalCanvasKit":true` dans `flutter_bootstrap.js` —
 vérifié explicitement par le smoke test CI (section 12).
+
+**Piège corrigé (connexion Google)** : Google Identity Services (le SDK
+derrière « Connexion avec Google ») a besoin de plusieurs allowances à la
+fois, chacune ayant échoué silencieusement en prod avant d'être corrigée une
+par une : `https://accounts.google.com` dans `script-src` (son propre
+`<script>`), `style-src` (sa feuille de style `gsi/style`) et `frame-src`
+(le bouton/prompt rendu dans une iframe) ; et `Cross-Origin-Opener-Policy:
+same-origin-allow-popups` (ni `same-origin`, ni l'en-tête absent) — sans quoi
+la popup Google ne peut pas renvoyer ses identifiants via `window.opener`.
+Les quatre sont vérifiés par le smoke test CI.
 
 ### Healthcheck
 
