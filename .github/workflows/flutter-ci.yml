@@ -247,6 +247,7 @@ jobs:
             APP_ENV=production
             API_BASE_URL=https://api.plumora-books.fr/api/v1
             WEB_BASE_URL=https://app.plumora-books.fr
+            GOOGLE_WEB_CLIENT_ID=813993268745-n6e5pe24ac22rvfajdgvf45dtlbjth0d.apps.googleusercontent.com
 
       - name: Smoke test the image (container, healthcheck, SPA fallback)
         run: |
@@ -286,6 +287,22 @@ jobs:
           bootstrap="$(curl -s http://localhost:8080/flutter_bootstrap.js)"
           echo "$bootstrap" | grep -q '"useLocalCanvasKit":true'
 
+          # Regression guard: GOOGLE_WEB_CLIENT_ID must actually be compiled
+          # into the bundle, or GoogleAuthConfig.isConfigured is false and
+          # "Connexion avec Google" fails with a not-configured error instead
+          # of ever reaching the backend (see Dockerfile's ARG comment).
+          main_js="$(curl -s http://localhost:8080/main.dart.js)"
+          echo "$main_js" | grep -q '813993268745-n6e5pe24ac22rvfajdgvf45dtlbjth0d.apps.googleusercontent.com'
+
+          # Regression guard: the CSP must allow accounts.google.com in both
+          # script-src (Google Identity Services' web SDK) and frame-src (its
+          # rendered button/prompt), or the sign-in flow silently never
+          # completes despite the button being visible (see
+          # docker/security-headers.conf's comment).
+          csp_header="$(curl -sI http://localhost:8080/ | grep -i '^content-security-policy:')"
+          echo "$csp_header" | grep -q "script-src[^;]*https://accounts.google.com"
+          echo "$csp_header" | grep -q "frame-src[^;]*https://accounts.google.com"
+
       - name: Stop smoke test container
         if: always()
         run: docker rm -f smoke-test || true
@@ -303,6 +320,7 @@ jobs:
             APP_ENV=production
             API_BASE_URL=https://api.plumora-books.fr/api/v1
             WEB_BASE_URL=https://app.plumora-books.fr
+            GOOGLE_WEB_CLIENT_ID=813993268745-n6e5pe24ac22rvfajdgvf45dtlbjth0d.apps.googleusercontent.com
 
       - name: Publish image tags to the job summary
         # Explicit and self-contained (doesn't rely on any other action's

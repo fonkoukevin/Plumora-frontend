@@ -7,11 +7,12 @@
 # GEMINI_API_KEY / JWT signing secrets / DB passwords, which all belong to
 # the (separately deployed) Spring Boot backend.
 #
-# Build (values below are public: a base URL, not a secret):
+# Build (values below are public: a base URL / OAuth client id, not a secret):
 #   docker build \
 #     --build-arg API_BASE_URL=https://api.plumora-books.fr/api/v1 \
 #     --build-arg WEB_BASE_URL=https://app.plumora-books.fr \
 #     --build-arg APP_ENV=production \
+#     --build-arg GOOGLE_WEB_CLIENT_ID=<see docs/api-contract.md> \
 #     -t plumora-frontend-web .
 #
 # Run:
@@ -37,6 +38,12 @@ ARG FLUTTER_VERSION=3.44.0
 ARG APP_ENV=production
 ARG API_BASE_URL=https://api.plumora-books.fr/api/v1
 ARG WEB_BASE_URL=https://app.plumora-books.fr
+# Google OAuth *web* client id — a public identifier (not a secret, see
+# lib/core/network/google_auth_config.dart), the audience the backend checks
+# ID tokens against (docs/api-contract.md). Without this, GoogleAuthConfig.
+# isConfigured is false and "Connexion avec Google" fails with a
+# not-configured error instead of reaching the backend.
+ARG GOOGLE_WEB_CLIENT_ID=813993268745-n6e5pe24ac22rvfajdgvf45dtlbjth0d.apps.googleusercontent.com
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       git \
@@ -76,7 +83,8 @@ RUN flutter build web --release \
       --no-web-resources-cdn \
       --dart-define=APP_ENV="${APP_ENV}" \
       --dart-define=API_BASE_URL="${API_BASE_URL}" \
-      --dart-define=WEB_BASE_URL="${WEB_BASE_URL}"
+      --dart-define=WEB_BASE_URL="${WEB_BASE_URL}" \
+      --dart-define=GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID}"
 
 # ---------------------------------------------------------------------------
 # Stage 2 — serve build/web with a minimal, non-root Nginx
