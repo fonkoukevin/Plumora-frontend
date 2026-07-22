@@ -1,5 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// The official package, imported directly (not just transitively through
+// google_sign_in_all_platforms) for its un-wrapped authenticationEvents
+// stream -- see webSignInButton. Prefixed because both packages export an
+// unrelated class literally named `GoogleSignIn`.
+import 'package:google_sign_in/google_sign_in.dart' as official;
 import 'package:google_sign_in_all_platforms/google_sign_in_all_platforms.dart';
 
 import '../../../../core/errors/app_error.dart';
@@ -42,6 +49,7 @@ class GoogleAuthService {
       );
 
   final GoogleSignIn _googleSignIn;
+  StreamSubscription<official.GoogleSignInAuthenticationEvent>? _webAuthSub;
 
   /// Runs the Google sign-in flow and returns a Google ID token the backend
   /// can verify. Throws an [AppException] with a French, user-facing message
@@ -90,6 +98,26 @@ class GoogleAuthService {
   /// [onSignIn] fires with credentials once the user completes the flow
   /// through it. Returns null if Google auth isn't configured (caller
   /// should fall back to the "not configured" messaging used elsewhere).
+  ///
+  /// Deliberately does NOT use `GSIAPButtonConfig.onSignIn`: that callback is
+  /// fed by `google_sign_in_all_platforms`'s `genCreds()`, which
+  /// unconditionally also calls `authorizationClient.authorizeScopes(...)`
+  /// -- even with `scopes: const []` above, that still opens an OAuth2
+  /// popup (`accounts.google.com/o/oauth2/v2/auth?...display=popup`) to
+  /// mint an access token, and since it fires from
+  /// `authenticationEvents.listen(...).then(...)` rather than the click
+  /// itself, browsers block it as untrusted ("Maybe blocked by the
+  /// browser?"). `genCreds()` then discards the perfectly valid ID token it
+  /// already had, because its unrelated `accessToken` came back null, and
+  /// `onSignIn` never fires. Confirmed live, twice, after removing the
+  /// scopes wasn't enough on its own.
+  ///
+  /// Instead, this listens directly to the official `package:google_sign_in`
+  /// singleton's own `authenticationEvents` -- already initialized by
+  /// `google_sign_in_all_platforms` above, since both packages share the
+  /// same `GoogleSignIn.instance` under the hood. That stream carries the ID
+  /// token straight from the sign-in response, with no OAuth2 authorization
+  /// step, and therefore no second popup, involved.
   Widget? webSignInButton({
     required void Function(GoogleSignInCredentials credentials) onSignIn,
   }) {
@@ -97,10 +125,22 @@ class GoogleAuthService {
       return null;
     }
 
+    _webAuthSub ??= official.GoogleSignIn.instance.authenticationEvents.listen((
+      event,
+    ) {
+      if (event is! official.GoogleSignInAuthenticationEventSignIn) {
+        return;
+      }
+      final idToken = event.user.authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        return;
+      }
+      onSignIn(GoogleSignInCredentials(accessToken: '', idToken: idToken));
+    });
+
     return _googleSignIn.signInButton(
-      config: GSIAPButtonConfig(
-        onSignIn: onSignIn,
-        uiConfig: const GSIAPButtonUiConfig(
+      config: const GSIAPButtonConfig(
+        uiConfig: GSIAPButtonUiConfig(
           type: GSIAPButtonType.standard,
           theme: GSIAPButtonTheme.outline,
           size: GSIAPButtonSize.large,
