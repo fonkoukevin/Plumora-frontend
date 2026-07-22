@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
-import '../../../core/theme/theme_mode_controller.dart';
+import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/widgets/app_shell_header.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
@@ -15,7 +13,9 @@ import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../beta_reading/data/repositories/beta_reading_repository.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../../catalog/data/models/catalog_book_model.dart';
+import '../../catalog/data/models/external_book_model.dart';
 import '../../catalog/data/repositories/catalog_repository.dart';
+import '../../catalog/data/repositories/external_book_repository.dart';
 import '../../notification/data/models/notification_model.dart';
 import '../../notification/data/repositories/notification_repository.dart';
 import '../../reading/data/models/reading_progress_model.dart';
@@ -42,8 +42,7 @@ class HomeScreen extends ConsumerWidget {
     final notificationsAsync = ref.watch(myNotificationsProvider);
     final readingCard = readingsAsync.when<Widget>(
       loading: () => const _LoadingCard(height: 146),
-      error: (_, _) =>
-          _NoReadingCard(onDiscover: () => context.go(AppRoutes.discover)),
+      error: (_, _) => const _RecommendedBookCard(),
       data: (readings) {
         final active = readings.where((reading) => !reading.finished).toList()
           ..sort((a, b) {
@@ -52,9 +51,7 @@ class HomeScreen extends ConsumerWidget {
             return bDate.compareTo(aDate);
           });
         if (active.isEmpty) {
-          return _NoReadingCard(
-            onDiscover: () => context.go(AppRoutes.discover),
-          );
+          return const _RecommendedBookCard();
         }
         return _ContinueReadingCard(reading: active.first);
       },
@@ -101,7 +98,6 @@ class HomeScreen extends ConsumerWidget {
                           icon: Icons.local_fire_department,
                           iconColor: context.colors.primary,
                           booksAsync: popularAsync,
-                          rankItems: true,
                           onSeeAll: () => context.go(AppRoutes.discover),
                           onRetry: () =>
                               ref.invalidate(popularCatalogBooksProvider),
@@ -183,38 +179,41 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.colors.background.withValues(alpha: 0.95),
-            border: Border(bottom: BorderSide(color: context.colors.border)),
-            boxShadow: overlapsContent
-                ? const [
-                    BoxShadow(
-                      color: Color(0x0F000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1280),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: PlumoraAppHeader(
-                  title: 'Accueil',
-                  subtitle:
-                      'Bonjour $displayName 👋 — Que voulez-vous '
-                      "faire aujourd'hui ?",
-                  emoji: '✨',
-                  gradient: [context.colors.primary, context.colors.plumora],
-                  trailing: const _ThemeToggleButton(),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        // Fully opaque: this pins above the book-cover rails, which are
+        // saturated enough that any translucency here let them show
+        // through legibly on scroll instead of just tinting the blur.
+        color: context.colors.background,
+        border: Border(bottom: BorderSide(color: context.colors.border)),
+        boxShadow: overlapsContent
+            ? const [
+                BoxShadow(
+                  color: Color(0x0F000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
-              ),
+              ]
+            : null,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1280),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: PlumoraAppHeader(
+              title: 'Accueil',
+              subtitleSpans: [
+                TextSpan(text: 'Bonjour $displayName '),
+                const WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: _WavingHandEmoji(),
+                ),
+                const TextSpan(text: " — Que voulez-vous faire aujourd'hui ?"),
+              ],
+              emoji: '✨',
+              gradient: [context.colors.primary, context.colors.plumora],
+              trailing: const ThemeToggleButton(),
             ),
           ),
         ),
@@ -228,50 +227,43 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-class _ThemeToggleButton extends ConsumerWidget {
-  const _ThemeToggleButton();
+/// Waving 👋 next to the "Bonjour" greeting -- rocks back and forth from
+/// the wrist (bottom-center pivot) like a real wave, looping continuously.
+class _WavingHandEmoji extends StatefulWidget {
+  const _WavingHandEmoji();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeControllerProvider);
-    final isDark = themeMode == ThemeMode.dark;
+  State<_WavingHandEmoji> createState() => _WavingHandEmojiState();
+}
 
-    return Semantics(
-      button: true,
-      label: isDark ? 'Activer le thème clair' : 'Activer le thème sombre',
-      child: Tooltip(
-        message: isDark ? 'Thème clair' : 'Thème sombre',
-        child: Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            hoverColor: context.colors.muted.withValues(alpha: 0.6),
-            onTap: () async {
-              try {
-                await ref.read(themeModeControllerProvider.notifier).toggle();
-              } catch (_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Impossible d’enregistrer le thème.'),
-                    ),
-                  );
-                }
-              }
-            },
-            child: SizedBox(
-              width: 36,
-              height: 36,
-              child: Icon(
-                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                size: 20,
-                color: context.colors.textSecondary,
-              ),
-            ),
-          ),
-        ),
+class _WavingHandEmojiState extends State<_WavingHandEmoji>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _angle = Tween<double>(
+    begin: -0.15,
+    end: 0.45,
+  ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _angle,
+      builder: (context, child) => Transform.rotate(
+        alignment: Alignment.bottomCenter,
+        angle: _angle.value,
+        child: child,
       ),
+      child: const Text('👋', style: TextStyle(fontSize: 16)),
     );
   }
 }
@@ -420,14 +412,14 @@ class _QuoteCopy extends StatelessWidget {
           overflow: featured ? TextOverflow.ellipsis : null,
           textAlign: centered ? TextAlign.center : TextAlign.start,
           style: featured
-              ? GoogleFonts.playfairDisplay(
+              ? GoogleFonts.lora(
                   color: context.colors.textPrimary,
                   fontSize: 14.5,
                   fontStyle: FontStyle.italic,
                   fontWeight: FontWeight.w600,
                   height: 1.35,
                 )
-              : TextStyle(
+              : GoogleFonts.lora(
                   color: context.colors.textPrimary,
                   fontSize: centered ? 15 : (compact ? 13 : 14),
                   fontStyle: FontStyle.italic,
@@ -682,6 +674,205 @@ class _ContinueReadingCard extends ConsumerWidget {
   }
 }
 
+/// Public-domain pick shown in the "continue reading" slot whenever a user
+/// has no active reading (brand-new accounts included) -- "Figures of
+/// Speech" by W. C. Tuttle (Wilbur C.), Project Gutenberg / Gutendex #79120.
+/// Falls back to the plain [_NoReadingCard] prompt if this specific lookup
+/// fails or resolves to a non-navigable result (e.g. an Open Library
+/// substitute if Gutendex is ever unreachable for this id).
+class _RecommendedBookCard extends ConsumerWidget {
+  const _RecommendedBookCard();
+
+  static const _gutendexId = '79120';
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookAsync = ref.watch(externalBookDetailProvider(_gutendexId));
+
+    return bookAsync.when(
+      loading: () => const _LoadingCard(height: 156),
+      error: (_, _) =>
+          _NoReadingCard(onDiscover: () => context.go(AppRoutes.discover)),
+      data: (book) {
+        if (!book.canOpenExternalDetail) {
+          return _NoReadingCard(
+            onDiscover: () => context.go(AppRoutes.discover),
+          );
+        }
+        return _RecommendedBookCardContent(book: book);
+      },
+    );
+  }
+}
+
+class _RecommendedBookCardContent extends StatelessWidget {
+  const _RecommendedBookCardContent({required this.book});
+
+  final ExternalBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 560;
+        final cardHeight = compact ? 156.0 : 180.0;
+        final horizontalPadding = compact ? 16.0 : 20.0;
+        final verticalPadding = compact ? 16.0 : 18.0;
+        final coverWidth = compact ? 82.0 : 96.0;
+        final coverHeight = cardHeight - (verticalPadding * 2);
+        final radius = compact ? 20.0 : 24.0;
+
+        return InkWell(
+          onTap: () => context.push(
+            AppRoutes.publicDomainBookDetailPath(book.externalId),
+          ),
+          borderRadius: BorderRadius.circular(radius),
+          child: Container(
+            key: const ValueKey('home_recommended_book_card'),
+            height: cardHeight,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF250047),
+                  Color(0xFF790FC0),
+                  Color(0xFF30267E),
+                ],
+                stops: [0, 0.58, 1],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(radius),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x26000000),
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.topRight,
+                        radius: 1.2,
+                        colors: [Color(0x287C3AED), Color(0x001F174A)],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: verticalPadding,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        foregroundDecoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.24),
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            compact ? 12 : 16,
+                          ),
+                        ),
+                        child: PlumoraBookCover(
+                          width: coverWidth,
+                          height: coverHeight,
+                          radius: compact ? 12 : 16,
+                          colors: _coverColors(book.externalId),
+                          imageUrl: book.coverUrl,
+                        ),
+                      ),
+                      SizedBox(width: compact ? 12 : 16),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _WhiteBadge(
+                              icon: Icons.auto_awesome,
+                              label: 'Recommandé pour toi',
+                            ),
+                            SizedBox(height: compact ? 7 : 9),
+                            Text(
+                              book.title.isEmpty
+                                  ? 'Livre sans titre'
+                                  : book.title,
+                              maxLines: compact ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.playfairDisplay(
+                                color: Colors.white,
+                                fontSize: compact ? 16 : 20,
+                                fontWeight: FontWeight.w800,
+                                height: 1.12,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Par ${book.authorLabel} · Domaine public',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.72),
+                                fontSize: compact ? 11 : 12,
+                                height: 1.25,
+                              ),
+                            ),
+                            SizedBox(height: compact ? 8 : 12),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.menu_book_outlined,
+                                  size: compact ? 14 : 16,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Découvrir ce livre',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    fontSize: compact ? 11 : 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: compact ? 8 : 16),
+                      Container(
+                        width: compact ? 34 : 40,
+                        height: compact ? 34 : 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.20),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: compact ? 20 : 22,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _NoReadingCard extends StatelessWidget {
   const _NoReadingCard({required this.onDiscover});
 
@@ -865,7 +1056,6 @@ class _BookRail extends StatelessWidget {
     required this.booksAsync,
     required this.onSeeAll,
     required this.onRetry,
-    this.rankItems = false,
   });
 
   final String title;
@@ -874,7 +1064,6 @@ class _BookRail extends StatelessWidget {
   final AsyncValue<List<CatalogBookModel>> booksAsync;
   final VoidCallback onSeeAll;
   final VoidCallback onRetry;
-  final bool rankItems;
 
   @override
   Widget build(BuildContext context) {
@@ -919,10 +1108,7 @@ class _BookRail extends StatelessWidget {
               railHeight: _homeBookRailHeight,
               itemBuilder: (context, index) {
                 final book = books[index];
-                return _BookTile(
-                  book: book,
-                  rank: rankItems ? index + 1 : null,
-                );
+                return _BookTile(book: book);
               },
             );
           },
@@ -932,81 +1118,83 @@ class _BookRail extends StatelessWidget {
   }
 }
 
-class _BookTile extends ConsumerWidget {
-  const _BookTile({required this.book, this.rank});
+class _BookTile extends ConsumerStatefulWidget {
+  const _BookTile({required this.book});
 
   final CatalogBookModel book;
-  final int? rank;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BookTile> createState() => _BookTileState();
+}
+
+class _BookTileState extends ConsumerState<_BookTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final book = widget.book;
     final cachedCover = ref.watch(bookCoverBytesProvider(book.id));
 
-    return InkWell(
-      onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
-      child: SizedBox(
-        width: 112,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: InkWell(
+          onTap: () => context.push(AppRoutes.catalogBookDetailPath(book.id)),
+          hoverColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashColor: context.colors.primary.withValues(alpha: 0.08),
+          child: SizedBox(
+            key: ValueKey('home_book_tile_${book.id}'),
+            width: 112,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PlumoraBookCover(
+                PlumoraHoverBookCover(
+                  key: ValueKey('home_book_cover_${book.id}'),
+                  hovered: _hovered,
                   width: 112,
                   height: 160,
                   radius: 16,
-                  colors: _coverColors(book.id),
-                  imageUrl: book.coverUrl,
-                  imageBytes: cachedCover,
-                ),
-                if (rank != null)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: context.colors.orange,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$rank',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),
+                  actionKey: ValueKey('home_book_hover_cta_${book.id}'),
+                  child: PlumoraBookCover(
+                    width: 112,
+                    height: 160,
+                    radius: 16,
+                    colors: _coverColors(book.id),
+                    imageUrl: book.coverUrl,
+                    imageBytes: cachedCover,
                   ),
+                ),
+                const SizedBox(height: 9),
+                Text(
+                  book.title.isEmpty ? 'Livre sans titre' : book.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _hovered
+                        ? context.colors.primary
+                        : context.colors.textPrimary,
+                    fontSize: 12,
+                    height: 1.15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  book.authorName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 9),
-            Text(
-              book.title.isEmpty ? 'Livre sans titre' : book.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: context.colors.textPrimary,
-                fontSize: 12,
-                height: 1.15,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              book.authorName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: context.colors.textSecondary,
-                fontSize: 11,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
