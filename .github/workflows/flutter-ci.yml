@@ -314,6 +314,16 @@ jobs:
           grep -q "frame-src[^;]*https://accounts.google.com" <<< "$csp_header"
           grep -q "style-src[^;]*https://accounts.google.com" <<< "$csp_header"
 
+          # Regression guard: Cross-Origin-Opener-Policy must be
+          # "same-origin-allow-popups", not omitted (browser default) or the
+          # stricter "same-origin" — otherwise the popup Google Identity
+          # Services opens can't hand credentials back via window.opener/
+          # postMessage, and the sign-in flow silently never completes even
+          # with a fully correct CSP and signInButton() (see
+          # docker/security-headers.conf's comment).
+          coop_header="$(curl -sI http://localhost:8080/ | grep -i '^cross-origin-opener-policy:')"
+          grep -q "same-origin-allow-popups" <<< "$coop_header"
+
       - name: Stop smoke test container
         if: always()
         run: docker rm -f smoke-test || true
