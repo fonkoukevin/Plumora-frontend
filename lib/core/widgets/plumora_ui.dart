@@ -414,6 +414,160 @@ class PlumoraBookCover extends StatelessWidget {
   }
 }
 
+/// Shared interactive treatment for book covers displayed in clickable
+/// catalog tiles. The parent owns the hover state so its title and metadata
+/// can react at the same time as the cover.
+class PlumoraHoverBookCover extends StatelessWidget {
+  const PlumoraHoverBookCover({
+    required this.hovered,
+    required this.width,
+    required this.height,
+    required this.radius,
+    required this.child,
+    this.canOpen = true,
+    this.overlayKey,
+    this.actionKey,
+    super.key,
+  });
+
+  final bool hovered;
+  final bool canOpen;
+  final double width;
+  final double height;
+  final double radius;
+  final Widget child;
+  final Key? overlayKey;
+  final Key? actionKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = hovered && canOpen;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      width: width,
+      height: height,
+      transform: Matrix4.translationValues(0, active ? -5 : 0, 0)
+        ..scaleByDouble(active ? 1.035 : 1, active ? 1.035 : 1, 1, 1),
+      transformAlignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: active
+              ? context.colors.primary.withValues(alpha: 0.42)
+              : Colors.transparent,
+          width: 1.4,
+        ),
+        boxShadow: active
+            ? [
+                BoxShadow(
+                  color: context.colors.primary.withValues(alpha: 0.18),
+                  blurRadius: 20,
+                  spreadRadius: -5,
+                  offset: const Offset(0, 10),
+                ),
+                const BoxShadow(
+                  color: Color(0x38000000),
+                  blurRadius: 24,
+                  spreadRadius: -6,
+                  offset: Offset(0, 15),
+                ),
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            child,
+            IgnorePointer(
+              child: AnimatedOpacity(
+                key: overlayKey,
+                opacity: active ? 1 : 0,
+                duration: const Duration(milliseconds: 190),
+                curve: Curves.easeOut,
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [0.42, 1],
+                      colors: [Colors.transparent, Color(0xC9000000)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 9,
+              right: 9,
+              bottom: 10,
+              child: IgnorePointer(
+                child: AnimatedSlide(
+                  offset: active ? Offset.zero : const Offset(0, 0.45),
+                  duration: const Duration(milliseconds: 230),
+                  curve: Curves.easeOutCubic,
+                  child: AnimatedOpacity(
+                    key: actionKey,
+                    opacity: active ? 1 : 0,
+                    duration: const Duration(milliseconds: 170),
+                    curve: Curves.easeOut,
+                    child: Container(
+                      height: 30,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.96),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.72),
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.auto_stories_rounded,
+                            size: 13,
+                            color: context.colors.primary,
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              'Voir le livre',
+                              maxLines: 1,
+                              overflow: TextOverflow.fade,
+                              softWrap: false,
+                              style: TextStyle(
+                                color: context.colors.primary,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.15,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 String? resolvePlumoraImageUrl(String? value) {
   final url = value?.trim();
   if (url == null || url.isEmpty) {

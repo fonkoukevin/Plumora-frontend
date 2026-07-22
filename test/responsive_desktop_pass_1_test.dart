@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -95,6 +97,24 @@ void main() {
       );
 
       expect(find.byType(ConstrainedBox), findsWidgets);
+      final tile = find.byKey(const ValueKey('favorites_page_tile_book-0'));
+      final cover = find.byKey(const ValueKey('favorites_page_cover_book-0'));
+      final coverAnimation = find.descendant(
+        of: cover,
+        matching: find.byType(AnimatedContainer),
+      );
+      final cta = find.byKey(const ValueKey('favorites_page_hover_cta_book-0'));
+      expect(tester.widget<AnimatedOpacity>(cta).opacity, 0);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(tester.getCenter(tile));
+      await tester.pump(const Duration(milliseconds: 260));
+
+      final hoveredCover = tester.widget<AnimatedContainer>(coverAnimation);
+      expect(hoveredCover.transform!.storage[13], lessThan(0));
+      expect(tester.widget<AnimatedOpacity>(cta).opacity, 1);
+      await mouse.removePointer();
       expect(tester.takeException(), isNull);
     });
 
