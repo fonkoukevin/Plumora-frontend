@@ -377,12 +377,6 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       ref.invalidate(myReviewsProvider);
       ref.invalidate(myReviewForBookProvider(widget.bookId));
       ref.invalidate(catalogBookDetailProvider(widget.bookId));
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Avis publié.')));
-      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(

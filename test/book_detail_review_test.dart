@@ -89,7 +89,7 @@ void main() {
     expect(repository.createdForBookId, 'book-1');
     expect(repository.createdRequest?.rating, 5);
     expect(repository.createdRequest?.comment, 'Une lecture captivante.');
-    expect(find.text('Avis publié.'), findsOneWidget);
+    expect(find.text('Avis publié.'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }
