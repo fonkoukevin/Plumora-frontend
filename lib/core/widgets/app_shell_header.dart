@@ -8,6 +8,7 @@ import '../../features/notification/data/repositories/notification_repository.da
 import '../routing/app_router.dart';
 import '../theme/plumora_colors.dart';
 import 'plumora_logo_mark.dart';
+import 'plumora_user_avatar.dart';
 
 /// Shared sticky title row for every screen wrapped by [MainShell], matching
 /// the Figma `AppHeader.tsx` component: the Plumora logo lockup on mobile
@@ -21,6 +22,7 @@ class PlumoraAppHeader extends ConsumerWidget {
     required this.title,
     required this.gradient,
     this.subtitle,
+    this.subtitleSpans,
     this.emoji,
     this.action,
     this.trailing,
@@ -29,6 +31,11 @@ class PlumoraAppHeader extends ConsumerWidget {
 
   final String title;
   final String? subtitle;
+
+  /// Rich alternative to [subtitle] for inline content (e.g. an animated
+  /// emoji right after the user's name, via a [WidgetSpan]) -- when set,
+  /// this renders instead of [subtitle].
+  final List<InlineSpan>? subtitleSpans;
   final String? emoji;
   final List<Color> gradient;
 
@@ -59,6 +66,7 @@ class PlumoraAppHeader extends ConsumerWidget {
                   ? _DesktopTitle(
                       title: title,
                       subtitle: subtitle,
+                      subtitleSpans: subtitleSpans,
                       emoji: emoji,
                       gradient: gradient,
                     )
@@ -102,31 +110,9 @@ class PlumoraAppHeader extends ConsumerWidget {
             _HeaderIconButton(
               onTap: () => context.go(AppRoutes.profile),
               tooltip: 'Profil',
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: gradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x26000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  _initialsFor(session?.user?.displayName),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              child: PlumoraUserAvatar(
+                name: session?.user?.displayName,
+                size: 36,
               ),
             ),
           ],
@@ -188,11 +174,13 @@ class _DesktopTitle extends StatelessWidget {
     required this.title,
     required this.gradient,
     this.subtitle,
+    this.subtitleSpans,
     this.emoji,
   });
 
   final String title;
   final String? subtitle;
+  final List<InlineSpan>? subtitleSpans;
   final String? emoji;
   final List<Color> gradient;
 
@@ -236,13 +224,13 @@ class _DesktopTitle extends StatelessWidget {
             ),
           ],
         ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 2),
-          Text(
-            subtitle!,
+        if (subtitleSpans != null || subtitle != null) ...[
+          const SizedBox(height: 3),
+          Text.rich(
+            TextSpan(children: subtitleSpans ?? [TextSpan(text: subtitle)]),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 15),
           ),
         ],
       ],
@@ -277,20 +265,4 @@ class _HeaderIconButton extends StatelessWidget {
       ),
     );
   }
-}
-
-String _initialsFor(String? name) {
-  final trimmed = name?.trim() ?? '';
-  if (trimmed.isEmpty) {
-    return '?';
-  }
-  final parts = trimmed
-      .split(RegExp(r'\s+'))
-      .where((p) => p.isNotEmpty)
-      .toList();
-  if (parts.length == 1) {
-    return parts.first.substring(0, 1).toUpperCase();
-  }
-  return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
-      .toUpperCase();
 }
