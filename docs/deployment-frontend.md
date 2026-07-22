@@ -36,7 +36,14 @@ D'autres `--dart-define` existent déjà pour la connexion Google
 (`GOOGLE_WEB_CLIENT_ID`, `GOOGLE_DESKTOP_CLIENT_ID`,
 `GOOGLE_DESKTOP_CLIENT_SECRET` — voir `lib/core/network/google_auth_config.dart`
 et `docs/api-contract.md`) ; ce sont des identifiants client OAuth publics par
-plateforme, pas des secrets serveur.
+plateforme, pas des secrets serveur. En production (Web, image Docker),
+`GOOGLE_WEB_CLIENT_ID` vaut
+`813993268745-n6e5pe24ac22rvfajdgvf45dtlbjth0d.apps.googleusercontent.com`
+(même client id que le backend vérifie comme `aud` du jeton Google) — voir
+l'`ARG GOOGLE_WEB_CLIENT_ID` du `Dockerfile` et le job `docker-publish` de
+`.github/workflows/flutter-ci.yml`, qui le passent déjà par défaut. Sans
+cette valeur, `GoogleAuthConfig.isConfigured` est faux et le bouton
+« Connexion avec Google » échoue avant même de contacter le backend.
 
 ### Lancer en développement
 
