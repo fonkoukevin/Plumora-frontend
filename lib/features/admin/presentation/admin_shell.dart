@@ -402,12 +402,20 @@ class _AdminBrand extends StatelessWidget {
                   color: AdminColors.error,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  'Espace Administration',
-                  style: TextStyle(
-                    color: AdminColors.error,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                // Flexible + ellipsis : ce badge est dans une colonne de
+                // largeur fixe (barre latérale) ; sans ça, "Espace
+                // Administration" déborde silencieusement plutôt que de se
+                // tronquer proprement dès que la police de rendu diffère
+                // légèrement de celle attendue (repli système, etc.).
+                Flexible(
+                  child: Text(
+                    'Espace Administration',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AdminColors.error,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -445,6 +453,11 @@ class _AdminNavTile extends StatelessWidget {
           onTap: () => context.go(item.path),
           hoverColor: active ? null : AdminColors.mutedBg,
           child: Container(
+            // Cible tactile Android >= 48dp (RGAA/WCAG 2.5.5) : la hauteur de
+            // contenu seule (icône + libellé + padding d'origine) tombait à
+            // 38-43px selon la densité.
+            constraints: const BoxConstraints(minHeight: 48),
+            alignment: Alignment.centerLeft,
             padding: EdgeInsets.symmetric(
               horizontal: 12,
               vertical: compact ? 9 : 11,

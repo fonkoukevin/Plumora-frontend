@@ -46,8 +46,9 @@ class ThemeToggleButton extends ConsumerWidget {
             hoverColor: context.colors.muted.withValues(alpha: 0.6),
             onTap: () => toggleThemeMode(context, ref),
             child: SizedBox(
-              width: 36,
-              height: 36,
+              // WCAG 2.5.5 / RGAA: cible tactile minimale 44x44 (était 36x36).
+              width: 44,
+              height: 44,
               child: Icon(
                 isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
                 size: 20,
