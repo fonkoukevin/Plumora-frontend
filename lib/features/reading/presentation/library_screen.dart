@@ -625,6 +625,7 @@ class _ReadingTile extends ConsumerWidget {
             colors: _coverColors(reading.bookId),
             imageUrl: reading.coverUrl,
             imageBytes: cachedCover,
+            semanticLabel: 'Couverture de ${reading.bookTitle}',
           ),
           const SizedBox(width: 14),
           Expanded(
