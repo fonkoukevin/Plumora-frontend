@@ -457,6 +457,11 @@ class AdminFilterChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
+          // Cible tactile Android >= 48dp (RGAA/WCAG 2.5.5) : la pastille ne
+          // faisait que 26px de haut en mode compact. Le texte reste centré
+          // dans la boîte agrandie, donc sa position visuelle ne change pas.
+          constraints: const BoxConstraints(minHeight: 48),
+          alignment: Alignment.center,
           padding: EdgeInsets.symmetric(
             horizontal: compact ? 11 : 14,
             vertical: compact ? 5 : 8,

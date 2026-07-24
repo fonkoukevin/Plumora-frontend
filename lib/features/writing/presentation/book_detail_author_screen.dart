@@ -278,6 +278,7 @@ class _BookHero extends ConsumerWidget {
                 width: 90,
                 height: 125,
                 radius: 10,
+                semanticLabel: 'Couverture de ${book.title}',
               ),
               Positioned(
                 right: -5,
