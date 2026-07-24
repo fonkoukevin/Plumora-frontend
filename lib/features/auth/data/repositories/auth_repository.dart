@@ -151,8 +151,22 @@ class AuthRepository {
     );
   }
 
-  Future<void> logout() {
-    return _tokenStorage.clearAccessToken();
+  /// Also signs out of Google's own client-side SDK, not just the Plumora
+  /// session: [GoogleAuthService] configures Google Identity Services with
+  /// `auto_select: true`, so without this, a user who logs out of Plumora
+  /// after signing in with Google still has an active Google session in the
+  /// browser — the SDK then silently tries to auto-select that same account
+  /// on the next Google sign-in attempt, which conflicts with a fresh manual
+  /// click and breaks it. Best-effort: Google's sign-out failing (e.g. no
+  /// active Google session, or Google auth not configured) must not block
+  /// clearing the Plumora session itself.
+  Future<void> logout() async {
+    await _tokenStorage.clearAccessToken();
+    try {
+      await _googleAuthService.signOut();
+    } catch (_) {
+      // See doc comment above.
+    }
   }
 
   Future<UserModel> _loadCurrentUser([UserModel? fallback]) async {

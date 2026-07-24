@@ -182,4 +182,26 @@ void main() {
       expect(await storage.readAccessToken(), 'a-valid-jwt');
     });
   });
+
+  group('AuthRepository.logout', () {
+    test(
+      'clears the token even if Google sign-out fails (best-effort)',
+      () async {
+        const storage = SecureTokenStorage();
+        await storage.saveAccessToken('a-valid-jwt');
+
+        final repository = _buildRepository(
+          (options) => throw StateError('the API must not be called'),
+        );
+
+        // No real Google session exists in this test environment, so the
+        // underlying SDK call is expected to fail — logout must swallow
+        // that and still clear the Plumora token (see doc comment on
+        // AuthRepository.logout).
+        await repository.logout();
+
+        expect(await storage.readAccessToken(), isNull);
+      },
+    );
+  });
 }
