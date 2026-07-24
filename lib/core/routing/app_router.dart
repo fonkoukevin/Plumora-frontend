@@ -115,12 +115,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RoleSelectionScreen(),
       ),
       GoRoute(
-        path: AppRoutes.editRoles,
-        name: 'edit-roles',
-        builder: (context, state) =>
-            const RoleSelectionScreen(isOnboarding: false),
-      ),
-      GoRoute(
         path: AppRoutes.editProfile,
         name: 'edit-profile',
         builder: (context, state) => const EditProfileScreen(),
@@ -340,6 +334,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: AppRoutes.profile,
             name: 'profile',
             builder: (context, state) => const ProfileScreen(),
+          ),
+          // Nested inside the shell (unlike roleSelection's onboarding
+          // variant, which is deliberately chrome-less) because every
+          // caller — profile, and the "Aller dans les paramètres" recovery
+          // link on a 403 while creating a book — already lives inside the
+          // shell. Pushing out to a top-level route and popping back in
+          // caused an observed desync between go_router's location and the
+          // rendered widget tree (URL moved on, stale screen stayed
+          // painted) — keeping the push/pop entirely within the shell's own
+          // nested Navigator avoids that root/shell navigator crossing.
+          GoRoute(
+            path: AppRoutes.editRoles,
+            name: 'edit-roles',
+            builder: (context, state) =>
+                const RoleSelectionScreen(isOnboarding: false),
           ),
           GoRoute(
             path: AppRoutes.notifications,
