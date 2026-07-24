@@ -1,0 +1,162 @@
+﻿00:00 +0: loading C:/dev/plumora_app/test/admin_catalog_screen_test.dart
+00:00 +0: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:00 +1: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:00 +2: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:00 +3: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:00 +4: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:00 +5: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:00 +6: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:00 +7: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:00 +8: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:01 +9: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:01 +10: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +11: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +12: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +13: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +14: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +15: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +16: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +17: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +18: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +19: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +20: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +21: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +22: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +23: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +24: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +25: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin catalog follows the compact mobile card layout
+00:02 +26: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin routes remain restricted to ADMIN accounts
+00:02 +27: C:/dev/plumora_app/test/admin_catalog_screen_test.dart: admin book covers accept backend aliases and relative URLs
+00:02 +28: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — HTTP status handling 401 maps to an authentication message
+00:03 +29: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — HTTP status handling 403 maps to a permission message
+00:03 +30: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — HTTP status handling 404 maps to a not-found message
+00:03 +31: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — HTTP status handling a server-provided message takes priority over the generic one
+00:03 +32: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — HTTP status handling a generic server-side message is not surfaced verbatim
+00:03 +33: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — network error handling a connection error (server unreachable) is reported clearly
+00:03 +34: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — network error handling a timeout is reported clearly
+00:03 +35: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — network error handling an unexpected (non-Dio, non-AppException) error gets a fallback
+00:03 +36: C:/dev/plumora_app/test/app_error_test.dart: AppError.messageFor — network error handling an AppException surfaces its own message
+00:05 +37: C:/dev/plumora_app/test/auth_repository_test.dart: AuthRepository.restoreSession — 401/403 (expired or invalid JWT) a 401 from /auth/me clears the token and signs the user out
+00:05 +38: C:/dev/plumora_app/test/auth_repository_test.dart: AuthRepository.restoreSession — 401/403 (expired or invalid JWT) a 403 from /auth/me also clears the token and signs the user out
+00:05 +39: C:/dev/plumora_app/test/auth_repository_test.dart: AuthRepository.restoreSession — 401/403 (expired or invalid JWT) no stored token short-circuits to unauthenticated without any call
+00:05 +40: C:/dev/plumora_app/test/auth_repository_test.dart: AuthRepository.restoreSession — network error handling a connection error propagates (so the UI can show a retry) and keeps the token — the user is not logged out just because they are offline
+00:05 +41: C:/dev/plumora_app/test/auth_repository_test.dart: AuthRepository.restoreSession — happy path a 200 from /auth/me restores an authenticated session
+00:09 +42: C:/dev/plumora_app/test/back_navigation_test.dart: Retour restores the exact previous page
+00:11 +43: C:/dev/plumora_app/test/book_detail_review_test.dart: the book detail always displays its only chapter
+00:11 +44: C:/dev/plumora_app/test/book_detail_review_test.dart: the book detail always displays its only chapter
+00:12 +45: C:/dev/plumora_app/test/book_detail_review_test.dart: a reader can publish a review from the book detail
+00:12 +46: C:/dev/plumora_app/test/book_detail_review_test.dart: a reader can publish a review from the book detail
+00:12 +47: C:/dev/plumora_app/test/book_detail_review_test.dart: a reader can publish a review from the book detail
+00:12 +48: C:/dev/plumora_app/test/book_detail_review_test.dart: a reader can publish a review from the book detail
+00:12 +49: C:/dev/plumora_app/test/book_detail_review_test.dart: a reader can publish a review from the book detail
+00:12 +50: C:/dev/plumora_app/test/book_detail_review_test.dart: a reader can publish a review from the book detail
+00:12 +51: C:/dev/plumora_app/test/book_detail_review_test.dart: a reader can publish a review from the book detail
+00:13 +52: C:/dev/plumora_app/test/chapter_detail_author_rich_content_test.dart: renaming a rich chapter preserves its encoded document
+00:20 +53: C:/dev/plumora_app/test/chapter_editor_autosave_test.dart: an existing chapter is saved automatically after typing
+00:21 +54: C:/dev/plumora_app/test/chapter_editor_autosave_test.dart: an existing chapter is saved automatically after typing
+00:21 +55: C:/dev/plumora_app/test/chapter_editor_autosave_test.dart: an existing chapter is saved automatically after typing
+00:21 +56: C:/dev/plumora_app/test/chapter_editor_autosave_test.dart: an existing chapter is saved automatically after typing
+00:23 +57: C:/dev/plumora_app/test/chapter_editor_autosave_test.dart: an existing chapter is saved automatically after typing
+00:23 +58: C:/dev/plumora_app/test/chapter_editor_layout_test.dart: desktop editor omits the secondary book navigation block
+00:24 +59: C:/dev/plumora_app/test/chapter_editor_layout_test.dart: desktop editor omits the secondary book navigation block
+00:24 +60: C:/dev/plumora_app/test/chapter_editor_layout_test.dart: desktop editor omits the secondary book navigation block
+00:24 +61: C:/dev/plumora_app/test/chapter_editor_layout_test.dart: desktop editor omits the secondary book navigation block
+00:24 +62: C:/dev/plumora_app/test/chapter_editor_layout_test.dart: desktop editor omits the secondary book navigation block
+00:24 +63: C:/dev/plumora_app/test/chapter_editor_plumo_test.dart: desktop Plumo guides the author and skips AI without a selection
+00:25 +64: C:/dev/plumora_app/test/chapter_editor_plumo_test.dart: desktop Plumo guides the author and skips AI without a selection
+00:25 +65: C:/dev/plumora_app/test/chapter_editor_plumo_test.dart: desktop Plumo guides the author and skips AI without a selection
+00:25 +66: C:/dev/plumora_app/test/chapter_editor_plumo_test.dart: desktop Plumo guides the author and skips AI without a selection
+00:26 +67: C:/dev/plumora_app/test/chapter_editor_plumo_test.dart: desktop Plumo guides the author and skips AI without a selection
+00:26 +68: C:/dev/plumora_app/test/external_book_open_library_test.dart: PublicDomainCatalogScreen — Open Library results hides the "read" affordance and never navigates for an un-imported Open Library card
+
+Warning: A call to tap() with finder "Found 1 widget with text "Fallback Fable": [
+  Text("Fallback Fable", inherit: true, color: Color(alpha: 1.0000, red: 0.1020, green: 0.0627, blue: 0.2510, colorSpace: ColorSpace.sRGB), size: 16.0, weight: 900, overflow: ellipsis, maxLines: 2, dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
+]" derived an Offset (Offset(238.8, 619.5)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+Indeed, Offset(238.8, 619.5) is outside the bounds of the root of the render tree, Size(800.0, 600.0).
+The finder corresponds to this RenderBox: RenderParagraph#2029a relayoutBoundary=up24
+The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#22e9f(_ReusableRenderView#5df68), HitTestEntry<HitTestTarget>#dda71(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/dev/plumora_app/test/external_book_open_library_test.dart:129:22)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+00:28 +69: C:/dev/plumora_app/test/chapter_editor_plumo_test.dart: desktop Plumo rewrites and replaces only the selected passage
+00:28 +70: C:/dev/plumora_app/test/chapter_editor_plumo_test.dart: desktop Plumo rewrites and replaces only the selected passage
+00:28 +71: C:/dev/plumora_app/test/chapter_editor_plumo_test.dart: desktop Plumo rewrites and replaces only the selected passage
+00:29 +72: C:/dev/plumora_app/test/landing_screen_effects_test.dart: landing page stays responsive on a compact screen
+00:29 +73: C:/dev/plumora_app/test/landing_screen_effects_test.dart: landing page stays responsive on a compact screen
+00:30 +74: C:/dev/plumora_app/test/landing_screen_effects_test.dart: landing page stays responsive on a compact screen
+00:30 +75: C:/dev/plumora_app/test/landing_screen_effects_test.dart: landing page stays responsive on a compact screen
+00:31 +76: C:/dev/plumora_app/test/landing_screen_effects_test.dart: landing page stays responsive on a compact screen
+00:31 +77: C:/dev/plumora_app/test/library_navigation_test.dart: a library reading opens its book detail first
+00:32 +78: C:/dev/plumora_app/test/library_navigation_test.dart: a library reading opens its book detail first
+00:32 +79: C:/dev/plumora_app/test/login_screen_layout_test.dart: login uses the purple split layout on desktop
+00:33 +80: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:33 +81: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:33 +82: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:33 +83: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:33 +84: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:33 +85: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:33 +86: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:33 +87: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:34 +88: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:34 +89: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:34 +90: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:34 +91: C:/dev/plumora_app/test/main_navigation_wide_layout_test.dart: beta feedback uses two columns only on wide screens
+00:35 +92: C:/dev/plumora_app/test/not_found_screen_test.dart: an unknown URL shows the internal 404 page instead of a bare error
+00:35 +93: C:/dev/plumora_app/test/not_found_screen_test.dart: tapping the 404 page action navigates back to the home route
+00:36 +94: C:/dev/plumora_app/test/plumora_document_editor_test.dart: the writing toolbar applies and persists rich text styles
+00:40 +95: C:/dev/plumora_app/test/plumora_document_editor_test.dart: the writing toolbar applies and persists rich text styles
+00:40 +96: C:/dev/plumora_app/test/plumora_document_editor_test.dart: the writing toolbar applies and persists rich text styles
+00:41 +97: C:/dev/plumora_app/test/register_screen_layout_test.dart: registration is centered with a full-width background
+00:42 +98: C:/dev/plumora_app/test/register_screen_layout_test.dart: registration is centered with a full-width background
+00:42 +99: C:/dev/plumora_app/test/register_screen_layout_test.dart: registration is centered with a full-width background
+00:43 +100: C:/dev/plumora_app/test/register_screen_layout_test.dart: registration is centered with a full-width background
+00:43 +101: C:/dev/plumora_app/test/responsive_desktop_pass_1_test.dart: MyFavoritesScreen no overflow at desktop width (previously had no wrapper)
+00:43 +102: C:/dev/plumora_app/test/responsive_desktop_pass_1_test.dart: MyFavoritesScreen no overflow at desktop width (previously had no wrapper)
+00:43 +103: C:/dev/plumora_app/test/responsive_desktop_pass_1_test.dart: MyFavoritesScreen no overflow at desktop width (previously had no wrapper)
+00:43 +104: C:/dev/plumora_app/test/responsive_desktop_pass_1_test.dart: MyFavoritesScreen no overflow at desktop width (previously had no wrapper)
+00:43 +105: C:/dev/plumora_app/test/router_chapter_navigation_test.dart: a chapter opens without duplicating shell page keys
+00:43 +106: C:/dev/plumora_app/test/router_chapter_navigation_test.dart: a chapter opens without duplicating shell page keys
+00:43 +107: C:/dev/plumora_app/test/router_chapter_navigation_test.dart: a chapter opens without duplicating shell page keys
+00:43 +108: C:/dev/plumora_app/test/router_chapter_navigation_test.dart: a chapter opens without duplicating shell page keys
+00:43 +109: C:/dev/plumora_app/test/router_chapter_navigation_test.dart: a chapter opens without duplicating shell page keys
+00:44 +110: C:/dev/plumora_app/test/router_chapter_navigation_test.dart: a chapter opens without duplicating shell page keys
+00:44 +111: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:44 +112: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:44 +113: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:44 +114: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:44 +115: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:44 +116: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:45 +117: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:45 +118: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:46 +119: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:46 +120: C:/dev/plumora_app/test/widget_test.dart: Plumora starts on public landing page
+00:46 +121: C:/dev/plumora_app/test/responsive_desktop_pass_1_test.dart: CatalogSearchScreen lays results out as a 2-column grid on desktop
+00:46 +122: C:/dev/plumora_app/test/widget_test.dart: Plumora starts directly with the restored dark theme
+00:46 +123: C:/dev/plumora_app/test/widget_test.dart: Plumora starts directly with the restored dark theme
+00:46 +124: C:/dev/plumora_app/test/widget_test.dart: PlumoraBookCover resolves backend upload cover URLs
+00:46 +125: C:/dev/plumora_app/test/widget_test.dart: Desktop sidebar can be toggled and dragged into icon-only mode
+00:47 +126: C:/dev/plumora_app/test/widget_test.dart: Home matches the reference layouts on mobile and desktop
+00:47 +127: C:/dev/plumora_app/test/widget_test.dart: Home recommends "Figures of speech" when there is no active reading
+00:47 +128: C:/dev/plumora_app/test/widget_test.dart: Home book rails do not draw ranking numbers on covers
+00:48 +129: C:/dev/plumora_app/test/widget_test.dart: Home falls back to the generic empty state if the recommended book cannot be fetched
+00:48 +130: C:/dev/plumora_app/test/widget_test.dart: Home uses figma_sombre surfaces and dark controls
+00:48 +131: C:/dev/plumora_app/test/widget_test.dart: Desktop page titles are black in light and violet in dark
+00:48 +132: C:/dev/plumora_app/test/widget_test.dart: Discover aligns search and Plumo on desktop only
+00:49 +133: C:/dev/plumora_app/test/widget_test.dart: Discover clears search results as soon as the field is emptied, without needing Enter
+00:50 +134: C:/dev/plumora_app/test/widget_test.dart: Discover keeps external covers visible inside a clipped scroll viewport
+00:50 +135: C:/dev/plumora_app/test/widget_test.dart: Author dashboard has no forced light structural surface
+00:50 +136: C:/dev/plumora_app/test/widget_test.dart: Author dashboard fills wide screens with four compact columns
+00:51 +137: C:/dev/plumora_app/test/widget_test.dart: Reader uses the dark background and foreground tokens
+00:51 +138: All tests passed!

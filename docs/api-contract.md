@@ -8,6 +8,8 @@ Base URL:
 POST `/auth/register`
 POST `/auth/login`
 POST `/auth/google`
+POST `/auth/forgot-password`
+POST `/auth/reset-password`
 GET `/auth/me`
 GET `/users/me`
 PUT `/users/me`
@@ -38,6 +40,27 @@ The backend must, on receiving `idToken`:
 - find the Plumora user by the token's verified `email`, or create one if
   none exists (the email is already verified by Google). See the `users`
   table note in docs/data-model.md — this account has no password.
+
+POST `/auth/forgot-password` request body: `{ "email": "<email>" }`. Sent
+from the "Mot de passe oublié ?" link on the login screen
+(`forgot_password_screen.dart`). Must always respond with 200 whether or
+not an account exists for that email — the response must not be used to
+leak account existence. On success, emails the user a link to
+`{frontend_base_url}/reset-password?token=<token>` with a short-lived,
+single-use reset token. Google-only accounts (see above, no password set)
+should presumably reject or special-case this — not yet decided, flag to
+the frontend if the behavior needs to differ from a normal 200.
+
+POST `/auth/reset-password` request body: `{ "token": "<token>",
+"newPassword": "<new password, min 8 chars>" }`. Consumed by
+`reset_password_screen.dart`. The token must be single-use and expire
+after a short window (e.g. 1 hour); an invalid/expired/already-used token
+should respond 400 with a message the frontend can surface via
+`AppError.messageFor` (see `_statusMessage`/`_responseMessage` in
+`app_error.dart` — any `message`/`error`/`detail` string field in the JSON
+body is shown to the user as-is, so keep it end-user readable in French).
+On success the token is invalidated and existing sessions/tokens for that
+user should presumably be revoked — not yet decided with the backend.
 
 ## Books
 
@@ -400,6 +423,52 @@ input-too-large/usage-limit/validation failures; 503 for
 `AiConfigurationException`/`AiProviderUnavailableException`/
 `AiInvalidResponseException` (Gemini misconfigured, unreachable, or returned
 unparseable JSON).
+
+## Reports (signalements)
+
+**Documenté 2026-07 : les routes de modération (`/admin/reports/**`,
+`/reports/{id}/status`) étaient déjà consommées par
+`admin_reports_screen.dart` mais n'étaient pas documentées ici — cet
+écart est comblé en même temps que l'ajout de la création côté
+lecteur.** Statuts (déjà en usage, non renommés) : `OPEN`, `IN_REVIEW`,
+`RESOLVED`, `DISMISSED`.
+
+POST `/books/{bookId}/reports` — utilisateur authentifié (tout rôle)
+- **Nouvelle route, proposée par le frontend** — à confirmer côté
+  backend, aucun test ni doc préexistante ne la référençait. Suit le
+  même gabarit que `POST /books/{bookId}/reviews` /
+  `POST /books/{bookId}/favorites`.
+- Body : `{ "reason": <enum ci-dessous, requis>, "description"?: string
+  (≤1000 caractères ; requis si `reason` = `OTHER`, sinon facultatif) }`.
+- Réponse attendue (`ReportResponse`) : `{ "id", "bookId", "reason",
+  "description", "status": "OPEN", "createdAt" }` — statut initial
+  toujours `OPEN`.
+- Motifs proposés (aucun enum existant trouvé côté frontend — colonne
+  `reason VARCHAR(100) NOT NULL` sans `CHECK` documenté dans
+  `docs/data-model.md`, donc compatible en chaîne libre) :
+  `INAPPROPRIATE_CONTENT`, `HARASSMENT`, `HATE_SPEECH`, `PLAGIARISM`,
+  `COPYRIGHT`, `MISLEADING_INFORMATION`, `OTHER`.
+- Codes d'erreur attendus côté client : 401 (non authentifié), 404
+  (livre introuvable), 409 (signalement déjà `OPEN` du même lecteur
+  sur ce livre — règle *suggérée*, pas confirmée côté backend), 400
+  (validation).
+
+GET `/admin/reports` — role `ADMIN`
+- Retourne la liste des signalements (tous statuts).
+
+GET `/admin/reports/{id}` — role `ADMIN`
+- Détail d'un signalement (méthode client existante, actuellement
+  inutilisée par l'écran de modération).
+
+PATCH `/admin/reports/{id}/resolve` — role `ADMIN`
+PATCH `/admin/reports/{id}/reject` — role `ADMIN`
+- Body optionnel : `{ "reason"?: string }`.
+
+PATCH `/reports/{id}/status` — role `ADMIN` (hors préfixe `/admin/**`
+mais réservée ADMIN côté serveur)
+- Body : `{ "status": "IN_REVIEW" }` — seule transition couverte par
+  cette route générique ; `resolve`/`reject` ci-dessus couvrent les
+  deux autres.
 
 ## Notifications
 
