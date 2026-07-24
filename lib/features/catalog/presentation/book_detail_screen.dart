@@ -217,6 +217,7 @@ class _ActionColumn extends ConsumerWidget {
             colors: _coverColors(book.id.isEmpty ? book.title : book.id),
             imageUrl: book.coverUrl,
             imageBytes: cachedCover,
+            semanticLabel: 'Couverture de ${book.title}',
           ),
         ),
         const SizedBox(height: 16),

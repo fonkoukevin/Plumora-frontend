@@ -1158,6 +1158,7 @@ class _PlumoraBookTileState extends ConsumerState<_PlumoraBookTile> {
                       width: widget.metrics.tileWidth,
                       height: widget.metrics.coverHeight,
                       radius: widget.metrics.radius,
+                      semanticLabel: 'Couverture de ${widget.book.title}',
                     ),
                   ),
                   Positioned(

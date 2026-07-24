@@ -608,6 +608,7 @@ class _CoverThumb extends ConsumerWidget {
       radius: radius,
       colors: _coverColors(book),
       imageUrl: book.coverUrl,
+      semanticLabel: 'Couverture de ${book.title}',
     );
   }
 }
@@ -840,7 +841,11 @@ class _CompactCatalogAction extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(999),
           child: Container(
-            height: 26,
+            // Cible tactile Android >= 48dp (RGAA/WCAG 2.5.5) : la pastille
+            // visuelle reste compacte (26px) mais la zone tactile est
+            // agrandie symétriquement autour du même centre.
+            constraints: const BoxConstraints(minHeight: 48),
+            alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),

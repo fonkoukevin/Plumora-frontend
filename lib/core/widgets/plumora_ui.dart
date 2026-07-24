@@ -349,6 +349,7 @@ class PlumoraBookCover extends StatelessWidget {
     this.width = 80,
     this.height = 112,
     this.radius = 12,
+    this.semanticLabel,
     super.key,
   });
 
@@ -359,56 +360,68 @@ class PlumoraBookCover extends StatelessWidget {
   final double height;
   final double radius;
 
+  /// Texte alternatif de la couverture (ex. "Couverture de {titre}"). Un
+  /// intitulé générique est utilisé si l'appelant ne précise pas le titre du
+  /// livre, pour qu'aucune couverture ne reste sans description pour un
+  /// lecteur d'écran.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
     final normalizedImageUrl = resolvePlumoraImageUrl(imageUrl);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        border: isDark
-            ? Border.all(color: context.colors.accent.withValues(alpha: 0.22))
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? const Color(0x33FFFFFF) : const Color(0x22000000),
-            blurRadius: isDark ? 16 : 12,
-            offset: Offset(0, isDark ? 8 : 7),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return Semantics(
+      image: true,
+      label: semanticLabel ?? 'Couverture de livre',
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          border: isDark
+              ? Border.all(color: context.colors.accent.withValues(alpha: 0.22))
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? const Color(0x33FFFFFF) : const Color(0x22000000),
+              blurRadius: isDark ? 16 : 12,
+              offset: Offset(0, isDark ? 8 : 7),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: colors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
             ),
-          ),
-          if (imageBytes != null)
-            Image.memory(
-              imageBytes!,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  const SizedBox.shrink(),
-            )
-          else if (normalizedImageUrl != null)
-            Image.network(
-              normalizedImageUrl,
-              fit: BoxFit.cover,
-              webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-              errorBuilder: (context, error, stackTrace) =>
-                  const SizedBox.shrink(),
-            ),
-        ],
+            if (imageBytes != null)
+              Image.memory(
+                imageBytes!,
+                fit: BoxFit.cover,
+                excludeFromSemantics: true,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+              )
+            else if (normalizedImageUrl != null)
+              Image.network(
+                normalizedImageUrl,
+                fit: BoxFit.cover,
+                excludeFromSemantics: true,
+                webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+              ),
+          ],
+        ),
       ),
     );
   }
