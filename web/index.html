@@ -20,6 +20,36 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <script>
+    // Flutter's web engine unconditionally strips this tag and replaces it
+    // with a hardcoded `user-scalable=no` one at startup (see
+    // FullPageEmbeddingStrategy._applyViewportMeta in the engine sources —
+    // it removes every <meta name="viewport"> and appends its own, marked
+    // with a flt-viewport attribute). Declaring our own tag above has no
+    // effect on its own; this observer puts the permissive value back the
+    // instant the engine overwrites it, so pinch-zoom keeps working for
+    // low-vision users and the Lighthouse accessibility audit passes.
+    (function () {
+      var PERMISSIVE_CONTENT =
+        'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
+
+      function enforce() {
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (meta && meta.getAttribute('content') !== PERMISSIVE_CONTENT) {
+          meta.setAttribute('content', PERMISSIVE_CONTENT);
+        }
+      }
+
+      new MutationObserver(enforce).observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['content'],
+      });
+    })();
+  </script>
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
