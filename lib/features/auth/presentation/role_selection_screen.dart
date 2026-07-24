@@ -59,7 +59,19 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
 
     if (widget.isOnboarding) {
       context.go(AppRoutes.home);
-    } else if (context.canPop()) {
+      return;
+    }
+
+    // Editing (not onboarding): the previous screen (e.g. profile, or the
+    // "Aller dans les paramètres" link from a permission error) keeps
+    // whatever it was showing before — nothing here forces it to refresh —
+    // so without an explicit confirmation, a successful save looks
+    // identical to a silent failure. Show one before navigating away.
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Rôles mis à jour.')));
+
+    if (context.canPop()) {
       context.pop();
     } else {
       context.go(AppRoutes.profile);
