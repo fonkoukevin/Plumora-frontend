@@ -99,6 +99,14 @@ class _LandingScreenState extends State<LandingScreen>
                       padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
                       child: LayoutBuilder(
                         builder: (context, constraints) {
+                          final registerButton = _HeaderOutlineButton(
+                            key: const ValueKey('landing_register_button'),
+                            label: "S'inscrire",
+                            onPressed: () => context.push(AppRoutes.register),
+                            radius: 12,
+                            minHeight: 42,
+                            horizontalPadding: 20,
+                          );
                           final loginButton = _GradientPillButton(
                             key: const ValueKey('landing_login_button'),
                             label: 'Se connecter',
@@ -113,6 +121,8 @@ class _LandingScreenState extends State<LandingScreen>
                               children: [
                                 const FigmaBrandMark(size: 36, textSize: 22),
                                 const Spacer(),
+                                registerButton,
+                                const SizedBox(width: 12),
                                 loginButton,
                               ],
                             );
@@ -133,13 +143,19 @@ class _LandingScreenState extends State<LandingScreen>
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 14),
-                              SizedBox(
-                                width: constraints.maxWidth < 280 ? 118 : 136,
+                              const SizedBox(width: 10),
+                              Expanded(
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
                                   alignment: Alignment.centerRight,
-                                  child: loginButton,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      registerButton,
+                                      const SizedBox(width: 8),
+                                      loginButton,
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -604,6 +620,79 @@ class _GradientPillButtonState extends State<_GradientPillButton> {
                         ],
                       ],
                     ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderOutlineButton extends StatefulWidget {
+  const _HeaderOutlineButton({
+    required this.label,
+    required this.onPressed,
+    this.radius = 12,
+    this.minHeight = 42,
+    this.horizontalPadding = 20,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final double radius;
+  final double minHeight;
+  final double horizontalPadding;
+
+  @override
+  State<_HeaderOutlineButton> createState() => _HeaderOutlineButtonState();
+}
+
+class _HeaderOutlineButtonState extends State<_HeaderOutlineButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 190),
+        constraints: BoxConstraints(minHeight: widget.minHeight),
+        decoration: BoxDecoration(
+          color: _hovered
+              ? context.colors.primary.withValues(alpha: 0.09)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(widget.radius),
+          border: Border.all(
+            color: _hovered
+                ? context.colors.primary
+                : context.colors.primary.withValues(alpha: 0.55),
+            width: 1.2,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onPressed,
+            borderRadius: BorderRadius.circular(widget.radius),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: widget.horizontalPadding,
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  widget.label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: context.colors.primary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
