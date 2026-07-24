@@ -197,19 +197,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: settingsTiles,
         ),
         const SizedBox(height: 14),
-        OutlinedButton.icon(
-          onPressed: _loggingOut ? null : _logout,
-          icon: _loggingOut
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.logout),
-          label: Text(_loggingOut ? 'Déconnexion...' : 'Se déconnecter'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: context.colors.destructive,
-            side: BorderSide(color: context.colors.destructive),
+        SizedBox(
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: _loggingOut ? null : _logout,
+            icon: _loggingOut
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: context.colors.destructive,
+                    ),
+                  )
+                : const Icon(Icons.logout, size: 18),
+            label: Text(_loggingOut ? 'Déconnexion...' : 'Se déconnecter'),
+            style: ButtonStyle(
+              shape: const WidgetStatePropertyAll(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+              ),
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              side: WidgetStateProperty.resolveWith((states) {
+                final active =
+                    states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.pressed);
+                return BorderSide(
+                  color: context.colors.destructive,
+                  width: active ? 0 : 1.4,
+                );
+              }),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return context.colors.destructive;
+                }
+                if (states.contains(WidgetState.hovered)) {
+                  return context.colors.destructive.withValues(alpha: 0.85);
+                }
+                return context.colors.destructive.withValues(alpha: 0.08);
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                final active =
+                    states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.pressed);
+                return active
+                    ? context.colors.onDestructive
+                    : context.colors.destructive;
+              }),
+            ),
           ),
         ),
       ],
