@@ -71,6 +71,17 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
       context,
     ).showSnackBar(const SnackBar(content: Text('Rôles mis à jour.')));
 
+    // The roles update above changes authControllerProvider's state, which
+    // app_router's refreshListenable reacts to by re-running its own
+    // redirect logic against the *current* route on its own schedule. Doing
+    // our own pop()/go() in the very same frame races that re-evaluation —
+    // in practice it can navigate away and immediately snap back to this
+    // same screen. Let it settle first.
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) {
+      return;
+    }
+
     if (context.canPop()) {
       context.pop();
     } else {
