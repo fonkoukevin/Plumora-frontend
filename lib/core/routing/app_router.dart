@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/data/repositories/auth_repository.dart'
+    show AuthSession;
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -800,8 +802,37 @@ bool _isPublicLocation(String location) {
   );
 }
 
+/// Only notifies when something the `redirect` callback actually cares
+/// about changes — whether the user is authenticated, and whether they're
+/// ADMIN (drives [AdminRouteGuard]). Notifying on *every* authControllerProvider
+/// state change (the previous behavior) meant an unrelated update — e.g.
+/// AuthController.updateRoles() adding a role, which cycles through
+/// AsyncLoading then AsyncData without touching auth status at all — made
+/// go_router re-run its redirect mid-navigation. Observed effect: the
+/// router's own idea of the current location snapped back to a previous
+/// screen before an explicit context.pop() following that same update had
+/// a chance to run, leaving a stale screen on screen while the URL had
+/// already moved on.
 class _AuthRedirectRefresh extends ChangeNotifier {
   _AuthRedirectRefresh(Ref ref) {
-    ref.listen(authControllerProvider, (previous, next) => notifyListeners());
+    ref.listen(authControllerProvider, (previous, next) {
+      if (_redirectRelevantSignature(previous) !=
+          _redirectRelevantSignature(next)) {
+        notifyListeners();
+      }
+    });
+  }
+
+  static (bool isAuthenticated, bool isAdmin) _redirectRelevantSignature(
+    AsyncValue<AuthSession>? state,
+  ) {
+    final session = state?.valueOrNull;
+    final isAuthenticated = session?.isAuthenticated ?? false;
+    final isAdmin =
+        session?.roles.any(
+          (role) => role.name.trim().toUpperCase() == 'ADMIN',
+        ) ??
+        false;
+    return (isAuthenticated, isAdmin);
   }
 }
