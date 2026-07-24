@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:dio/dio.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -118,6 +119,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
   String? _hydratedBookId;
   bool _isSubmitting = false;
   String? _error;
+  bool _missingAuthorRole = false;
 
   bool get _editing =>
       widget.bookId != null && widget.bookId!.trim().isNotEmpty;
@@ -286,6 +288,19 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (_missingAuthorRole) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => context.push(AppRoutes.editRoles),
+                  icon: const Icon(Icons.settings_outlined, size: 16),
+                  label: const Text('Aller dans les paramètres'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
             ],
             const SizedBox(height: 28),
             _CreateCta(
@@ -407,6 +422,7 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
     setState(() {
       _isSubmitting = true;
       _error = null;
+      _missingAuthorRole = false;
     });
 
     try {
@@ -451,7 +467,16 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
             : AppRoutes.chapterEditorPath(saved.id),
       );
     } catch (error) {
-      setState(() => _error = AppError.messageFor(error));
+      final missingAuthorRole =
+          error is DioException && error.response?.statusCode == 403;
+      setState(() {
+        _missingAuthorRole = missingAuthorRole;
+        _error = missingAuthorRole
+            ? (_editing
+                  ? "Tu n'as pas les droits pour modifier ce livre : il te faut le rôle Auteur."
+                  : "Tu n'as pas les droits pour créer un livre : il te faut le rôle Auteur.")
+            : AppError.messageFor(error);
+      });
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);

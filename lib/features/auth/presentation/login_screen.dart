@@ -88,6 +88,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submitGoogle() async {
     await ref.read(authControllerProvider.notifier).loginWithGoogle();
+    await _ensureGoogleDefaultRoles();
 
     final session = ref.read(authControllerProvider).valueOrNull;
     if (!mounted || session?.isAuthenticated != true) {
@@ -109,6 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref
         .read(authControllerProvider.notifier)
         .loginWithGoogleIdToken(idToken);
+    await _ensureGoogleDefaultRoles();
 
     final session = ref.read(authControllerProvider).valueOrNull;
     if (!mounted || session?.isAuthenticated != true) {
@@ -116,6 +118,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     context.go(_postLoginDestination(session!.roles));
+  }
+
+  /// Google sign-in is meant to be a single click, so a brand-new Google
+  /// account (no roles yet — same signal `_postLoginDestination` uses to
+  /// send email/password signups to the manual role-selection screen) is
+  /// granted all three reader-facing roles immediately instead. The user
+  /// can still narrow them down later from Profil > Rôles. If this call
+  /// fails, roles stay empty and the normal `_postLoginDestination` fallback
+  /// sends the user to manual role selection instead of leaving them stuck.
+  Future<void> _ensureGoogleDefaultRoles() async {
+    final session = ref.read(authControllerProvider).valueOrNull;
+    if (session == null ||
+        !session.isAuthenticated ||
+        session.roles.isNotEmpty) {
+      return;
+    }
+
+    await ref.read(authControllerProvider.notifier).updateRoles(const [
+      'AUTHOR',
+      'READER',
+      'BETA_READER',
+    ]);
   }
 
   @override
