@@ -1,0 +1,3 @@
+﻿Lignes couvertes : 10784
+Lignes mesurées : 19714
+Couverture frontend : 54.7 %

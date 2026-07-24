@@ -8,10 +8,12 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_ui.dart';
 import '../../../core/widgets/plumora_user_avatar.dart';
+import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../book/data/repositories/book_cover_cache.dart';
 import '../../reading/data/models/review_model.dart';
 import '../../reading/data/repositories/favorite_repository.dart';
 import '../../reading/data/repositories/review_repository.dart';
+import '../../reading/presentation/report_book_dialog.dart';
 import '../../reading/presentation/review_dialog.dart';
 import '../data/models/catalog_book_model.dart';
 import '../data/repositories/catalog_repository.dart';
@@ -71,6 +73,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
                   favoriteError: _favoriteError,
                   onToggleFavorite: () =>
                       _toggleFavorite(favoriteAsync.valueOrNull ?? false),
+                  onReport: _openReportDialog,
                 );
                 final details = _BookDetails(
                   book: book,
@@ -134,6 +137,25 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
     }
   }
 
+  Future<void> _openReportDialog() async {
+    final session = ref.read(authControllerProvider).valueOrNull;
+    if (session?.isAuthenticated != true) {
+      context.push(AppRoutes.login);
+      return;
+    }
+
+    final reported = await showReportBookDialog(context, widget.bookId);
+    if (reported == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Votre signalement a bien été transmis. Il sera examiné par un administrateur.',
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _toggleFavorite(bool isFavorite) async {
     setState(() {
       _favoriteMutating = true;
@@ -165,6 +187,7 @@ class _ActionColumn extends ConsumerWidget {
     required this.isFavorite,
     required this.favoriteLoading,
     required this.onToggleFavorite,
+    required this.onReport,
     this.favoriteError,
   });
 
@@ -172,6 +195,7 @@ class _ActionColumn extends ConsumerWidget {
   final bool isFavorite;
   final bool favoriteLoading;
   final VoidCallback onToggleFavorite;
+  final VoidCallback onReport;
   final String? favoriteError;
 
   @override
@@ -233,6 +257,26 @@ class _ActionColumn extends ConsumerWidget {
             ),
           ),
         ],
+        const SizedBox(height: 10),
+        Center(
+          child: TextButton.icon(
+            onPressed: onReport,
+            icon: Icon(
+              Icons.flag_outlined,
+              size: 16,
+              color: context.colors.textSecondary,
+            ),
+            label: Text(
+              'Signaler ce livre',
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
+          ),
+        ),
       ],
     );
   }
