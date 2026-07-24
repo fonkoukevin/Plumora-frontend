@@ -121,17 +121,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   /// Google sign-in is meant to be a single click, so a brand-new Google
-  /// account (no roles yet — same signal `_postLoginDestination` uses to
-  /// send email/password signups to the manual role-selection screen) is
-  /// granted all three reader-facing roles immediately instead. The user
-  /// can still narrow them down later from Profil > Rôles. If this call
-  /// fails, roles stay empty and the normal `_postLoginDestination` fallback
-  /// sends the user to manual role selection instead of leaving them stuck.
+  /// account is granted all three reader-facing roles immediately instead
+  /// of being left with just one or sent through the manual role-selection
+  /// screen meant for the slower email/password signup flow. The user can
+  /// still narrow them down later from Profil > Rôles.
+  ///
+  /// Triggers when the account has no roles yet OR only the backend's own
+  /// default (`READER` alone, silently assigned server-side on account
+  /// creation) — not just on a fully empty list, since that default means
+  /// `_postLoginDestination`'s "roles.isEmpty -> role selection" signal
+  /// never fires for a brand-new Google account either. An account with any
+  /// other role already set (e.g. an existing user who deliberately picked
+  /// just READER, or already has AUTHOR/BETA_READER) is left untouched. If
+  /// the update call fails, the account simply keeps its current roles.
   Future<void> _ensureGoogleDefaultRoles() async {
     final session = ref.read(authControllerProvider).valueOrNull;
-    if (session == null ||
-        !session.isAuthenticated ||
-        session.roles.isNotEmpty) {
+    if (session == null || !session.isAuthenticated) {
+      return;
+    }
+
+    final currentRoles = session.roles
+        .map((role) => role.name.trim().toUpperCase())
+        .toSet();
+    final isBareDefault =
+        currentRoles.isEmpty ||
+        (currentRoles.length == 1 && currentRoles.contains('READER'));
+    if (!isBareDefault) {
       return;
     }
 

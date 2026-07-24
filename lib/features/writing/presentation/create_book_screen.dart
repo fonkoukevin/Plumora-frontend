@@ -291,7 +291,19 @@ class _CreateBookScreenState extends ConsumerState<CreateBookScreen> {
               if (_missingAuthorRole) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
-                  onPressed: () => context.push(AppRoutes.editRoles),
+                  onPressed: () async {
+                    await context.push(AppRoutes.editRoles);
+                    // The roles screen may have just granted AUTHOR — clear
+                    // the stale permission error instead of leaving it
+                    // displayed until the next submit attempt, which reads
+                    // as "my role change didn't work" even when it did.
+                    if (mounted && _missingAuthorRole) {
+                      setState(() {
+                        _error = null;
+                        _missingAuthorRole = false;
+                      });
+                    }
+                  },
                   icon: const Icon(Icons.settings_outlined, size: 16),
                   label: const Text('Aller dans les paramètres'),
                   style: TextButton.styleFrom(
