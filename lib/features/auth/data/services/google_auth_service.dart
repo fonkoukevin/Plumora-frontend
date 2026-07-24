@@ -142,10 +142,15 @@ class GoogleAuthService {
       config: const GSIAPButtonConfig(
         uiConfig: GSIAPButtonUiConfig(
           type: GSIAPButtonType.standard,
-          theme: GSIAPButtonTheme.outline,
+          // Filled black reads as more deliberate/polished next to the
+          // app's solid purple primary button than the default gray
+          // outline, without competing with the purple brand color the
+          // way Google's own filledBlue theme would.
+          theme: GSIAPButtonTheme.filledBlack,
           size: GSIAPButtonSize.large,
           text: GSIAPButtonText.continueWith,
           shape: GSIAPButtonShape.rectangular,
+          logoAlignment: GSIAPButtonLogoAlignment.center,
         ),
       ),
     );
