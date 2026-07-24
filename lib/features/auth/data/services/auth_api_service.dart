@@ -2,8 +2,10 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/errors/app_error.dart';
 import '../models/auth_response.dart';
+import '../models/forgot_password_request.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
+import '../models/reset_password_request.dart';
 import '../models/role_model.dart';
 import '../models/update_profile_request.dart';
 import '../models/user_model.dart';
@@ -29,6 +31,17 @@ class AuthApiService {
       data: {'idToken': idToken},
     );
     return AuthResponse.fromJson(_readMap(response.data));
+  }
+
+  /// Always resolves successfully regardless of whether [request.email]
+  /// belongs to an account — the backend must not leak account existence
+  /// through this endpoint (see docs/api-contract.md).
+  Future<void> requestPasswordReset(ForgotPasswordRequest request) async {
+    await _dio.post('/auth/forgot-password', data: request.toJson());
+  }
+
+  Future<void> resetPassword(ResetPasswordRequest request) async {
+    await _dio.post('/auth/reset-password', data: request.toJson());
   }
 
   Future<UserModel> authMe() async {

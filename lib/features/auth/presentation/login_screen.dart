@@ -223,6 +223,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             onGoogle: _submitGoogle,
                             googleSignInButton: _webGoogleSignInButton,
                             onRegister: () => context.push(AppRoutes.register),
+                            onForgotPassword: () =>
+                                context.push(AppRoutes.forgotPassword),
                           ),
                         ),
                       ],
@@ -249,6 +251,7 @@ class _LoginSplitCard extends StatelessWidget {
     required this.onGoogle,
     this.googleSignInButton,
     required this.onRegister,
+    required this.onForgotPassword,
   });
 
   final GlobalKey<FormState> formKey;
@@ -260,6 +263,7 @@ class _LoginSplitCard extends StatelessWidget {
   final VoidCallback onGoogle;
   final Widget? googleSignInButton;
   final VoidCallback onRegister;
+  final VoidCallback onForgotPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +283,7 @@ class _LoginSplitCard extends StatelessWidget {
           onGoogle: onGoogle,
           googleSignInButton: googleSignInButton,
           onRegister: onRegister,
+          onForgotPassword: onForgotPassword,
         );
 
         return Container(
@@ -676,6 +681,7 @@ class _LoginFormPane extends StatelessWidget {
     required this.onGoogle,
     this.googleSignInButton,
     required this.onRegister,
+    required this.onForgotPassword,
   });
 
   final bool compact;
@@ -688,6 +694,7 @@ class _LoginFormPane extends StatelessWidget {
   final VoidCallback onGoogle;
   final Widget? googleSignInButton;
   final VoidCallback onRegister;
+  final VoidCallback onForgotPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -750,7 +757,7 @@ class _LoginFormPane extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: isLoading ? null : () {},
+              onPressed: isLoading ? null : onForgotPassword,
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               ),
@@ -837,7 +844,7 @@ class _LoginFormPane extends StatelessWidget {
   }
 }
 
-class _LoginTextField extends StatelessWidget {
+class _LoginTextField extends StatefulWidget {
   const _LoginTextField({
     required this.controller,
     required this.label,
@@ -859,6 +866,13 @@ class _LoginTextField extends StatelessWidget {
   final ValueChanged<String>? onFieldSubmitted;
 
   @override
+  State<_LoginTextField> createState() => _LoginTextFieldState();
+}
+
+class _LoginTextFieldState extends State<_LoginTextField> {
+  late bool _obscured = widget.obscureText;
+
+  @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(10);
 
@@ -866,7 +880,7 @@ class _LoginTextField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: TextStyle(
             color: context.colors.textPrimary,
             fontSize: 13,
@@ -875,13 +889,13 @@ class _LoginTextField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: obscureText,
-          validator: validator,
-          onFieldSubmitted: onFieldSubmitted,
-          autofillHints: obscureText
+          controller: widget.controller,
+          keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          obscureText: widget.obscureText && _obscured,
+          validator: widget.validator,
+          onFieldSubmitted: widget.onFieldSubmitted,
+          autofillHints: widget.obscureText
               ? const [AutofillHints.password]
               : const [AutofillHints.email],
           autocorrect: false,
@@ -891,7 +905,7 @@ class _LoginTextField extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: widget.hint,
             filled: true,
             fillColor: context.colors.inputBackground,
             contentPadding: const EdgeInsets.symmetric(
@@ -899,6 +913,25 @@ class _LoginTextField extends StatelessWidget {
               vertical: 15,
             ),
             constraints: const BoxConstraints(minHeight: 52),
+            suffixIcon: widget.obscureText
+                ? Semantics(
+                    button: true,
+                    label: _obscured
+                        ? 'Afficher le mot de passe'
+                        : 'Masquer le mot de passe',
+                    child: IconButton(
+                      tooltip: _obscured
+                          ? 'Afficher le mot de passe'
+                          : 'Masquer le mot de passe',
+                      icon: Icon(
+                        _obscured
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () => setState(() => _obscured = !_obscured),
+                    ),
+                  )
+                : null,
             border: OutlineInputBorder(borderRadius: radius),
             enabledBorder: OutlineInputBorder(
               borderRadius: radius,

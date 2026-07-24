@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/controllers/auth_controller.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/role_selection_screen.dart';
 import '../../features/ai/presentation/plumo_recommendation_screen.dart';
 import '../../features/ai/presentation/plumo_writing_screen.dart';
@@ -95,6 +97,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.register,
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        name: 'forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        name: 'reset-password',
+        builder: (context, state) =>
+            ResetPasswordScreen(token: state.uri.queryParameters['token']),
       ),
       GoRoute(
         path: AppRoutes.roleSelection,
@@ -456,6 +469,8 @@ abstract final class AppRoutes {
   static const String landing = '/';
   static const String login = '/login';
   static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
   static const String roleSelection = '/roles';
   static const String editRoles = '/roles/edit';
   static const String home = '/home';
@@ -501,6 +516,15 @@ abstract final class AppRoutes {
   static const String adminAi = '/admin/ai';
   static const String adminAccessDenied = '/admin/access-denied';
   static const String continueOnWebAuthor = '/author/manuscripts/:bookId';
+
+  static String resetPasswordPath({String? token}) {
+    final normalizedToken = token?.trim();
+    if (normalizedToken == null || normalizedToken.isEmpty) {
+      return resetPassword;
+    }
+
+    return '$resetPassword?token=${Uri.encodeQueryComponent(normalizedToken)}';
+  }
 
   static String continueOnWebAuthorPath(String bookId) {
     return '/author/manuscripts/${Uri.encodeComponent(bookId.trim())}';
@@ -754,7 +778,14 @@ bool _isPublicLocation(String location) {
     return true;
   }
 
-  const publicPrefixes = ['/login', '/register', '/discover', '/catalog'];
+  const publicPrefixes = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/discover',
+    '/catalog',
+  ];
   return publicPrefixes.any(
     (prefix) => location == prefix || location.startsWith('$prefix/'),
   );

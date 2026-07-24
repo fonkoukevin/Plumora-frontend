@@ -559,7 +559,7 @@ class _RegisterForm extends StatelessWidget {
   }
 }
 
-class _RegisterTextField extends StatelessWidget {
+class _RegisterTextField extends StatefulWidget {
   const _RegisterTextField({
     required this.controller,
     required this.label,
@@ -581,6 +581,13 @@ class _RegisterTextField extends StatelessWidget {
   final ValueChanged<String>? onFieldSubmitted;
 
   @override
+  State<_RegisterTextField> createState() => _RegisterTextFieldState();
+}
+
+class _RegisterTextFieldState extends State<_RegisterTextField> {
+  late bool _obscured = widget.obscureText;
+
+  @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(10);
 
@@ -588,7 +595,7 @@ class _RegisterTextField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: TextStyle(
             color: context.colors.textPrimary,
             fontSize: 13,
@@ -597,15 +604,15 @@ class _RegisterTextField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: obscureText,
-          validator: validator,
-          onFieldSubmitted: onFieldSubmitted,
-          autofillHints: obscureText
+          controller: widget.controller,
+          keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          obscureText: widget.obscureText && _obscured,
+          validator: widget.validator,
+          onFieldSubmitted: widget.onFieldSubmitted,
+          autofillHints: widget.obscureText
               ? const [AutofillHints.newPassword]
-              : keyboardType == TextInputType.emailAddress
+              : widget.keyboardType == TextInputType.emailAddress
               ? const [AutofillHints.email]
               : const [AutofillHints.name],
           autocorrect: false,
@@ -615,7 +622,7 @@ class _RegisterTextField extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: widget.hint,
             filled: true,
             fillColor: context.colors.inputBackground,
             contentPadding: const EdgeInsets.symmetric(
@@ -623,6 +630,25 @@ class _RegisterTextField extends StatelessWidget {
               vertical: 15,
             ),
             constraints: const BoxConstraints(minHeight: 52),
+            suffixIcon: widget.obscureText
+                ? Semantics(
+                    button: true,
+                    label: _obscured
+                        ? 'Afficher le mot de passe'
+                        : 'Masquer le mot de passe',
+                    child: IconButton(
+                      tooltip: _obscured
+                          ? 'Afficher le mot de passe'
+                          : 'Masquer le mot de passe',
+                      icon: Icon(
+                        _obscured
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () => setState(() => _obscured = !_obscured),
+                    ),
+                  )
+                : null,
             border: OutlineInputBorder(borderRadius: radius),
             enabledBorder: OutlineInputBorder(
               borderRadius: radius,

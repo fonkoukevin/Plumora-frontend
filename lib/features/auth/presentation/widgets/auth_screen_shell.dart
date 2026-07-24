@@ -177,7 +177,7 @@ class AppWordmark extends StatelessWidget {
   }
 }
 
-class PlumoraTextField extends StatelessWidget {
+class PlumoraTextField extends StatefulWidget {
   const PlumoraTextField({
     required this.controller,
     required this.label,
@@ -202,12 +202,19 @@ class PlumoraTextField extends StatelessWidget {
   final int maxLines;
 
   @override
+  State<PlumoraTextField> createState() => _PlumoraTextFieldState();
+}
+
+class _PlumoraTextFieldState extends State<PlumoraTextField> {
+  late bool _obscured = widget.obscureText;
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: TextStyle(
             color: context.colors.textPrimary,
             fontSize: 14,
@@ -216,15 +223,36 @@ class PlumoraTextField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: obscureText,
-          validator: validator,
-          onFieldSubmitted: onFieldSubmitted,
-          maxLines: obscureText ? 1 : maxLines,
+          controller: widget.controller,
+          keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          obscureText: widget.obscureText && _obscured,
+          validator: widget.validator,
+          onFieldSubmitted: widget.onFieldSubmitted,
+          maxLines: widget.obscureText ? 1 : widget.maxLines,
           style: TextStyle(fontSize: 16, color: context.colors.textPrimary),
-          decoration: InputDecoration(hintText: hint),
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            suffixIcon: widget.obscureText
+                ? Semantics(
+                    button: true,
+                    label: _obscured
+                        ? 'Afficher le mot de passe'
+                        : 'Masquer le mot de passe',
+                    child: IconButton(
+                      tooltip: _obscured
+                          ? 'Afficher le mot de passe'
+                          : 'Masquer le mot de passe',
+                      icon: Icon(
+                        _obscured
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () => setState(() => _obscured = !_obscured),
+                    ),
+                  )
+                : null,
+          ),
         ),
       ],
     );
