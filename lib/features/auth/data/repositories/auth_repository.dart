@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/app_error.dart';
 import '../../../../core/network/dio_provider.dart';
 import '../../../../core/storage/secure_token_storage.dart';
+import '../models/forgot_password_request.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
+import '../models/reset_password_request.dart';
 import '../models/role_model.dart';
 import '../models/update_profile_request.dart';
 import '../models/user_model.dart';
@@ -121,6 +123,32 @@ class AuthRepository {
     }
 
     return _apiService.updateMe(request);
+  }
+
+  Future<void> requestPasswordReset(String email) async {
+    if (email.trim().isEmpty) {
+      throw const AppException('Adresse email requise.');
+    }
+
+    await _apiService.requestPasswordReset(ForgotPasswordRequest(email: email));
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    if (token.trim().isEmpty) {
+      throw const AppException('Lien de réinitialisation invalide.');
+    }
+    if (newPassword.length < 8) {
+      throw const AppException(
+        'Le mot de passe doit contenir au moins 8 caractères.',
+      );
+    }
+
+    await _apiService.resetPassword(
+      ResetPasswordRequest(token: token, newPassword: newPassword),
+    );
   }
 
   Future<void> logout() {
