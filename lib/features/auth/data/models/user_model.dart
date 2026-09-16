@@ -9,6 +9,7 @@ class UserModel {
     this.username,
     this.avatarUrl,
     this.bio,
+    this.emailVerified = false,
     this.roles = const [],
   });
 
@@ -19,6 +20,7 @@ class UserModel {
   final String? username;
   final String? avatarUrl;
   final String? bio;
+  final bool emailVerified;
   final List<RoleModel> roles;
 
   String get displayName {
@@ -39,6 +41,7 @@ class UserModel {
       username: _readNullableString(json, ['username']),
       avatarUrl: _readNullableString(json, ['avatarUrl', 'avatar_url']),
       bio: _readNullableString(json, ['bio']),
+      emailVerified: json['emailVerified'] == true,
       roles: _readRoles(json['roles']),
     );
   }
@@ -52,6 +55,7 @@ class UserModel {
       if (username != null) 'username': username,
       if (avatarUrl != null) 'avatarUrl': avatarUrl,
       if (bio != null) 'bio': bio,
+      'emailVerified': emailVerified,
       'roles': roles.map((role) => role.toJson()).toList(),
     };
   }

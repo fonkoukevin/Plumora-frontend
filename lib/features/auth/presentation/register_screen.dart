@@ -9,7 +9,8 @@ import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
 import '../../../core/widgets/plumora_logo_mark.dart';
 import '../data/models/register_request.dart';
-import 'controllers/auth_controller.dart';
+import 'controllers/email_verification_controller.dart';
+import 'controllers/register_controller.dart';
 import 'widgets/auth_screen_shell.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -25,6 +26,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _registered = false;
 
   @override
   void dispose() {
@@ -43,8 +45,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final nameParts = _fullNameController.text.trim().split(RegExp(r'\s+'));
 
     await ref
-        .read(authControllerProvider.notifier)
-        .register(
+        .read(registerControllerProvider.notifier)
+        .submit(
           RegisterRequest(
             firstname: nameParts.first,
             lastname: nameParts.skip(1).join(' '),
@@ -53,20 +55,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
         );
 
-    final session = ref.read(authControllerProvider).valueOrNull;
-    if (!mounted || session?.isAuthenticated != true) {
+    if (!mounted) {
       return;
     }
-
-    context.go(AppRoutes.roleSelection);
+    if (!ref.read(registerControllerProvider).hasError) {
+      setState(() => _registered = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
-    final error = authState.hasError
-        ? AppError.messageFor(authState.error!)
+    final registerState = ref.watch(registerControllerProvider);
+    final isLoading = registerState.isLoading;
+    final error = registerState.hasError
+        ? AppError.messageFor(registerState.error!)
         : null;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -163,6 +165,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 _confirmPasswordController,
                             error: error,
                             isLoading: isLoading,
+                            registered: _registered,
                             onSubmit: _submit,
                             onLogin: () => context.go(AppRoutes.login),
                           ),
@@ -189,6 +192,7 @@ class _RegisterCard extends StatelessWidget {
     required this.confirmPasswordController,
     required this.error,
     required this.isLoading,
+    required this.registered,
     required this.onSubmit,
     required this.onLogin,
   });
@@ -200,6 +204,7 @@ class _RegisterCard extends StatelessWidget {
   final TextEditingController confirmPasswordController;
   final String? error;
   final bool isLoading;
+  final bool registered;
   final VoidCallback onSubmit;
   final VoidCallback onLogin;
 
@@ -231,18 +236,24 @@ class _RegisterCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _RegisterHeader(compact: compact),
-              _RegisterForm(
-                compact: compact,
-                formKey: formKey,
-                fullNameController: fullNameController,
-                emailController: emailController,
-                passwordController: passwordController,
-                confirmPasswordController: confirmPasswordController,
-                error: error,
-                isLoading: isLoading,
-                onSubmit: onSubmit,
-                onLogin: onLogin,
-              ),
+              if (registered)
+                _RegisterConfirmation(
+                  email: emailController.text.trim(),
+                  onLogin: onLogin,
+                )
+              else
+                _RegisterForm(
+                  compact: compact,
+                  formKey: formKey,
+                  fullNameController: fullNameController,
+                  emailController: emailController,
+                  passwordController: passwordController,
+                  confirmPasswordController: confirmPasswordController,
+                  error: error,
+                  isLoading: isLoading,
+                  onSubmit: onSubmit,
+                  onLogin: onLogin,
+                ),
             ],
           ),
         );
@@ -362,6 +373,135 @@ class _RegisterHeader extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown in place of the form once registration succeeds: the new account
+/// starts unverified, so this replaces the previous auto-login redirect to
+/// role selection with instructions to confirm the emailed link first.
+/// Mirrors `ForgotPasswordScreen`'s `_ConfirmationContent`.
+class _RegisterConfirmation extends ConsumerStatefulWidget {
+  const _RegisterConfirmation({required this.email, required this.onLogin});
+
+  final String email;
+  final VoidCallback onLogin;
+
+  @override
+  ConsumerState<_RegisterConfirmation> createState() =>
+      _RegisterConfirmationState();
+}
+
+class _RegisterConfirmationState extends ConsumerState<_RegisterConfirmation> {
+  bool _resent = false;
+
+  Future<void> _resend() async {
+    await ref
+        .read(resendVerificationControllerProvider.notifier)
+        .submit(widget.email);
+
+    if (!mounted) {
+      return;
+    }
+    if (!ref.read(resendVerificationControllerProvider).hasError) {
+      setState(() => _resent = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final resendState = ref.watch(resendVerificationControllerProvider);
+    final isResending = resendState.isLoading;
+    final resendError = resendState.hasError
+        ? AppError.messageFor(resendState.error!)
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 27, 24, 24),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: context.colors.success.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.mark_email_read_outlined,
+              color: context.colors.success,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Ton compte a été créé !',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: context.colors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.email.isEmpty
+                ? 'Vérifie tes emails pour confirmer ton adresse avant de te connecter.'
+                : 'Un email de confirmation a été envoyé à ${widget.email}. Clique sur le lien qu\'il contient pour activer ton compte avant de te connecter.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: context.colors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Vérifie aussi tes courriers indésirables.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 22),
+          if (resendError != null) ...[
+            AuthErrorBanner(message: resendError),
+            const SizedBox(height: 14),
+          ],
+          if (_resent) ...[
+            Text(
+              'Email de confirmation renvoyé.',
+              style: TextStyle(
+                color: context.colors.success,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: isResending ? null : _resend,
+              child: LoadingButtonChild(
+                label: 'Renvoyer l\'email de confirmation',
+                isLoading: isResending,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: widget.onLogin,
+              child: const Text('Aller à la connexion'),
             ),
           ),
         ],

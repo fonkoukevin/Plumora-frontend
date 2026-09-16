@@ -10,10 +10,37 @@ POST `/auth/login`
 POST `/auth/google`
 POST `/auth/forgot-password`
 POST `/auth/reset-password`
+POST `/auth/verify-email`
+POST `/auth/resend-verification`
 GET `/auth/me`
 GET `/users/me`
 PUT `/users/me`
 PUT `/users/me/roles`
+
+New accounts are created unverified (`UserModel.emailVerified: false`) and receive a confirmation
+email with a link to `{frontend_base_url}/verify-email?token=<token>`. `POST /auth/register` no
+longer returns a token — response body is `{ "message", "user" }` (no `accessToken`), so
+`AuthApiService.register` doesn't parse it into an `AuthResponse`; it just awaits the call and lets
+a non-2xx response surface as a `DioException` (e.g. 409 if the email/username is already used).
+`RegisterController` (not `AuthController`) drives the register screen for this reason — it has
+nothing to do with `AuthSession`. `POST /auth/login` responds `403` (not `401`) specifically when
+the account exists, the password is correct, but the email isn't confirmed yet — `LoginScreen`
+detects this exact case (`_isUnverifiedEmailError`, any 403 from `/auth/login`) to show a "Renvoyer
+l'email de confirmation" button. Signing in with Google (`POST /auth/google`) always counts as
+confirming the email, whether the account was created via Google or via `/auth/register`.
+
+POST `/auth/verify-email` request body: `{ "token": "<token>" }`. Consumed by
+`verify_email_screen.dart`, reached from the confirmation email's link and auto-submitted on load.
+The token must be single-use and expire after a longer window than the password reset token (email
+confirmation isn't a credential, and the user may not check their inbox right away — mirrors
+`/auth/reset-password`'s token lifecycle). An invalid/expired/already-used token responds 400 with
+a message surfaced via `AppError.messageFor`, same as `/auth/reset-password`.
+
+POST `/auth/resend-verification` request body: `{ "email": "<email>" }`. Reachable from the
+"check your email" screen shown right after registration and from `LoginScreen`'s "Renvoyer
+l'email de confirmation" button. Must always respond with 200 whether or not an account exists for
+that email, and whether or not it's already verified — same anti-enumeration contract as
+`/auth/forgot-password`. Invalidates any previously issued verification token and sends a new one.
 
 PUT `/users/me` request body: `{ "firstname", "lastname", "username", "bio"?,
 "avatarUrl"? }`. Returns the updated `UserModel` (same shape as `GET
@@ -122,6 +149,33 @@ GET `/catalog/books/popular`
 GET `/catalog/books/latest`
 
 Only books with status PUBLISHED and visibility PUBLIC are returned in the catalog.
+
+## Public stats
+
+GET `/stats/platform` — **new endpoint, proposed by the frontend, to confirm
+backend** — no auth required (called from the pre-login landing screen,
+`landing_screen.dart`, before the visitor has an account or a token).
+
+- Response (`PlatformStatsDto`): `{ "totalBooks": int, "totalAuthors": int,
+  "totalReaders": int }`.
+- Replaces the landing page's previous hardcoded marketing copy ("50k+
+  Histoires", "12k+ Auteurs", "200k+ Lecteurs" and "+50 000 histoires vous
+  attendent"), which did not reflect real data and must not come back —
+  the Flutter client (`_StatsRow`/`_HeroBadge`) shows a plain "—" /
+  generic tagline instead of a number while this call is loading or if it
+  fails, it never falls back to a hardcoded figure.
+- Exact semantics, so the number on the landing page always matches what a
+  visitor can actually find on the platform:
+  - `totalBooks`: `COUNT(*)` on `books` where `status = 'PUBLISHED'` and
+    `visibility = 'PUBLIC'` — the same filter as `GET /catalog/books`.
+  - `totalAuthors`: `COUNT(DISTINCT author_id)` on that same filtered set
+    (authors who actually have at least one book visible in the catalog,
+    not everyone who merely holds the `AUTHOR` role, which would inflate
+    the number with accounts that have never published anything).
+  - `totalReaders`: `COUNT(*)` on `users` where `is_active = TRUE` — total
+    registered active accounts, mirroring `activeUsers` on the ADMIN-only
+    `GET /admin/dashboard` (`AdminDashboardDto`) but exposed publicly since
+    the landing page is reached before login.
 
 ## External Books
 

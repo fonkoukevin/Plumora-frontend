@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +16,17 @@ import '../data/models/login_request.dart';
 import '../data/models/role_model.dart';
 import '../data/services/google_auth_service.dart';
 import 'controllers/auth_controller.dart';
+import 'controllers/email_verification_controller.dart';
 import 'widgets/auth_screen_shell.dart';
+
+/// `/auth/login` only ever answers 403 for one reason: the account exists,
+/// the password is correct, but its email hasn't been confirmed yet (wrong
+/// credentials are a 401 — see docs/api-contract.md). Bad credentials get
+/// the generic `AppError.messageFor` treatment; this one additionally
+/// unlocks the "Renvoyer l'email de confirmation" button below the banner.
+bool _isUnverifiedEmailError(Object? error) {
+  return error is DioException && error.response?.statusCode == 403;
+}
 
 /// ADMIN accounts land directly in the Administration space rather than the
 /// regular home dashboard — they never see the reader/author app (see
@@ -39,6 +50,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _verificationResent = false;
 
   // Built once (not per-build): Google Identity Services' web SDK renders
   // this into its own DOM node, so recreating it on every rebuild would
@@ -69,6 +81,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
+    setState(() => _verificationResent = false);
+
     await ref
         .read(authControllerProvider.notifier)
         .login(
@@ -84,6 +98,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     context.go(_postLoginDestination(session!.roles));
+  }
+
+  /// Reachable once [_submit] has surfaced the "email not confirmed" 403
+  /// (see [_isUnverifiedEmailError]) — same anti-enumeration contract as
+  /// `ForgotPasswordScreen`, so the email field's value doesn't need to be
+  /// validated here beyond non-empty.
+  Future<void> _resendVerification() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      return;
+    }
+
+    await ref
+        .read(resendVerificationControllerProvider.notifier)
+        .submit(email);
+
+    if (!mounted) {
+      return;
+    }
+    if (!ref.read(resendVerificationControllerProvider).hasError) {
+      setState(() => _verificationResent = true);
+    }
   }
 
   Future<void> _submitGoogle() async {
@@ -164,6 +200,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final error = authState.hasError
         ? AppError.messageFor(authState.error!)
         : null;
+    final showResendVerification =
+        authState.hasError && _isUnverifiedEmailError(authState.error);
+    final resendState = ref.watch(resendVerificationControllerProvider);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -258,12 +297,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             passwordController: _passwordController,
                             error: error,
                             isLoading: isLoading,
+                            showResendVerification: showResendVerification,
+                            isResendingVerification: resendState.isLoading,
+                            verificationResent: _verificationResent,
                             onSubmit: _submit,
                             onGoogle: _submitGoogle,
                             googleSignInButton: _webGoogleSignInButton,
                             onRegister: () => context.push(AppRoutes.register),
                             onForgotPassword: () =>
                                 context.push(AppRoutes.forgotPassword),
+                            onResendVerification: _resendVerification,
                           ),
                         ),
                       ],
@@ -286,11 +329,15 @@ class _LoginSplitCard extends StatelessWidget {
     required this.passwordController,
     required this.error,
     required this.isLoading,
+    required this.showResendVerification,
+    required this.isResendingVerification,
+    required this.verificationResent,
     required this.onSubmit,
     required this.onGoogle,
     this.googleSignInButton,
     required this.onRegister,
     required this.onForgotPassword,
+    required this.onResendVerification,
   });
 
   final GlobalKey<FormState> formKey;
@@ -298,11 +345,15 @@ class _LoginSplitCard extends StatelessWidget {
   final TextEditingController passwordController;
   final String? error;
   final bool isLoading;
+  final bool showResendVerification;
+  final bool isResendingVerification;
+  final bool verificationResent;
   final VoidCallback onSubmit;
   final VoidCallback onGoogle;
   final Widget? googleSignInButton;
   final VoidCallback onRegister;
   final VoidCallback onForgotPassword;
+  final VoidCallback onResendVerification;
 
   @override
   Widget build(BuildContext context) {
@@ -318,11 +369,15 @@ class _LoginSplitCard extends StatelessWidget {
           passwordController: passwordController,
           error: error,
           isLoading: isLoading,
+          showResendVerification: showResendVerification,
+          isResendingVerification: isResendingVerification,
+          verificationResent: verificationResent,
           onSubmit: onSubmit,
           onGoogle: onGoogle,
           googleSignInButton: googleSignInButton,
           onRegister: onRegister,
           onForgotPassword: onForgotPassword,
+          onResendVerification: onResendVerification,
         );
 
         return Container(
@@ -716,11 +771,15 @@ class _LoginFormPane extends StatelessWidget {
     required this.passwordController,
     required this.error,
     required this.isLoading,
+    required this.showResendVerification,
+    required this.isResendingVerification,
+    required this.verificationResent,
     required this.onSubmit,
     required this.onGoogle,
     this.googleSignInButton,
     required this.onRegister,
     required this.onForgotPassword,
+    required this.onResendVerification,
   });
 
   final bool compact;
@@ -729,11 +788,15 @@ class _LoginFormPane extends StatelessWidget {
   final TextEditingController passwordController;
   final String? error;
   final bool isLoading;
+  final bool showResendVerification;
+  final bool isResendingVerification;
+  final bool verificationResent;
   final VoidCallback onSubmit;
   final VoidCallback onGoogle;
   final Widget? googleSignInButton;
   final VoidCallback onRegister;
   final VoidCallback onForgotPassword;
+  final VoidCallback onResendVerification;
 
   @override
   Widget build(BuildContext context) {
@@ -764,6 +827,36 @@ class _LoginFormPane extends StatelessWidget {
           SizedBox(height: compact ? 26 : 30),
           if (error != null) ...[
             AuthErrorBanner(message: error!),
+            if (showResendVerification) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: verificationResent
+                    ? Text(
+                        'Email de confirmation renvoyé.',
+                        style: TextStyle(
+                          color: context.colors.success,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    : TextButton(
+                        onPressed: isResendingVerification
+                            ? null
+                            : onResendVerification,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
+                        ),
+                        child: LoadingButtonChild(
+                          label: 'Renvoyer l\'email de confirmation',
+                          isLoading: isResendingVerification,
+                        ),
+                      ),
+              ),
+            ],
             const SizedBox(height: 16),
           ],
           _LoginTextField(

@@ -10,6 +10,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/role_selection_screen.dart';
+import '../../features/auth/presentation/verify_email_screen.dart';
 import '../../features/ai/presentation/plumo_recommendation_screen.dart';
 import '../../features/ai/presentation/plumo_writing_screen.dart';
 import '../../features/admin/presentation/admin_access_denied_screen.dart';
@@ -110,6 +111,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'reset-password',
         builder: (context, state) =>
             ResetPasswordScreen(token: state.uri.queryParameters['token']),
+      ),
+      GoRoute(
+        path: AppRoutes.verifyEmail,
+        name: 'verify-email',
+        builder: (context, state) =>
+            VerifyEmailScreen(token: state.uri.queryParameters['token']),
       ),
       GoRoute(
         path: AppRoutes.roleSelection,
@@ -482,6 +489,7 @@ abstract final class AppRoutes {
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
+  static const String verifyEmail = '/verify-email';
   static const String roleSelection = '/roles';
   static const String editRoles = '/roles/edit';
   static const String home = '/home';
@@ -535,6 +543,15 @@ abstract final class AppRoutes {
     }
 
     return '$resetPassword?token=${Uri.encodeQueryComponent(normalizedToken)}';
+  }
+
+  static String verifyEmailPath({String? token}) {
+    final normalizedToken = token?.trim();
+    if (normalizedToken == null || normalizedToken.isEmpty) {
+      return verifyEmail;
+    }
+
+    return '$verifyEmail?token=${Uri.encodeQueryComponent(normalizedToken)}';
   }
 
   static String continueOnWebAuthorPath(String bookId) {
@@ -794,6 +811,7 @@ bool _isPublicLocation(String location) {
     '/register',
     '/forgot-password',
     '/reset-password',
+    '/verify-email',
     '/discover',
     '/catalog',
   ];

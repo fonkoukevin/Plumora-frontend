@@ -7,10 +7,12 @@ import '../../../../core/storage/secure_token_storage.dart';
 import '../models/forgot_password_request.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
+import '../models/resend_verification_request.dart';
 import '../models/reset_password_request.dart';
 import '../models/role_model.dart';
 import '../models/update_profile_request.dart';
 import '../models/user_model.dart';
+import '../models/verify_email_request.dart';
 import '../services/auth_api_service.dart';
 import '../services/google_auth_service.dart';
 
@@ -64,14 +66,12 @@ class AuthRepository {
     }
   }
 
-  Future<AuthSession> register(RegisterRequest request) async {
-    await _tokenStorage.clearAccessToken();
-    final response = await _apiService.register(request);
-    await _tokenStorage.saveAccessToken(response.accessToken);
-
-    final user = await _loadCurrentUser(response.user);
-    final roles = await _loadRolesSafely();
-    return AuthSession(user: user, roles: roles);
+  /// Unlike [login]/[loginWithGoogle], this never authenticates: the new
+  /// account starts unverified and the backend no longer returns a token
+  /// from `/auth/register` — the user must confirm the emailed link (see
+  /// `verifyEmail`) before they can sign in.
+  Future<void> register(RegisterRequest request) async {
+    await _apiService.register(request);
   }
 
   Future<AuthSession> login(LoginRequest request) async {
@@ -148,6 +148,24 @@ class AuthRepository {
 
     await _apiService.resetPassword(
       ResetPasswordRequest(token: token, newPassword: newPassword),
+    );
+  }
+
+  Future<void> verifyEmail(String token) async {
+    if (token.trim().isEmpty) {
+      throw const AppException('Lien de confirmation invalide.');
+    }
+
+    await _apiService.verifyEmail(VerifyEmailRequest(token: token));
+  }
+
+  Future<void> resendVerificationEmail(String email) async {
+    if (email.trim().isEmpty) {
+      throw const AppException('Adresse email requise.');
+    }
+
+    await _apiService.resendVerification(
+      ResendVerificationRequest(email: email),
     );
   }
 

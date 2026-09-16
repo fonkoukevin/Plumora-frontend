@@ -21,14 +21,27 @@ Future<void> main() async {
 }
 
 class PlumoraApp extends StatelessWidget {
-  const PlumoraApp({this.initialThemeMode = ThemeMode.light, super.key});
+  const PlumoraApp({
+    this.initialThemeMode = ThemeMode.light,
+    this.overrides = const [],
+    super.key,
+  });
 
   final ThemeMode initialThemeMode;
+
+  /// Extra Riverpod overrides, on top of [initialThemeMode]'s. Lets widget
+  /// tests that pump the whole app (rather than a single screen under their
+  /// own `ProviderScope`) stub network-backed providers — e.g.
+  /// `platformStatsProvider` — instead of issuing a real HTTP call.
+  final List<Override> overrides;
 
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
-      overrides: [initialThemeModeProvider.overrideWithValue(initialThemeMode)],
+      overrides: [
+        initialThemeModeProvider.overrideWithValue(initialThemeMode),
+        ...overrides,
+      ],
       child: const _PlumoraMaterialApp(),
     );
   }

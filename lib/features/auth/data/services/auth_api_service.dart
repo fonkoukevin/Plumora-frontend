@@ -5,19 +5,24 @@ import '../models/auth_response.dart';
 import '../models/forgot_password_request.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
+import '../models/resend_verification_request.dart';
 import '../models/reset_password_request.dart';
 import '../models/role_model.dart';
 import '../models/update_profile_request.dart';
 import '../models/user_model.dart';
+import '../models/verify_email_request.dart';
 
 class AuthApiService {
   const AuthApiService(this._dio);
 
   final Dio _dio;
 
-  Future<AuthResponse> register(RegisterRequest request) async {
-    final response = await _dio.post('/auth/register', data: request.toJson());
-    return AuthResponse.fromJson(_readMap(response.data));
+  /// The new account starts unverified and cannot sign in until the
+  /// confirmation email is clicked — unlike login/google, this no longer
+  /// returns a token, so the response body (`{ message, user }`) is
+  /// intentionally not parsed here.
+  Future<void> register(RegisterRequest request) async {
+    await _dio.post('/auth/register', data: request.toJson());
   }
 
   Future<AuthResponse> login(LoginRequest request) async {
@@ -42,6 +47,17 @@ class AuthApiService {
 
   Future<void> resetPassword(ResetPasswordRequest request) async {
     await _dio.post('/auth/reset-password', data: request.toJson());
+  }
+
+  Future<void> verifyEmail(VerifyEmailRequest request) async {
+    await _dio.post('/auth/verify-email', data: request.toJson());
+  }
+
+  /// Always resolves successfully regardless of whether [request.email]
+  /// belongs to an account or is already verified — same anti-enumeration
+  /// contract as [requestPasswordReset].
+  Future<void> resendVerification(ResendVerificationRequest request) async {
+    await _dio.post('/auth/resend-verification', data: request.toJson());
   }
 
   Future<UserModel> authMe() async {

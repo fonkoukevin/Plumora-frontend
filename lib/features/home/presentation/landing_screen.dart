@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../data/repositories/home_repository.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -879,11 +881,20 @@ class _GenreChipState extends State<_GenreChip> {
   }
 }
 
-class _HeroBadge extends StatelessWidget {
+class _HeroBadge extends ConsumerWidget {
   const _HeroBadge();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(platformStatsProvider);
+    final label = statsAsync.when(
+      data: (stats) => stats.totalBooks > 0
+          ? '${_compactNumber(stats.totalBooks)} histoires vous attendent'
+          : 'Vos histoires ont leur place ici',
+      loading: () => 'Des histoires vous attendent',
+      error: (_, _) => 'Des histoires vous attendent',
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
@@ -901,7 +912,7 @@ class _HeroBadge extends StatelessWidget {
             Icon(Icons.star, size: 15, color: context.colors.accent),
             SizedBox(width: 8),
             Text(
-              '+50 000 histoires vous attendent',
+              label,
               maxLines: 1,
               style: TextStyle(
                 color: context.colors.primary,
@@ -1188,16 +1199,44 @@ class _LandingCoverButtonState extends State<_LandingCoverButton> {
   }
 }
 
-class _StatsRow extends StatelessWidget {
+class _StatsRow extends ConsumerWidget {
   const _StatsRow();
 
   @override
-  Widget build(BuildContext context) {
-    const stats = [
-      (Icons.menu_book_outlined, '50k+', 'Histoires'),
-      (Icons.group_outlined, '12k+', 'Auteurs'),
-      (Icons.trending_up, '200k+', 'Lecteurs'),
-    ];
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(platformStatsProvider);
+    // '—' on loading/error is deliberate: this row must never show an
+    // invented number, only the real, server-computed counts or an honest
+    // "unknown for now" placeholder.
+    final stats = statsAsync.when(
+      data: (value) => [
+        (
+          Icons.menu_book_outlined,
+          _compactNumber(value.totalBooks),
+          'Histoires',
+        ),
+        (
+          Icons.group_outlined,
+          _compactNumber(value.totalAuthors),
+          'Auteurs',
+        ),
+        (
+          Icons.trending_up,
+          _compactNumber(value.totalReaders),
+          'Lecteurs',
+        ),
+      ],
+      loading: () => const [
+        (Icons.menu_book_outlined, '—', 'Histoires'),
+        (Icons.group_outlined, '—', 'Auteurs'),
+        (Icons.trending_up, '—', 'Lecteurs'),
+      ],
+      error: (_, _) => const [
+        (Icons.menu_book_outlined, '—', 'Histoires'),
+        (Icons.group_outlined, '—', 'Auteurs'),
+        (Icons.trending_up, '—', 'Lecteurs'),
+      ],
+    );
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 320),
@@ -1380,4 +1419,18 @@ class _LandingFeature {
   final String title;
   final String description;
   final Color color;
+}
+
+String _compactNumber(int value) {
+  if (value >= 1000000) {
+    return '${(value / 1000000).toStringAsFixed(1)}M';
+  }
+  if (value >= 1000) {
+    final scaled = value / 1000;
+    if (value % 1000 == 0) {
+      return '${scaled.toStringAsFixed(0)}k';
+    }
+    return '${scaled.toStringAsFixed(1)}k';
+  }
+  return value.toString();
 }

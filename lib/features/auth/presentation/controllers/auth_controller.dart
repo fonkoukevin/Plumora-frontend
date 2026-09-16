@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/login_request.dart';
-import '../../data/models/register_request.dart';
 import '../../data/models/update_profile_request.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'auth_cache_invalidator.dart';
@@ -52,17 +51,6 @@ class AuthController extends AsyncNotifier<AuthSession> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() {
       return ref.read(authRepositoryProvider).loginWithGoogleIdToken(idToken);
-    });
-    if (state.hasValue) {
-      invalidateUserScopedCaches(ref);
-    }
-  }
-
-  Future<void> register(RegisterRequest request) async {
-    invalidateUserScopedCaches(ref);
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() {
-      return ref.read(authRepositoryProvider).register(request);
     });
     if (state.hasValue) {
       invalidateUserScopedCaches(ref);

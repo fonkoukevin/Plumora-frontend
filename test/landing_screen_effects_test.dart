@@ -1,9 +1,12 @@
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:plumora_app/core/theme/plumora_theme.dart';
+import 'package:plumora_app/features/home/data/models/platform_stats_model.dart';
+import 'package:plumora_app/features/home/data/repositories/home_repository.dart';
 import 'package:plumora_app/features/home/presentation/landing_screen.dart';
 
 void main() {
@@ -14,7 +17,22 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      MaterialApp(theme: PlumoraTheme.light, home: const LandingScreen()),
+      ProviderScope(
+        overrides: [
+          // Keeps this test hermetic (no real HTTP call) and deterministic.
+          platformStatsProvider.overrideWith(
+            (ref) async => const PlatformStatsModel(
+              totalBooks: 128,
+              totalAuthors: 34,
+              totalReaders: 512,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: PlumoraTheme.light,
+          home: const LandingScreen(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
   }

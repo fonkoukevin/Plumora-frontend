@@ -11,6 +11,8 @@ import 'package:plumora_app/features/ai/data/models/ai_models.dart';
 import 'package:plumora_app/features/ai/data/services/ai_api_service.dart';
 import 'package:plumora_app/features/auth/data/models/login_request.dart';
 import 'package:plumora_app/features/auth/data/models/register_request.dart';
+import 'package:plumora_app/features/auth/data/models/resend_verification_request.dart';
+import 'package:plumora_app/features/auth/data/models/verify_email_request.dart';
 import 'package:plumora_app/features/auth/data/services/auth_api_service.dart';
 import 'package:plumora_app/features/beta_reading/data/models/beta_campaign_model.dart';
 import 'package:plumora_app/features/beta_reading/data/models/beta_comment_model.dart';
@@ -45,6 +47,9 @@ void main() {
           AppRoutes.landing,
           AppRoutes.login,
           AppRoutes.register,
+          AppRoutes.forgotPassword,
+          AppRoutes.resetPassword,
+          AppRoutes.verifyEmail,
           AppRoutes.roleSelection,
           AppRoutes.home,
           AppRoutes.discover,
@@ -317,7 +322,7 @@ void main() {
       final ai = AiApiService(dio);
       final notifications = NotificationApiService(dio);
 
-      final register = await auth.register(
+      await auth.register(
         const RegisterRequest(
           firstname: 'Kevin',
           lastname: 'Fonkou',
@@ -332,8 +337,11 @@ void main() {
       final userMe = await auth.userMe();
       final roles = await auth.myRoles();
       final updatedRoles = await auth.updateMyRoles(['AUTHOR', 'READER']);
+      await auth.verifyEmail(const VerifyEmailRequest(token: 'verify-token'));
+      await auth.resendVerification(
+        const ResendVerificationRequest(email: 'kevin@plumora.test'),
+      );
 
-      expect(register.accessToken, 'seed-token');
       expect(login.user?.firstname, 'Kevin');
       expect(authMe.id, 'user-1');
       expect(userMe.email, 'kevin@plumora.test');
@@ -619,6 +627,8 @@ void main() {
         containsAll([
           'POST /auth/register',
           'POST /auth/login',
+          'POST /auth/verify-email',
+          'POST /auth/resend-verification',
           'GET /auth/me',
           'GET /users/me',
           'GET /users/me/roles',
@@ -998,8 +1008,13 @@ Map<String, Object?> _seedResponses() {
   };
 
   return {
-    'POST /auth/register': {'accessToken': 'seed-token', 'user': user},
+    'POST /auth/register': {
+      'message': 'Registration successful.',
+      'user': user,
+    },
     'POST /auth/login': {'accessToken': 'seed-token', 'user': user},
+    'POST /auth/verify-email': _emptyResponse,
+    'POST /auth/resend-verification': _emptyResponse,
     'GET /auth/me': user,
     'GET /users/me': user,
     'GET /users/me/roles': {

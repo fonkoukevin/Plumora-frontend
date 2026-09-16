@@ -25,6 +25,8 @@ import 'package:plumora_app/features/catalog/data/models/external_book_model.dar
 import 'package:plumora_app/features/catalog/data/repositories/catalog_repository.dart';
 import 'package:plumora_app/features/catalog/data/repositories/external_book_repository.dart';
 import 'package:plumora_app/features/catalog/presentation/discover_screen.dart';
+import 'package:plumora_app/features/home/data/models/platform_stats_model.dart';
+import 'package:plumora_app/features/home/data/repositories/home_repository.dart';
 import 'package:plumora_app/features/home/presentation/home_screen.dart';
 import 'package:plumora_app/features/notification/data/repositories/notification_repository.dart';
 import 'package:plumora_app/features/reading/data/models/reading_progress_model.dart';
@@ -78,7 +80,9 @@ void main() {
   });
 
   testWidgets('Plumora starts on public landing page', (tester) async {
-    await tester.pumpWidget(const PlumoraApp());
+    await tester.pumpWidget(
+      PlumoraApp(overrides: [_fakePlatformStatsOverride]),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Plumora'), findsOneWidget);
@@ -89,7 +93,12 @@ void main() {
   testWidgets('Plumora starts directly with the restored dark theme', (
     tester,
   ) async {
-    await tester.pumpWidget(const PlumoraApp(initialThemeMode: ThemeMode.dark));
+    await tester.pumpWidget(
+      PlumoraApp(
+        initialThemeMode: ThemeMode.dark,
+        overrides: [_fakePlatformStatsOverride],
+      ),
+    );
     await tester.pump();
 
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
@@ -1183,6 +1192,18 @@ class _TestAuthController extends AuthController {
   @override
   Future<AuthSession> build() async => const AuthSession.unauthenticated();
 }
+
+// Keeps app-boot tests hermetic: without this, LandingScreen's stats row
+// issues a real, unmocked Dio call that can leave a pending timer behind
+// (flutter_test's `!timersPending` teardown check) on a test that doesn't
+// pumpAndSettle.
+final _fakePlatformStatsOverride = platformStatsProvider.overrideWith(
+  (ref) async => const PlatformStatsModel(
+    totalBooks: 128,
+    totalAuthors: 34,
+    totalReaders: 512,
+  ),
+);
 
 class _TestThemeModeStorage extends ThemeModeStorage {
   _TestThemeModeStorage() : super.withStorage(const FlutterSecureStorage());
