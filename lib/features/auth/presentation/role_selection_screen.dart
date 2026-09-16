@@ -273,8 +273,10 @@ List<_RoleChoice> _roleChoices(BuildContext context) => [
   ),
   _RoleChoice(
     value: 'BETA_READER',
-    label: 'Bêta-testeur',
-    description: 'Lire des manuscrits avant publication et donner mon avis',
+    label: 'Bêta-lecteur',
+    description:
+        'Lire des manuscrits avant publication et transmettre des retours '
+        'structurés aux auteurs',
     icon: Icons.science_outlined,
     iconBackground: context.colors.success.withValues(alpha: 0.14),
     iconColor: context.colors.success,

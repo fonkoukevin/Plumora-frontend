@@ -146,7 +146,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.discover,
             name: 'discover',
-            builder: (context, state) => const DiscoverScreen(),
+            builder: (context, state) => DiscoverScreen(
+              initialGenre: state.uri.queryParameters['genre'],
+            ),
           ),
           GoRoute(
             path: AppRoutes.publicDomainCatalog,

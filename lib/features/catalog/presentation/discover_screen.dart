@@ -20,7 +20,12 @@ import '../data/repositories/external_book_repository.dart';
 const double _discoverMaxContentWidth = 1520;
 
 class DiscoverScreen extends ConsumerStatefulWidget {
-  const DiscoverScreen({super.key});
+  const DiscoverScreen({this.initialGenre, super.key});
+
+  /// Genre pré-sélectionné à l'ouverture (ex. depuis un chip de la landing
+  /// page, via `/discover?genre=Fantasy`) — doit correspondre au `label`
+  /// d'un `_DiscoverFilter` ci-dessous, sinon ignoré silencieusement.
+  final String? initialGenre;
 
   @override
   ConsumerState<DiscoverScreen> createState() => _DiscoverScreenState();
@@ -31,7 +36,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   final _pageScrollController = ScrollController();
   String _query = '';
   String? _language;
-  _DiscoverFilter _activeFilter = _filters.first;
+  late _DiscoverFilter _activeFilter;
   bool _headerOverlapsContent = false;
 
   static const _filters = [
@@ -48,6 +53,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   @override
   void initState() {
     super.initState();
+    final initialGenre = widget.initialGenre;
+    _activeFilter = initialGenre == null
+        ? _filters.first
+        : _filters.firstWhere(
+            (filter) =>
+                filter.label.toLowerCase() == initialGenre.toLowerCase(),
+            orElse: () => _filters.first,
+          );
     _pageScrollController.addListener(_updateHeaderShadow);
   }
 
@@ -187,22 +200,23 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                                         const SizedBox(height: 32),
                                       ],
                                       _ExternalAsyncRail(
-                                        title: 'Tendances',
+                                        title: 'Classiques populaires',
                                         icon: Icons.trending_up,
                                         query: ExternalBookSearchQuery(
                                           language: _language,
                                         ),
-                                        subtitle: "Mis à jour aujourd'hui",
+                                        subtitle: 'Gutendex',
                                       ),
                                       const SizedBox(height: 32),
                                       _ExternalAsyncRail(
-                                        title: 'Nouveautés',
+                                        title: 'À découvrir',
                                         icon: Icons.bolt_outlined,
                                         iconColor: context.colors.accent,
                                         query: ExternalBookSearchQuery(
                                           language: _language,
                                           page: 1,
                                         ),
+                                        subtitle: 'Gutendex',
                                         loadDelay: const Duration(
                                           milliseconds: 250,
                                         ),
@@ -375,7 +389,7 @@ class _DiscoverHeader extends StatelessWidget {
               children: [
                 PlumoraAppHeader(
                   title: 'Découvrir',
-                  subtitle: "Explorez des milliers d'histoires inédites",
+                  subtitle: 'Explorez les œuvres Plumora et les classiques du domaine public',
                   emoji: '🔍',
                   gradient: [context.colors.plumora, context.colors.primary],
                   trailing: const ThemeToggleButton(),

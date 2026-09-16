@@ -14,106 +14,138 @@ import '../widgets/plumora_logo_mark.dart';
 import '../widgets/plumora_user_avatar.dart';
 import 'app_router.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({required this.location, required this.child, super.key});
 
   final String location;
   final Widget child;
 
-  static const List<ShellDestination> mobileDestinations = [
-    ShellDestination(
-      label: 'Accueil',
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-      path: AppRoutes.home,
-    ),
-    ShellDestination(
-      label: 'Découvrir',
-      icon: Icons.menu_book_outlined,
-      selectedIcon: Icons.menu_book,
-      path: AppRoutes.discover,
-    ),
-    ShellDestination(
-      label: 'Écrire',
-      icon: Icons.draw_outlined,
-      selectedIcon: Icons.draw,
-      path: AppRoutes.write,
-      useLogoMark: true,
-    ),
-    ShellDestination(
-      label: 'Bibliothèque',
-      icon: Icons.library_books_outlined,
-      selectedIcon: Icons.library_books,
-      path: AppRoutes.library,
-    ),
-    ShellDestination(
-      label: 'Profil',
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person,
-      path: AppRoutes.profile,
-    ),
-  ];
+  static const _home = ShellDestination(
+    label: 'Accueil',
+    icon: Icons.home_outlined,
+    selectedIcon: Icons.home,
+    path: AppRoutes.home,
+  );
+  static const _discover = ShellDestination(
+    label: 'Découvrir',
+    icon: Icons.menu_book_outlined,
+    selectedIcon: Icons.menu_book,
+    path: AppRoutes.discover,
+  );
+  static const _manuscriptsMobile = ShellDestination(
+    label: 'Mes manuscrits',
+    icon: Icons.draw_outlined,
+    selectedIcon: Icons.draw,
+    path: AppRoutes.write,
+    useLogoMark: true,
+  );
+  static const _manuscriptsDesktop = ShellDestination(
+    label: 'Mes manuscrits',
+    icon: Icons.edit_note_outlined,
+    selectedIcon: Icons.edit_note,
+    path: AppRoutes.manuscripts,
+  );
+  static const _library = ShellDestination(
+    label: 'Bibliothèque',
+    icon: Icons.library_books_outlined,
+    selectedIcon: Icons.library_books,
+    path: AppRoutes.library,
+  );
+  static const _betaFeedback = ShellDestination(
+    label: 'Bêta-retours',
+    icon: Icons.chat_bubble_outline,
+    selectedIcon: Icons.chat_bubble,
+    path: AppRoutes.betaFeedback,
+  );
+  static const _betaInvitations = ShellDestination(
+    label: 'Invitations',
+    icon: Icons.mail_outline,
+    selectedIcon: Icons.mail,
+    path: AppRoutes.betaInvitations,
+  );
+  static const _plumo = ShellDestination(
+    label: 'Plumo',
+    icon: Icons.auto_awesome_outlined,
+    selectedIcon: Icons.auto_awesome,
+    path: AppRoutes.plumoRecommendation,
+  );
+  static const _profile = ShellDestination(
+    label: 'Profil',
+    icon: Icons.person_outline,
+    selectedIcon: Icons.person,
+    path: AppRoutes.profile,
+  );
 
-  /// Matches the updated Figma `AppLayout.tsx` `NAV_ITEMS` exactly: six
-  /// entries (no more standalone "Éditeur" destination — the chapter editor
-  /// is reached from within the "Écrire" space now).
-  static const List<ShellDestination> desktopDestinations = [
-    ShellDestination(
-      label: 'Accueil',
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-      path: AppRoutes.home,
-    ),
-    ShellDestination(
-      label: 'Découvrir',
-      icon: Icons.menu_book_outlined,
-      selectedIcon: Icons.menu_book,
-      path: AppRoutes.discover,
-    ),
-    ShellDestination(
-      label: 'Écrire',
-      icon: Icons.edit_note_outlined,
-      selectedIcon: Icons.edit_note,
-      path: AppRoutes.manuscripts,
-    ),
-    ShellDestination(
-      label: 'Bibliothèque',
-      icon: Icons.library_books_outlined,
-      selectedIcon: Icons.library_books,
-      path: AppRoutes.library,
-    ),
-    ShellDestination(
-      label: 'Bêta-retours',
-      icon: Icons.chat_bubble_outline,
-      selectedIcon: Icons.chat_bubble,
-      path: AppRoutes.betaFeedback,
-    ),
-    ShellDestination(
-      label: 'Profil',
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person,
-      path: AppRoutes.profile,
-    ),
-  ];
+  /// Builds the nav destinations for the given account roles, so a Lecteur,
+  /// un Auteur et un Bêta-lecteur ne voient pas exactement le même menu.
+  /// Un compte cumulant plusieurs rôles (ou dont les rôles ne sont pas
+  /// encore chargés) voit l'union de tous les items pertinents.
+  static List<ShellDestination> _destinationsFor(
+    List<RoleModel> roles, {
+    required ShellDestination manuscripts,
+  }) {
+    final codes = roles.map((role) => role.name.trim().toUpperCase()).toSet();
+    final isAuthor = codes.contains('AUTHOR');
+    final isReader = codes.contains('READER');
+    final isBetaReader = codes.contains('BETA_READER');
+    // Rôles pas encore chargés (session en cours de restauration) : afficher
+    // le menu complet plutôt qu'un menu vide ou tronqué le temps du chargement.
+    final showAll = codes.isEmpty;
+
+    return [
+      _home,
+      _discover,
+      if (isAuthor || showAll) manuscripts,
+      if (isBetaReader || showAll) _betaInvitations,
+      if (isReader || isBetaReader || showAll) _library,
+      if (isAuthor || showAll) _betaFeedback,
+      if (isReader || showAll) _plumo,
+      _profile,
+    ];
+  }
+
+  static List<ShellDestination> mobileDestinationsFor(List<RoleModel> roles) =>
+      _destinationsFor(roles, manuscripts: _manuscriptsMobile);
+
+  static List<ShellDestination> desktopDestinationsFor(
+    List<RoleModel> roles,
+  ) => _destinationsFor(roles, manuscripts: _manuscriptsDesktop);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final roles =
+        ref.watch(authControllerProvider).valueOrNull?.roles ??
+        const <RoleModel>[];
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 1024) {
-          return _DesktopShell(location: location, child: child);
+          return _DesktopShell(
+            location: location,
+            destinations: desktopDestinationsFor(roles),
+            child: child,
+          );
         }
 
-        return _MobileShell(location: location, child: child);
+        return _MobileShell(
+          location: location,
+          destinations: mobileDestinationsFor(roles),
+          child: child,
+        );
       },
     );
   }
 }
 
 class _MobileShell extends StatelessWidget {
-  const _MobileShell({required this.location, required this.child});
+  const _MobileShell({
+    required this.location,
+    required this.destinations,
+    required this.child,
+  });
 
   final String location;
+  final List<ShellDestination> destinations;
   final Widget child;
 
   @override
@@ -129,7 +161,10 @@ class _MobileShell extends StatelessWidget {
             bottom: 0,
             child: SafeArea(
               top: false,
-              child: _MobileBottomBar(location: location),
+              child: _MobileBottomBar(
+                location: location,
+                destinations: destinations,
+              ),
             ),
           ),
         ],
@@ -139,9 +174,10 @@ class _MobileShell extends StatelessWidget {
 }
 
 class _MobileBottomBar extends StatelessWidget {
-  const _MobileBottomBar({required this.location});
+  const _MobileBottomBar({required this.location, required this.destinations});
 
   final String location;
+  final List<ShellDestination> destinations;
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +194,7 @@ class _MobileBottomBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
               children: [
-                for (final destination in MainShell.mobileDestinations)
+                for (final destination in destinations)
                   Expanded(
                     child: _BottomNavItem(
                       destination: destination,
@@ -249,9 +285,14 @@ class _BottomNavItem extends StatelessWidget {
 }
 
 class _DesktopShell extends StatefulWidget {
-  const _DesktopShell({required this.location, required this.child});
+  const _DesktopShell({
+    required this.location,
+    required this.destinations,
+    required this.child,
+  });
 
   final String location;
+  final List<ShellDestination> destinations;
   final Widget child;
 
   @override
@@ -339,8 +380,7 @@ class _DesktopShellState extends State<_DesktopShell> {
                               horizontal: showLabels ? 12 : 10,
                             ),
                             children: [
-                              for (final destination
-                                  in MainShell.desktopDestinations)
+                              for (final destination in widget.destinations)
                                 _SidebarItem(
                                   destination: destination,
                                   selected: _isSelected(
@@ -828,7 +868,7 @@ String _roleLabel(List<RoleModel> roles) {
   return switch (name.trim().toUpperCase()) {
     'AUTHOR' => 'Auteur',
     'READER' => 'Lecteur',
-    'BETA_READER' => 'Bêta-testeur',
+    'BETA_READER' => 'Bêta-lecteur',
     'ADMIN' => 'Administrateur',
     _ => 'Utilisateur Plumora',
   };

@@ -406,6 +406,7 @@ class FigmaBookCover extends StatelessWidget {
     this.rank,
     this.badge,
     this.icon,
+    this.imageUrl,
     super.key,
   });
 
@@ -417,6 +418,11 @@ class FigmaBookCover extends StatelessWidget {
   final int? rank;
   final String? badge;
   final IconData? icon;
+
+  /// Optional real cover image (network URL). When provided and it loads
+  /// successfully, it is drawn over the gradient background; on a null URL
+  /// or a load failure, the gradient + title stay the fallback.
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -445,6 +451,17 @@ class FigmaBookCover extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          if (imageUrl != null && imageUrl!.trim().isNotEmpty)
+            Positioned.fill(
+              child: Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+                loadingBuilder: (context, child, progress) =>
+                    progress == null ? child : const SizedBox.shrink(),
+              ),
+            ),
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(

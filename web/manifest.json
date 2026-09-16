@@ -1,11 +1,11 @@
 {
-    "name": "plumora_app",
-    "short_name": "plumora_app",
+    "name": "Plumora — Lire, écrire et partager des histoires",
+    "short_name": "Plumora",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#7C5CFF",
+    "description": "Plumora est une plateforme de lecture, d'écriture, de publication et de bêta-lecture accompagnée par l'assistant IA Plumo.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

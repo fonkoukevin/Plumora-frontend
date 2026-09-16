@@ -97,8 +97,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Navigate straight to the create-book screen, like a signed-in reader
-      // clicking "Écrire" would.
+      // Navigate straight to the create-book screen, like a signed-in author
+      // clicking "Mes manuscrits" would.
       container.read(appRouterProvider).go(AppRoutes.createBook);
       await tester.pumpAndSettle();
       expect(find.text('Nouvelle histoire'), findsOneWidget);

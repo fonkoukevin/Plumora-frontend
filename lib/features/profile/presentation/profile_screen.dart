@@ -635,7 +635,7 @@ String _friendlyRoleName(String value) {
   return switch (value.trim().toUpperCase()) {
     'AUTHOR' => 'Auteur',
     'READER' => 'Lecteur',
-    'BETA_READER' => 'Bêta-testeur',
+    'BETA_READER' => 'Bêta-lecteur',
     _ => value,
   };
 }

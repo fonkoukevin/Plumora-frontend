@@ -81,7 +81,9 @@ void main() {
 
   testWidgets('Plumora starts on public landing page', (tester) async {
     await tester.pumpWidget(
-      PlumoraApp(overrides: [_fakePlatformStatsOverride]),
+      PlumoraApp(
+        overrides: [_fakePlatformStatsOverride, _fakeLandingCoverBooksOverride],
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -96,7 +98,7 @@ void main() {
     await tester.pumpWidget(
       PlumoraApp(
         initialThemeMode: ThemeMode.dark,
-        overrides: [_fakePlatformStatsOverride],
+        overrides: [_fakePlatformStatsOverride, _fakeLandingCoverBooksOverride],
       ),
     );
     await tester.pump();
@@ -171,7 +173,7 @@ void main() {
       expect(tester.getSize(content).width, 1040);
       expect(find.text('Plumora'), findsOneWidget);
       expect(find.text('Accueil'), findsOneWidget);
-      expect(find.text('Écrire'), findsOneWidget);
+      expect(find.text('Mes manuscrits'), findsOneWidget);
       expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
 
       await tester.tap(toggleButton);
@@ -199,14 +201,14 @@ void main() {
       expect(tester.getSize(content).width, 1204);
       expect(find.text('Plumora'), findsNothing);
       expect(find.text('Accueil'), findsNothing);
-      expect(find.text('Écrire'), findsNothing);
+      expect(find.text('Mes manuscrits'), findsNothing);
       expect(find.byIcon(Icons.home), findsOneWidget);
       expect(find.byIcon(Icons.edit_note_outlined), findsOneWidget);
       expect(
         tester
             .widgetList<Tooltip>(find.byType(Tooltip))
             .map((tooltip) => tooltip.message),
-        containsAll(['Accueil', 'Écrire', 'Découvrir']),
+        containsAll(['Accueil', 'Mes manuscrits', 'Découvrir']),
       );
 
       await tester.drag(resizeHandle, const Offset(200, 0));
@@ -216,7 +218,7 @@ void main() {
       expect(tester.getSize(content).width, 1040);
       expect(find.text('Plumora'), findsOneWidget);
       expect(find.text('Accueil'), findsOneWidget);
-      expect(find.text('Écrire'), findsOneWidget);
+      expect(find.text('Mes manuscrits'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -1204,6 +1206,12 @@ final _fakePlatformStatsOverride = platformStatsProvider.overrideWith(
     totalReaders: 512,
   ),
 );
+
+// Same rationale as _fakePlatformStatsOverride, for LandingScreen's real-book
+// cover stack.
+final _fakeLandingCoverBooksOverride = plumoraCatalogBooksProvider(
+  const PlumoraCatalogQuery(),
+).overrideWith((ref) async => const <CatalogBookModel>[]);
 
 class _TestThemeModeStorage extends ThemeModeStorage {
   _TestThemeModeStorage() : super.withStorage(const FlutterSecureStorage());

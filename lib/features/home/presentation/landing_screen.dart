@@ -6,36 +6,45 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/plumora_colors.dart';
 import '../../../core/widgets/figma_plumora.dart';
+import '../../catalog/data/models/catalog_book_model.dart';
+import '../../catalog/data/repositories/catalog_repository.dart';
 import '../data/repositories/home_repository.dart';
+
+/// Habillage visuel (dégradé/inclinaison) appliqué aux vrais livres Plumora
+/// affichés sur la landing — la donnée (titre, couverture, id) vient
+/// toujours de l'API, seul ce style reste codé en dur pour garder l'effet
+/// "pile de livres" dessiné à la main.
+class _CoverStyle {
+  const _CoverStyle({required this.colors, required this.angle, this.top = 0});
+
+  final List<Color> colors;
+  final double angle;
+  final double top;
+}
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
 
-  static const _covers = [
-    _LandingCover(
-      title: "Les Chroniques d'Eldoria",
+  static const _coverStyles = [
+    _CoverStyle(
       colors: [Color(0xFF7C3AED), Color(0xFF4F46E5), Color(0xFF312E81)],
       angle: -0.10,
     ),
-    _LandingCover(
-      title: 'Au-delà des Étoiles',
+    _CoverStyle(
       colors: [Color(0xFF1E40AF), Color(0xFF3730A3), Color(0xFF0F172A)],
       angle: 0.04,
       top: 16,
     ),
-    _LandingCover(
-      title: 'La Nuit Rouge',
+    _CoverStyle(
       colors: [Color(0xFFF43F5E), Color(0xFFDC2626), Color(0xFFC2410C)],
       angle: -0.02,
     ),
-    _LandingCover(
-      title: "Sang d'Encre",
+    _CoverStyle(
       colors: [Color(0xFFDB2777), Color(0xFFBE123C), Color(0xFF991B1B)],
       angle: 0.09,
       top: 16,
     ),
-    _LandingCover(
-      title: 'La Prophétie',
+    _CoverStyle(
       colors: [Color(0xFF059669), Color(0xFF0F766E), Color(0xFF155E75)],
       angle: -0.06,
     ),
@@ -244,10 +253,7 @@ class _LandingScreenState extends State<LandingScreen>
                             start: 0.34,
                             end: 0.72,
                             offsetY: 34,
-                            child: _CoverStack(
-                              onBookPressed: () =>
-                                  context.go(AppRoutes.discover),
-                            ),
+                            child: const _CoverStack(),
                           ),
                           const SizedBox(height: 34),
                           _LandingEntrance(
@@ -262,8 +268,9 @@ class _LandingScreenState extends State<LandingScreen>
                                 for (final genre in LandingScreen._genres)
                                   _GenreChip(
                                     label: genre,
-                                    onPressed: () =>
-                                        context.go(AppRoutes.discover),
+                                    onPressed: () => context.go(
+                                      '${AppRoutes.discover}?genre=${Uri.encodeComponent(genre)}',
+                                    ),
                                   ),
                               ],
                             ),
@@ -976,20 +983,55 @@ class _HeroTitle extends StatelessWidget {
   }
 }
 
-class _CoverStack extends StatefulWidget {
-  const _CoverStack({required this.onBookPressed});
-
-  final VoidCallback onBookPressed;
+class _CoverStack extends ConsumerStatefulWidget {
+  const _CoverStack();
 
   @override
-  State<_CoverStack> createState() => _CoverStackState();
+  ConsumerState<_CoverStack> createState() => _CoverStackState();
 }
 
-class _CoverStackState extends State<_CoverStack> {
+class _CoverStackState extends ConsumerState<_CoverStack> {
   bool _expanded = false;
+
+  List<_LandingCover> _coversFor(List<CatalogBookModel> books) {
+    final styles = LandingScreen._coverStyles;
+    final count = books.length < styles.length ? books.length : styles.length;
+    if (count == 0) {
+      // Aucun livre Plumora publié pour l'instant : garder l'habillage
+      // visuel sans réintroduire de faux titres inventés.
+      return [
+        for (final style in styles)
+          _LandingCover(
+            title: 'Bientôt sur Plumora',
+            colors: style.colors,
+            angle: style.angle,
+            top: style.top,
+          ),
+      ];
+    }
+    return [
+      for (var i = 0; i < count; i++)
+        _LandingCover(
+          title: books[i].title,
+          colors: styles[i].colors,
+          angle: styles[i].angle,
+          top: styles[i].top,
+          bookId: books[i].id,
+          imageUrl: books[i].coverUrl,
+        ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final books =
+        ref
+            .watch(plumoraCatalogBooksProvider(const PlumoraCatalogQuery()))
+            .valueOrNull ??
+        const <CatalogBookModel>[];
+    final covers = _coversFor(books);
+    final spacingCount = covers.length > 1 ? covers.length - 1 : 1;
+
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 340),
       child: SizedBox(
@@ -1008,8 +1050,7 @@ class _CoverStackState extends State<_CoverStack> {
               final closedSpan = available * 0.74;
               final start = _expanded ? 0.0 : (available - closedSpan) / 2;
               final spacing =
-                  (_expanded ? available : closedSpan) /
-                  (LandingScreen._covers.length - 1);
+                  (_expanded ? available : closedSpan) / spacingCount;
 
               return Stack(
                 clipBehavior: Clip.none,
@@ -1035,34 +1076,39 @@ class _CoverStackState extends State<_CoverStack> {
                       ),
                     ),
                   ),
-                  for (
-                    var index = 0;
-                    index < LandingScreen._covers.length;
-                    index++
-                  )
+                  for (var index = 0; index < covers.length; index++)
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 260),
                       curve: Curves.easeOutCubic,
                       left: start + (index * spacing),
                       top:
-                          LandingScreen._covers[index].top +
+                          covers[index].top +
                           (_expanded ? (index.isOdd ? -5 : 0) : 7),
                       child: TweenAnimationBuilder<double>(
                         duration: const Duration(milliseconds: 260),
                         curve: Curves.easeOutCubic,
                         tween: Tween(
                           end: _expanded
-                              ? LandingScreen._covers[index].angle * 0.45
-                              : LandingScreen._covers[index].angle,
+                              ? covers[index].angle * 0.45
+                              : covers[index].angle,
                         ),
                         builder: (context, angle, child) =>
                             Transform.rotate(angle: angle, child: child),
                         child: _LandingCoverButton(
                           key: ValueKey('landing_cover_$index'),
-                          cover: LandingScreen._covers[index],
+                          cover: covers[index],
                           width: coverWidth,
                           height: coverHeight,
-                          onPressed: widget.onBookPressed,
+                          onPressed: () {
+                            final bookId = covers[index].bookId;
+                            if (bookId == null) {
+                              context.go(AppRoutes.discover);
+                            } else {
+                              context.push(
+                                AppRoutes.catalogBookDetailPath(bookId),
+                              );
+                            }
+                          },
                         ),
                       ),
                     ),
@@ -1187,6 +1233,7 @@ class _LandingCoverButtonState extends State<_LandingCoverButton> {
                       height: widget.height,
                       colors: widget.cover.colors,
                       title: widget.cover.title,
+                      imageUrl: widget.cover.imageUrl,
                     ),
                   ),
                 ),
@@ -1399,12 +1446,19 @@ class _LandingCover {
     required this.colors,
     required this.angle,
     this.top = 0,
+    this.bookId,
+    this.imageUrl,
   });
 
   final String title;
   final List<Color> colors;
   final double angle;
   final double top;
+
+  /// Null pour un placeholder (aucun livre Plumora publié pour l'instant) ;
+  /// sinon l'id du vrai livre à ouvrir au clic.
+  final String? bookId;
+  final String? imageUrl;
 }
 
 class _LandingFeature {
