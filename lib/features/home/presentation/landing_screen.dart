@@ -1262,16 +1262,8 @@ class _StatsRow extends ConsumerWidget {
           _compactNumber(value.totalBooks),
           'Histoires',
         ),
-        (
-          Icons.group_outlined,
-          _compactNumber(value.totalAuthors),
-          'Auteurs',
-        ),
-        (
-          Icons.trending_up,
-          _compactNumber(value.totalReaders),
-          'Lecteurs',
-        ),
+        (Icons.group_outlined, _compactNumber(value.totalAuthors), 'Auteurs'),
+        (Icons.trending_up, _compactNumber(value.totalReaders), 'Lecteurs'),
       ],
       loading: () => const [
         (Icons.menu_book_outlined, '—', 'Histoires'),

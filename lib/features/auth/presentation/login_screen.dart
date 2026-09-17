@@ -110,9 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    await ref
-        .read(resendVerificationControllerProvider.notifier)
-        .submit(email);
+    await ref.read(resendVerificationControllerProvider.notifier).submit(email);
 
     if (!mounted) {
       return;

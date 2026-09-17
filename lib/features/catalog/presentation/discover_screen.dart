@@ -389,7 +389,8 @@ class _DiscoverHeader extends StatelessWidget {
               children: [
                 PlumoraAppHeader(
                   title: 'Découvrir',
-                  subtitle: 'Explorez les œuvres Plumora et les classiques du domaine public',
+                  subtitle:
+                      'Explorez les œuvres Plumora et les classiques du domaine public',
                   emoji: '🔍',
                   gradient: [context.colors.plumora, context.colors.primary],
                   trailing: const ThemeToggleButton(),

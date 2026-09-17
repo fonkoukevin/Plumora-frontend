@@ -107,9 +107,8 @@ class MainShell extends ConsumerWidget {
   static List<ShellDestination> mobileDestinationsFor(List<RoleModel> roles) =>
       _destinationsFor(roles, manuscripts: _manuscriptsMobile);
 
-  static List<ShellDestination> desktopDestinationsFor(
-    List<RoleModel> roles,
-  ) => _destinationsFor(roles, manuscripts: _manuscriptsDesktop);
+  static List<ShellDestination> desktopDestinationsFor(List<RoleModel> roles) =>
+      _destinationsFor(roles, manuscripts: _manuscriptsDesktop);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
