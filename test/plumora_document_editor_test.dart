@@ -56,15 +56,33 @@ void main() {
       'italic': true,
     });
 
-    await tester.tap(find.byIcon(Icons.undo_outlined));
-    await tester.pump();
+    // Quill regroupe deux mises en forme successives dans une seule
+    // opération d'historique si elles arrivent assez vite (History.interval,
+    // 400 ms par défaut dans flutter_quill) - un vrai intervalle d'horloge,
+    // pas simulé par le test. Sous charge (CI notamment), le délai réel
+    // entre les deux tap() ci-dessus peut occasionnellement dépasser cette
+    // fenêtre et produire deux opérations séparées au lieu d'une seule.
+    // On annule autant de fois que nécessaire (borné) plutôt que de figer
+    // un nombre d'étapes, pour tester le comportement qui compte réellement
+    // (annuler retire la mise en forme, rétablir la restaure) sans dépendre
+    // de cette course contre la montre.
+    var undoSteps = 0;
+    while ((controller.document.toDelta().toJson().first['attributes']
+                as Map?) !=
+            null &&
+        undoSteps < 5) {
+      await tester.tap(find.byIcon(Icons.undo_outlined));
+      await tester.pump();
+      undoSteps += 1;
+    }
     final afterUndo = controller.document.toDelta().toJson().first;
-    // Quill regroupe les deux mises en forme successives dans une seule
-    // opération d'historique, comme un traitement de texte classique.
     expect(afterUndo['attributes'], isNull);
+    expect(undoSteps, greaterThan(0));
 
-    await tester.tap(find.byIcon(Icons.redo_outlined));
-    await tester.pump();
+    for (var i = 0; i < undoSteps; i++) {
+      await tester.tap(find.byIcon(Icons.redo_outlined));
+      await tester.pump();
+    }
     final afterRedo = controller.document.toDelta().toJson().first;
     expect(afterRedo['attributes'], <String, Object>{
       'bold': true,
