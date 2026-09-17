@@ -1069,6 +1069,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    // Extra safety margin on top of pumpAndSettle(): this test has been
+    // intermittently failing in CI only (never locally, across many runs)
+    // with the stats row (manuscript_stat_Œuvres) not yet built, despite
+    // the manuscript cards themselves always being present by this point -
+    // consistent with the async myBooksProvider override needing one more
+    // settle pass than pumpAndSettle's own heuristic catches on a loaded
+    // CI runner.
+    await tester.pump(const Duration(milliseconds: 400));
 
     final firstCard = find.byKey(const ValueKey('manuscript_card_book-1'));
     final secondCard = find.byKey(const ValueKey('manuscript_card_book-2'));
