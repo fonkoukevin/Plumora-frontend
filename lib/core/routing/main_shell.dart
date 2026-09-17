@@ -33,14 +33,14 @@ class MainShell extends ConsumerWidget {
     path: AppRoutes.discover,
   );
   static const _manuscriptsMobile = ShellDestination(
-    label: 'Mes manuscrits',
+    label: 'Écrire',
     icon: Icons.draw_outlined,
     selectedIcon: Icons.draw,
     path: AppRoutes.write,
     useLogoMark: true,
   );
   static const _manuscriptsDesktop = ShellDestination(
-    label: 'Mes manuscrits',
+    label: 'Écrire',
     icon: Icons.edit_note_outlined,
     selectedIcon: Icons.edit_note,
     path: AppRoutes.manuscripts,
@@ -62,12 +62,6 @@ class MainShell extends ConsumerWidget {
     icon: Icons.mail_outline,
     selectedIcon: Icons.mail,
     path: AppRoutes.betaInvitations,
-  );
-  static const _plumo = ShellDestination(
-    label: 'Plumo',
-    icon: Icons.auto_awesome_outlined,
-    selectedIcon: Icons.auto_awesome,
-    path: AppRoutes.plumoRecommendation,
   );
   static const _profile = ShellDestination(
     label: 'Profil',
@@ -99,7 +93,6 @@ class MainShell extends ConsumerWidget {
       if (isBetaReader || showAll) _betaInvitations,
       if (isReader || isBetaReader || showAll) _library,
       if (isAuthor || showAll) _betaFeedback,
-      if (isReader || showAll) _plumo,
       _profile,
     ];
   }
