@@ -51,18 +51,6 @@ class MainShell extends ConsumerWidget {
     selectedIcon: Icons.library_books,
     path: AppRoutes.library,
   );
-  static const _betaFeedback = ShellDestination(
-    label: 'Bêta-retours',
-    icon: Icons.chat_bubble_outline,
-    selectedIcon: Icons.chat_bubble,
-    path: AppRoutes.betaFeedback,
-  );
-  static const _betaInvitations = ShellDestination(
-    label: 'Invitations',
-    icon: Icons.mail_outline,
-    selectedIcon: Icons.mail,
-    path: AppRoutes.betaInvitations,
-  );
   static const _profile = ShellDestination(
     label: 'Profil',
     icon: Icons.person_outline,
@@ -90,9 +78,7 @@ class MainShell extends ConsumerWidget {
       _home,
       _discover,
       if (isAuthor || showAll) manuscripts,
-      if (isBetaReader || showAll) _betaInvitations,
       if (isReader || isBetaReader || showAll) _library,
-      if (isAuthor || showAll) _betaFeedback,
       _profile,
     ];
   }
