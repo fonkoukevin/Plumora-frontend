@@ -96,7 +96,7 @@ class _PlumoRecommendationScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Quel type de livre veux-tu lire aujourd'hui ?",
+                  'Décris-nous ce que tu as envie de lire.',
                   style: TextStyle(
                     color: context.colors.textPrimary,
                     fontSize: 20,
