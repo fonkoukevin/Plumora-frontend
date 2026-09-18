@@ -3586,6 +3586,14 @@ void _showPlumoAppliedSnackBar(
     SnackBar(
       content: Text(message),
       behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+      // SnackBar.persist defaults to true whenever an action is set (see
+      // the Flutter SDK's SnackBar constructor), which makes
+      // ScaffoldMessengerState's own auto-dismiss timer a no-op - a
+      // snackbar with an action never times out on its own unless this is
+      // explicitly turned off. That's why this kept sitting on screen
+      // indefinitely instead of disappearing after `duration`.
+      persist: false,
       action: SnackBarAction(label: 'Annuler', onPressed: onUndo),
     ),
   );
