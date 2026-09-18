@@ -340,6 +340,25 @@ class AdminBadge extends StatelessWidget {
   }
 }
 
+/// The real backend `RoleName` values (`AUTHOR`, `READER`, `BETA_READER`,
+/// `ADMIN`) shown in readable French wherever an admin screen displays a
+/// role - the badge, the role filter, and the role-change dropdown, all of
+/// which used to show the raw enum string directly.
+String adminRoleLabel(String role) {
+  switch (role.trim().toUpperCase()) {
+    case 'ADMIN':
+      return 'Administrateur';
+    case 'AUTHOR':
+      return 'Auteur';
+    case 'READER':
+      return 'Lecteur';
+    case 'BETA_READER':
+      return 'Bêta-lecteur';
+    default:
+      return role;
+  }
+}
+
 class AdminRoleBadge extends StatelessWidget {
   const AdminRoleBadge({required this.role, this.compact = false, super.key});
 
@@ -361,7 +380,11 @@ class AdminRoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AdminBadge(label: role, color: colorFor(role), compact: compact);
+    return AdminBadge(
+      label: adminRoleLabel(role),
+      color: colorFor(role),
+      compact: compact,
+    );
   }
 }
 
@@ -456,58 +479,68 @@ class AdminFilterChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: Container(
-          // Cible tactile Android >= 48dp (RGAA/WCAG 2.5.5) : la pastille ne
-          // faisait que 26px de haut en mode compact. Le texte reste centré
-          // dans la boîte agrandie, donc sa position visuelle ne change pas.
-          constraints: const BoxConstraints(minHeight: 48),
-          alignment: Alignment.center,
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 11 : 14,
-            vertical: compact ? 5 : 8,
-          ),
-          decoration: BoxDecoration(
-            color: selected ? AdminColors.primary : AdminColors.card,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? Colors.transparent : AdminColors.border,
+        // IntrinsicWidth keeps this chip sized to its own content (a pill,
+        // not a bar) even though its parent is a Wrap. Without it, the
+        // Container below expands to fill all the width Wrap offers during
+        // layout, because Container.alignment makes a Container fill its
+        // parent's bounded constraints instead of shrink-wrapping its child
+        // (see the Container class doc, "Summary") - every chip in a role/
+        // status filter row ended up as a full-width bar stacked on its own
+        // line instead of a compact row of pills.
+        child: IntrinsicWidth(
+          child: Container(
+            // Cible tactile Android >= 48dp (RGAA/WCAG 2.5.5) : la pastille ne
+            // faisait que 26px de haut en mode compact. Le texte reste centré
+            // dans la boîte agrandie, donc sa position visuelle ne change pas.
+            constraints: const BoxConstraints(minHeight: 48),
+            alignment: Alignment.center,
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 11 : 14,
+              vertical: compact ? 5 : 8,
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: selected ? Colors.white : AdminColors.muted,
-                  fontSize: compact ? 10 : 13,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                ),
+            decoration: BoxDecoration(
+              color: selected ? AdminColors.primary : AdminColors.card,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected ? Colors.transparent : AdminColors.border,
               ),
-              if (count != null) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 1,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: selected ? Colors.white : AdminColors.muted,
+                    fontSize: compact ? 10 : 13,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                   ),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? Colors.white.withValues(alpha: 0.22)
-                        : AdminColors.border,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '$count',
-                    style: TextStyle(
-                      color: selected ? Colors.white : AdminColors.text,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                ),
+                if (count != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.22)
+                          : AdminColors.border,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: TextStyle(
+                        color: selected ? Colors.white : AdminColors.text,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

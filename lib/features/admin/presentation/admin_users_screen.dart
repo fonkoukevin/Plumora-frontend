@@ -298,7 +298,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     isExpanded: true,
                     items: [
                       for (final role in _assignableRoles)
-                        DropdownMenuItem(value: role, child: Text(role)),
+                        DropdownMenuItem(
+                          value: role,
+                          child: Text(adminRoleLabel(role)),
+                        ),
                     ],
                     onChanged: (value) =>
                         setModalState(() => selectedRole = value!),
@@ -561,7 +564,7 @@ class _Filters extends StatelessWidget {
         ),
         for (final role in _assignableRoles)
           AdminFilterChip(
-            label: role,
+            label: adminRoleLabel(role),
             selected: roleFilter == role,
             onTap: () => onRoleChanged(role),
           ),
