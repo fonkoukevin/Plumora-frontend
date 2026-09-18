@@ -475,7 +475,7 @@ class _ActionGrid extends StatelessWidget {
           Expanded(
             child: _ActionTile(
               icon: Icons.group_outlined,
-              label: 'Bêta-test',
+              label: 'Bêta-lecture',
               onTap: isMutating
                   ? null
                   : () => context.push(
@@ -1374,7 +1374,7 @@ class _SettingsTab extends StatelessWidget {
             items: [
               _QuickLink(
                 icon: Icons.upload_outlined,
-                label: 'Soumettre en bêta-test',
+                label: 'Soumettre en bêta-lecture',
                 route: AppRoutes.authorBetaCampaignsPath(book.id),
                 color: context.colors.primary,
               ),
@@ -1637,7 +1637,7 @@ class _DangerCard extends StatelessWidget {
           ),
           const SizedBox(height: 9),
           Text(
-            'Archive ce livre si tu ne veux plus le voir dans tes histoires actives.',
+            'Archive ce livre si tu ne veux plus le voir dans tes œuvres actives.',
             style: TextStyle(
               color: context.colors.textSecondary,
               fontSize: 11,
@@ -1860,50 +1860,53 @@ class _ArchiveConfirmDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Archiver « $title » ?',
-              style: TextStyle(
-                color: context.colors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Ce livre sera retiré de tes histoires actives.',
-              style: TextStyle(
-                color: context.colors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Annuler'),
-                  ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Archiver « $title » ?',
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: context.colors.destructive,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Ce livre sera retiré de tes œuvres actives.',
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Annuler'),
                     ),
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Archiver'),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: context.colors.destructive,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Archiver'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1984,7 +1987,7 @@ class _VisibilityStyle {
 _StatusStyle _statusStyle(BuildContext context, BookStatus status) {
   return switch (status) {
     BookStatus.inBetaReading => _StatusStyle(
-      label: 'Bêta-test',
+      label: 'Bêta-lecture',
       background: context.colors.primary.withValues(alpha: 0.12),
       foreground: context.colors.primary,
     ),

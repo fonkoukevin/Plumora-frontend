@@ -18,7 +18,7 @@ const _writeGold = Color(0xFFD6B25E);
 const _writeGreen = Color(0xFF3FBF7F);
 const double _authorDashboardMaxWidth = 1480;
 
-const _writeTabs = ['Toutes', 'En cours', 'Bêta-test', 'Publiées'];
+const _writeTabs = ['Toutes', 'En cours', 'Bêta-lecture', 'Publiées'];
 
 Color _softWriteBorder(BuildContext context) {
   if (Theme.of(context).brightness == Brightness.dark) {
@@ -44,7 +44,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
         return book.status == BookStatus.draft ||
             book.status == BookStatus.inCorrection ||
             book.status == BookStatus.readyToPublish;
-      case 'Bêta-test':
+      case 'Bêta-lecture':
         return book.status == BookStatus.inBetaReading;
       case 'Publiées':
         return book.status == BookStatus.published;
@@ -196,10 +196,10 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       isDesktop
-                                          ? '${books.length} histoires · '
+                                          ? '${books.length} œuvres · '
                                                 '$totalChapters chapitres · '
                                                 '${_compactNumber(totalWords)} mots'
-                                          : '${books.length} histoires · '
+                                          : '${books.length} œuvres · '
                                                 '$totalChapters chapitres',
                                       style: TextStyle(
                                         color: context.colors.textSecondary,
@@ -217,7 +217,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                         _GradientActionButton(
                           icon: Icons.add,
                           label: showFullButtonLabel
-                              ? 'Nouvelle histoire'
+                              ? 'Nouveau manuscrit'
                               : 'Créer',
                           onPressed: () => context.push(AppRoutes.createBook),
                         ),
@@ -230,7 +230,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                   children: [
                     Expanded(
                       child: _StatTile(
-                        label: 'Histoires',
+                        label: 'Œuvres',
                         value: books.length.toString(),
                         icon: Icons.menu_book_outlined,
                         color: _writeAccent,
@@ -302,7 +302,8 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
                   icon: Icons.upload_outlined,
                   iconColors: const [_writeGold, Color(0xFFC49A40)],
                   title: 'Prêt à publier ?',
-                  subtitle: 'Soumettez votre manuscrit à la communauté',
+                  subtitle:
+                      'Rendez votre livre disponible dans le catalogue Plumora.',
                   borderColor: _writeGold,
                   onTap: () => _goToPublish(books),
                 ),
@@ -588,7 +589,7 @@ class _EmptyStories extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Aucune histoire ici',
+            'Aucun manuscrit ici',
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 17,
@@ -597,13 +598,13 @@ class _EmptyStories extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Commencez à écrire votre première histoire',
+            'Commencez à écrire votre premier manuscrit',
             style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 22),
           _GradientActionButton(
             icon: Icons.add,
-            label: 'Créer une histoire',
+            label: 'Créer un manuscrit',
             onPressed: onCreate,
           ),
         ],
@@ -882,7 +883,7 @@ class _StatusStyle {
 _StatusStyle _statusStyle(BuildContext context, BookStatus status) {
   return switch (status) {
     BookStatus.inBetaReading => _StatusStyle(
-      label: 'Bêta-test',
+      label: 'Bêta-lecture',
       background: context.colors.primary.withValues(alpha: 0.12),
       foreground: context.colors.primary,
     ),
@@ -1324,51 +1325,54 @@ class _ArchiveConfirmDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Archiver « $title » ?',
-              style: TextStyle(
-                color: context.colors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Ce livre sera archivé et retiré de tes histoires actives. '
-              'Tu pourras toujours le retrouver et le republier plus tard.',
-              style: TextStyle(
-                color: context.colors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Annuler'),
-                  ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Archiver « $title » ?',
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: context.colors.destructive,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Ce livre sera archivé et retiré de tes œuvres actives. '
+                'Tu pourras toujours le retrouver et le republier plus tard.',
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Annuler'),
                     ),
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Archiver'),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: context.colors.destructive,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Archiver'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
